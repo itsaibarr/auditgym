@@ -82,8 +82,30 @@ def _validate_config(cfg: dict) -> None:
     for b in cfg["base_currencies"]:
         if not any(c != b for c in cfg["foreign_currencies"]):
             raise ValueError(f"foreign_currencies needs at least one currency other than base {b}")
-    if not all(0 <= p <= 1 for p in cfg["interacting"].values()):
-        raise ValueError("interacting probabilities must be in [0, 1]")
+    if not all(isinstance(p, (int, float)) and not isinstance(p, bool) and 0 <= p <= 1 for p in cfg["interacting"].values()):
+        raise ValueError("interacting probabilities must be numbers in [0, 1]")
+    w = cfg["cutoff_window_days"]
+    if not (isinstance(w, int) and not isinstance(w, bool) and 4 <= w <= 60):
+        raise ValueError(f"cutoff_window_days must be an integer in [4, 60] (late-cutoff postings land up to 3 days after "
+                         f"period end, inside the export window), got {w!r}")
+    m = cfg["months"]
+    if not (isinstance(m, list) and m and all(isinstance(x, int) and not isinstance(x, bool) and 1 <= x <= 12 for x in m)):
+        raise ValueError(f"months must be a non-empty list of integers 1..12, got {m!r}")
+    y = cfg["year"]
+    if not (isinstance(y, int) and not isinstance(y, bool) and 1971 <= y <= 2200):
+        raise ValueError(f"year must be an integer in [1971, 2200], got {y!r}")
+    me = cfg["max_errors"]
+    if not (isinstance(me, int) and not isinstance(me, bool) and me >= 0):
+        raise ValueError(f"max_errors must be an integer >= 0, got {me!r}")
+    tzs = cfg["timezones"]
+    if not (isinstance(tzs, list) and tzs):
+        raise ValueError("timezones must be a non-empty list")
+    from zoneinfo import ZoneInfo
+    for tz in tzs:
+        try:
+            ZoneInfo(tz)
+        except Exception:
+            raise ValueError(f"unknown timezone {tz!r}") from None
 
 
 def current_salt() -> str:

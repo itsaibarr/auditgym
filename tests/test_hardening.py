@@ -632,6 +632,11 @@ def test_x1_named_wrong_methods_stay_outside_tolerance():
         pid = next(p["payment_id"] for p in ep.public["payments"] if p["doc_id"] in pay)
         row2150 = next(r for r in ep.public["ledger"] if r["account"] == "2150" and r["payment_id"] == pid)
         assert abs(row2150["credit_minor"] - x1["payment_allocation"]["expected_amount_minor"]) > 2
+        fx_truth = x1["fx_conversion"]["expected_amount_minor"]
+        for r in ep.public["ledger"]:
+            if r["payment_id"] == pid and r["account"] in ("7100", "7200"):
+                d = abs(r["credit_minor"] + r["debit_minor"] - fx_truth)
+                assert d == 0 or d > 2                                  # recorded gain/loss row is not a near-miss answer
 
 
 # ---------------------------------------------------------------------------------------- council round 4
@@ -668,7 +673,9 @@ def test_closed_eval_refuses_episode_dirs_with_truth(monkeypatch, tmp_path):
 
 
 @pytest.mark.parametrize("cfg", [{"timezone": ["UTC"]}, {"foreign_currencies": []}, {"base_currencies": ["USD"], "foreign_currencies": ["USD"]},
-                                 {"errors": {"duplicate_invoices": {"on": True}}}, {"errors": {"fx_conversion": {"count": [3, 1]}}}])
+                                 {"errors": {"duplicate_invoices": {"on": True}}}, {"errors": {"fx_conversion": {"count": [3, 1]}}},
+                                 {"cutoff_window_days": 3}, {"cutoff_window_days": -3}, {"months": [13]}, {"timezones": ["Mars/Base"]},
+                                 {"max_errors": -1}, {"interacting": {"X1": "yes"}}])
 def test_bad_configs_are_rejected(cfg):
     with pytest.raises(ValueError):
         generate(1, cfg)
