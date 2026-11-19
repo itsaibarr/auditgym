@@ -17,11 +17,26 @@ PATTERNS = [
 EVAL_INFO_KEYS = {"steps_remaining", "error_code"}
 
 
+def _strings(x):
+    if isinstance(x, str):
+        yield x
+    elif isinstance(x, dict):
+        for k, v in x.items():
+            yield k
+            yield from _strings(v)
+    elif isinstance(x, list):
+        for v in x:
+            yield from _strings(v)
+
+
 def scan_records(records: list[dict], mode: str) -> list[str]:
     problems = []
     for rec in records:
         where = f"{rec.get('episode_id')}#{rec.get('step')}"
         blob = json.dumps({"observation": rec.get("observation"), "info": rec.get("info")}, ensure_ascii=False)
+        # the env echoes (at most 64 chars of) the policy's own input in error messages; that is not a leak
+        for s in sorted({t[:64] for t in _strings(rec.get("action")) if len(t) >= 3}, key=len, reverse=True):
+            blob = blob.replace(json.dumps(s, ensure_ascii=False)[1:-1], "")
         for pat, what in PATTERNS:
             mm = pat.search(blob)
             if mm:

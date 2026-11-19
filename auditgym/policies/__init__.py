@@ -205,8 +205,9 @@ class ExpertPolicy(ScanPolicy):
                 out.append(finding("fx_conversion", [d["doc_id"]], v.delta, base, ev, "converted amount differs from policy rate"))
             elif v.invariant == "I6":
                 d = docs[v.subject]
-                out.append(finding("period_cutoff", [d["doc_id"]], v.delta, base, [d["doc_id"], _src_row(led, d)["row_id"]],
-                                   "posted in a different period than the event"))
+                ts = d.get("issued_at") or d["timestamp"]
+                ev = [d["doc_id"], _src_row(led, d)["row_id"]] + ([_fx_id_for(b, ts, d["currency"])] if d["currency"] != base else [])
+                out.append(finding("period_cutoff", [d["doc_id"]], v.delta, base, ev, "posted in a different period than the event"))
             elif v.invariant == "I7":
                 a, c = v.subject.split("|")
                 pay = docs[a] if "payment_id" in docs[a] else docs[c]

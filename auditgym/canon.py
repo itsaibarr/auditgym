@@ -23,3 +23,17 @@ def assert_no_floats(obj: Any, path: str = "$") -> None:
     elif isinstance(obj, list):
         for i, v in enumerate(obj):
             assert_no_floats(v, f"{path}[{i}]")
+
+
+def _no_dup_keys(pairs):
+    d = {}
+    for k, v in pairs:
+        if k in d:
+            raise ValueError(f"duplicate key {k!r}")
+        d[k] = v
+    return d
+
+
+def loads_strict(s):
+    """json.loads that rejects duplicate object keys (last-key-wins is a grading ambiguity)."""
+    return json.loads(s, object_pairs_hook=_no_dup_keys)

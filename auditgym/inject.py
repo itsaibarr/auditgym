@@ -10,7 +10,7 @@ from .money import convert
 from .rng import Rng
 from .timeutil import local_instant
 from .world import (AR, FX_GAIN, FX_LOSS, RETURNS, REVENUE, UNAPPLIED, JE, Invoice, Line, Payment, World,
-                    bank_account)
+                    bank_account, lagged_issue)
 
 MIN_DELTA = 100  # every injected amount >= 100 x tolerance (tolerance = 1 minor unit)
 
@@ -41,6 +41,7 @@ class Ctx:
         self.w = w
         self.r = Rng(key, "inject")
         self.busy: set[int] = set()
+        self.skipped: list[str] = []
 
     def je_of(self, doc) -> JE:
         return next(j for j in self.w.jes if j.src is doc)
@@ -128,23 +129,26 @@ def _fx_ref(w: World, dt: datetime, ccy: str) -> tuple:
     return ("fx", w.rate_date(w.local(dt), ccy), ccy)
 
 
-def _wrong_rate_date(c: Ctx, correct_dt: datetime, ccy: str):
-    """A business date whose effective rate differs from the correct one."""
+def _wrong_rate_date(c: Ctx, correct_dt: datetime, ccy: str, avoid: datetime | None = None):
+    """A business date whose effective rate differs from the correct one (and from the rate date of `avoid`,
+    e.g. an invoice's delivery date: that conversion is defensible under IAS 21.22, so it must not be the error)."""
     w = c.w
     good = w.rate_date(w.local(correct_dt), ccy)
+    bad = {good} | ({w.rate_date(w.local(avoid), ccy)} if avoid else set())
     idx = w.fx_dates.index(good)
     for _ in range(10):
         k = c.r.choice([-5, -4, -3, -2, -1, 1, 2, 3])
         j = idx + k
-        if 0 <= j < len(w.fx_dates) and w.fx_dates[j] != good:
+        if 0 <= j < len(w.fx_dates) and w.fx_dates[j] not in bad:
             return w.fx_dates[j]
     raise Abort("no alternative fx date")
 
 
 # ---------------------------------------------------------------------------------------- E1
-def _clone(c: Ctx, orig: Invoice, shift: timedelta) -> tuple[Invoice, JE]:
+def _clone(c: Ctx, orig: Invoice) -> tuple[Invoice, JE]:
     w = c.w
-    issued = orig.issued_at + shift
+    lag_min = int((orig.issued_at - orig.delivered_at).total_seconds() // 60)
+    issued = lagged_issue(c.r, w, orig.delivered_at, max(130, lag_min + 60))
     dup = Invoice(f"inv{len(w.invoices)}", "invoice", orig.cust, orig.ccy, issued, issued + (orig.due_at - orig.issued_at),
                   orig.delivered_at, [dict(l) for l in orig.lines], orig.total, orig.delivery_ref,
                   service_period=orig.service_period, utc_written=c.r.chance(0.3), dup_of=orig, same_number=c.r.chance(0.5))
@@ -177,8 +181,7 @@ def e1_prepare(c: Ctx):
 
 
 def e1_mutate(c: Ctx, orig: Invoice) -> list[Issue]:
-    shift = timedelta(hours=c.r.randint(2, 70))
-    dup, je = _clone(c, orig, shift)
+    dup, je = _clone(c, orig)
     c.mark(dup)
     return [_dup_issue(dup, je, orig, "E1.clone_invoice")]
 
@@ -243,7 +246,7 @@ def e3_mutate(c: Ctx, target) -> list[Issue]:
         wrong_d = w.rate_date(w.local(doc.refs[0].issued_at), doc.ccy)
         how = "invoice_date_rate_used_for_payment"
     else:
-        wrong_d = _wrong_rate_date(c, dt, doc.ccy)
+        wrong_d = _wrong_rate_date(c, dt, doc.ccy, doc.delivered_at if kind == "inv" else None)
         how = "wrong_rate_date"
     amount = doc.total if kind == "inv" else doc.amount
     wrong = convert(amount, doc.ccy, w.base, w.fx[(wrong_d, doc.ccy)])
@@ -291,7 +294,8 @@ def e4_mutate(c: Ctx, target) -> list[Issue]:
         je.ts = local_instant(w.period_end + timedelta(days=c.r.randint(1, 3)), c.r.randint(9, 12), c.r.randint(0, 59), w.tz)
     w.jes.sort(key=lambda j: j.ts)
     ar, rev = _line(je, "ar"), _line(je, "revenue")
-    return [Issue("period_cutoff", [inv], ar.debit, [[("doc", inv), ("line", je, ar)], [("doc", inv), ("line", je, rev)]],
+    fx = [_fx_ref(w, inv.issued_at, inv.ccy)] if inv.ccy != w.base else []
+    return [Issue("period_cutoff", [inv], ar.debit, [[("doc", inv), *fx, ("line", je, ar)], [("doc", inv), *fx, ("line", je, rev)]],
                   "I6", "E4." + mode, {"mode": mode}, before=[before], jes=[je])]
 
 
@@ -316,7 +320,7 @@ def x1_prepare(c: Ctx):
     if abs(wrong_bank - correct_bank) < MIN_DELTA or alloc_delta < MIN_DELTA or part <= 0:
         raise Abort("x1 deltas too small")
     c.mark(inv)
-    p = Payment(f"pay{len(w.payments)}", "receipt", inv.cust, inv.ccy, ts, amt, [inv], utc_written=c.r.chance(0.5))
+    p = Payment(f"pay{len(w.payments)}", "receipt", inv.cust, inv.ccy, ts, amt, [inv], utc_written=c.r.chance(0.3))
     w.payments.append(p)
     c.mark(p)
     rel = convert(amt, inv.ccy, w.base, inv_rate)
@@ -349,7 +353,9 @@ def x1_mutate(c: Ctx, target) -> list[Issue]:
     _rebalance_fx(je)
     common = dict(before=[before], jes=[je], link="X1")
     return [
-        Issue("period_cutoff", [p], wrong_bank, [[("doc", p), ("line", je, bank)]], "I6", "X1.cutoff", {"posted_on": new_day.isoformat()}, **common),
+        # measured against the correct value of the other dimension (correct rate), so the fx error is not counted twice
+        Issue("period_cutoff", [p], correct_bank, [[("doc", p), _fx_ref(w, p.ts, p.ccy), ("line", je, bank)]], "I6", "X1.cutoff",
+              {"posted_on": new_day.isoformat(), "recorded_minor": wrong_bank}, **common),
         Issue("fx_conversion", [p], fx_delta, [[("doc", p), _fx_ref(w, p.ts, p.ccy), ("line", je, bank)]], "I5", "X1.fx",
               {"used_rate_date": new_day.isoformat()}, **common),
         Issue("payment_allocation", [p, inv], alloc_delta, [[("doc", p), ("doc", inv), _fx_ref(w, inv.issued_at, inv.ccy), ("line", je, ar)]],
@@ -391,7 +397,7 @@ def x2_mutate(c: Ctx, target) -> list[Issue]:
         raise Abort("x2 delta")
     ar, ret = _line(je, "ar"), _line(je, "returns")
     ar.credit = ret.debit = wrong
-    dup, dje = _clone(c, inv, timedelta(hours=c.r.randint(20, 50)))
+    dup, dje = _clone(c, inv)
     c.mark(dup)
     return [
         _dup_issue(dup, dje, inv, "X2.duplicate", link="X2"),
@@ -439,6 +445,8 @@ def plan(w: World, cfg: dict, key: str) -> tuple[Ctx, list]:
                 break
             except Abort:
                 continue
+        else:
+            c.skipped.append(name)  # no valid target: the requested count is an upper bound (recorded in provenance)
     return c, prepared
 
 
@@ -448,5 +456,5 @@ def mutate(c: Ctx, prepared: list) -> list[Issue]:
         try:
             issues += INJECTORS[name][1](c, target)
         except Abort:
-            continue
+            c.skipped.append(name)
     return issues

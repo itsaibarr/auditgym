@@ -13,6 +13,7 @@ import gymnasium as gym
 from gymnasium import spaces
 
 from ..env import AuditEnv
+from ..runner import parse_action_line
 
 _CHARS = string.printable + "".join(chr(c) for c in range(0xA0, 0x500)) + "ёЁ—–…«»№"
 MAX_LEN = 2_000_000
@@ -35,10 +36,7 @@ class AuditGymEnv(gym.Env):
         return json.dumps(obs, ensure_ascii=True), info
 
     def step(self, action):
-        try:
-            act = json.loads(action) if isinstance(action, str) else action
-        except ValueError:
-            act = action
+        act = parse_action_line(action.encode("utf-8", "surrogatepass"))[0] if isinstance(action, str) else action
         obs, r, term, trunc, info = self._env.step(act)
         return json.dumps(obs, ensure_ascii=True), float(r), term, trunc, info
 

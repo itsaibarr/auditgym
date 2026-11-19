@@ -138,6 +138,7 @@ def generate(seed: int | str, config: dict | None = None, salt: str | None = Non
         "episode_id": episode_id, "generator_version": __version__, "schema_version": SCHEMA_VERSION,
         "config": cfg, "config_hash": cfg_hash, "config_version": config_version, "public_fingerprint": sha256(public), "events": prov_events,
         "invariants_before_injection": {"checked": ["I1", "I2", "I3", "I4", "I5", "I6", "I7", "I8"], "violations": [str(v) for v in check_invariants(clean)]},
+        "skipped_injectors": ctx.skipped,
         "inserted_documents": sorted(ids.doc[id(d)] for d in (set(w.invoices) | set(w.payments)) - set(correct_docs[0]) - set(correct_docs[1])),
     }
     assert_no_floats(public)
@@ -302,7 +303,8 @@ def make_policy(w: World) -> dict:
         "fx": {
             "rate_direction": "rate = units of base currency per 1 unit of source currency; never invert",
             "rate_date": {"invoice": "company-local date of issued_at", "credit_note": "company-local date of issued_at",
-                          "payment": "company-local date of timestamp", "refund": "company-local date of timestamp"},
+                          "payment": "company-local date of timestamp", "refund": "company-local date of timestamp",
+                          "note": "an invoice translates at its issue date even when delivery (revenue recognition) was on an earlier date"},
             "missing_date_rule": "use the last rate on or before that date (fx.csv has business days only)",
             "conversion": "base_minor = round(doc_minor * rate * 10**(exp(base) - exp(doc))), once per document total",
             "rounding_mode": ROUNDING,
@@ -324,7 +326,7 @@ def make_policy(w: World) -> dict:
                     "duplicate": "when two invoices bill the same delivery_ref, the later-issued one (by issued_at instant) is the duplicate",
                     "service_period": "informational only; revenue is recognised at delivered_at"},
         "opening_balance": "the opening entry (account 3000, at period start) carries prior-period open invoices at their issue-date "
-                           "conversion; it is not an invoice posting for the recognition rule. No event of an opening invoice is dated before the period start.",
+                           "conversion; it is not an invoice posting for the recognition rule. No payment, credit note or refund of an opening invoice is dated before the period start.",
         "revaluation": "no period-end revaluation of open foreign-currency items",
         "chart_of_accounts": CHART_OF_ACCOUNTS,
         "amount_tolerance_minor": TOLERANCE_MINOR,
@@ -335,7 +337,9 @@ def make_policy(w: World) -> dict:
                 "duplicate_invoice": "the duplicate's AR debit in base currency",
                 "payment_allocation": "AR under-credited for the referenced invoice, at the invoice's carried rate",
                 "fx_conversion": "absolute difference between the recorded and the correct base amount of the converted row",
-                "period_cutoff": "the base amount of the mis-dated posting as recorded in the ledger (the source row: AR for an invoice, bank for a payment)",
+                "period_cutoff": "the correct base amount of the mis-dated posting (the source row: AR for an invoice, bank for a payment): "
+                                 "the document amount converted at the policy rate. It equals the ledger row when only the date is wrong; if the "
+                                 "same posting is also mis-converted, that difference belongs to the linked fx_conversion finding, not to this amount",
             },
             "affected_ids": {
                 "duplicate_invoice": "doc_ids of both the original and the duplicate invoice",
@@ -350,7 +354,8 @@ def make_policy(w: World) -> dict:
                 "payment_allocation": "payment doc + invoice doc + the payment's AR row for that invoice (or its 2150 row for a base-currency payment) "
                                       "+ the invoice-date fx row if the invoice is in a foreign currency",
                 "fx_conversion": "the document + the fx row the policy prescribes + the converted ledger row",
-                "period_cutoff": "the document + the mis-dated ledger row (AR/revenue for an invoice, bank for a payment)",
+                "period_cutoff": "the document + the mis-dated ledger row (AR/revenue for an invoice, bank for a payment) "
+                                 "+ the fx row the policy prescribes if the document is in a foreign currency",
             },
         },
     }

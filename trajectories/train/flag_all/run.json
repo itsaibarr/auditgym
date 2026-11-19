@@ -1,6 +1,6 @@
 {
   "auditgym_version": "1.0.0",
-  "code_hash": "f305efacf755e605",
+  "code_hash": "b9998d9dc4c1de57",
   "policy": "flag_all",
   "policy_args": [],
   "mode": "train",

@@ -43,7 +43,7 @@ CHART_OF_ACCOUNTS = {
 LEVEL = {"USD": 1.0, "KZT": 478.0, "EUR": 0.93, "JPY": 152.0, "KWD": 0.307, "CNY": 7.15, "GBP": 0.79}
 
 _ADJ = ["Zhasyl", "Sary", "Kok", "Zhana", "Ak", "Biryuza", "Severo", "Nord", "Step", "Tau", "Samal", "Orion",
-        "Vega", "Ornek", "Arman", "Dala", "Kokzhal", "Zhuldyz", "Kumis", "Bereke", "Shyn", "Ural", "Irtysh", "Baikonur"]
+        "Vega", "Ornek", "Arman", "Dala", "Kokzhal", "Zhuldyz", "Kumis", "Sapa", "Shyn", "Ural", "Irtysh", "Baikonur"]
 _NOUN = ["Trade", "Logistic", "Agro", "Stroi", "Tech", "Service", "Pack", "Metal", "Textile", "Pharm", "Energy",
          "Media", "Soft", "Market", "Foods", "Line", "Group", "Systems", "Supply", "Print"]
 _SUFFIX = ["LLP", "JSC", "LLC", "GmbH", "Ltd", "TOO"]
@@ -236,6 +236,16 @@ def _rand_time(r: Rng, w: World, d: date, late: bool = False) -> datetime:
     return local_instant(d, r.randint(8, 19), r.randint(0, 59), w.tz)
 
 
+def lagged_issue(r: Rng, w: World, delivered: datetime, min_minutes: int = 130) -> datetime:
+    """Invoice billed hours to days after delivery (random minutes), at a local business-ish hour 08:00-23:59.
+    Shared by legit late billing and injected duplicates so issue timing does not tell them apart."""
+    t = delivered + timedelta(minutes=r.randint(min_minutes, max(min_minutes, 78 * 60)))
+    loc = t.astimezone(ZoneInfo(w.tz))
+    if loc.hour < 8:
+        t = local_instant(loc.date(), 8, r.randint(0, 59), w.tz)
+    return t
+
+
 def _lines(r: Rng, w: World, ccy: str, n: int | None = None, usd_scale: float = 1.0) -> list[dict]:
     out = []
     for sku, desc in r.sample(_SKUS, n or r.randint(1, 4)):
@@ -278,7 +288,7 @@ def _make_invoices(w: World, cfg: dict) -> None:
         t = _rand_time(r, w, d, late=late)
         issued = t + timedelta(minutes=r.randint(1, 4) if late else r.randint(10, 240))
         if not late and r.chance(0.15):  # billed 1-3 days after delivery, still within the same period
-            lagged = t + timedelta(days=r.randint(1, 3), hours=r.randint(0, 6))
+            lagged = lagged_issue(r, w, t)
             if w.local(lagged) < w.period_end:
                 issued = lagged
         inv = _new_invoice(w, r, r.choice(w.customers), t, issued)
@@ -383,7 +393,7 @@ def _make_payments(w: World, cfg: dict) -> None:
             add(inv.cust, inv.ccy, _pay_ts(r, w, inv.issued_at), inv.total - fee, [inv], fee=fee, tag="fee")
         elif pat == "credit_note":  # D5
             cn_amount = inv.total * r.randint(1, 3) // 10
-            t = max(inv.issued_at, local_instant(w.period_start, 9, 0, w.tz)) + timedelta(days=r.randint(1, 6), hours=r.randint(0, 5))
+            t = max(inv.issued_at, local_instant(w.period_start, 9, 0, w.tz)) + timedelta(days=r.randint(1, 6), hours=r.randint(0, 5), minutes=r.randint(0, 59))
             if t >= export_end_dt:
                 continue
             cn = Invoice(f"inv{len(w.invoices)}", "credit_note", inv.cust, inv.ccy, t, t, None,

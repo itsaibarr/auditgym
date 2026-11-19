@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import cmd
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -68,25 +69,30 @@ def _episodes(a) -> list:
     if cfg is not None and "episodes" in cfg:
         if getattr(a, "seeds", None):
             raise ValueError("--config is a split file with its own episodes/seeds; use --split <file> (without --seeds)")
-        _warn_salt()
+        _warn_salt(a)
         return split_episodes(a.config)
     if getattr(a, "seeds", None):
-        _warn_salt()
+        _warn_salt(a)
         base = (cfg or {}).get("base_config", cfg or {})
         return [("seeds", generate(s, base)) for s in parse_seeds(a.seeds)]
     out = []
     for s in a.split.split(","):
         if s not in ("train", "dev"):
-            _warn_salt()
+            _warn_salt(a)
         out += split_episodes(s)
     return out
 
 
-def _warn_salt() -> None:
+def _warn_salt(a) -> None:
     import os
-    if not os.environ.get("AUDITGYM_SALT"):
-        print("warning: AUDITGYM_SALT is not set; non-open episodes use the PUBLIC default salt, so a policy that imports the "
-              "open generator could regenerate their truth. For closed evaluation: docker run -e AUDITGYM_SALT=<secret> ...", file=sys.stderr)
+    if os.environ.get("AUDITGYM_SALT"):
+        return
+    if getattr(a, "fn", None) is cmd_run and a.mode == "eval" and not a.public_salt:
+        raise ValueError("closed evaluation needs a secret salt: docker run -e AUDITGYM_SALT=<secret> ... "
+                         "(without it a policy can regenerate the truth from the open generator). "
+                         "Pass --public-salt to run these episodes with the public default salt anyway.")
+    print("warning: AUDITGYM_SALT is not set; non-open episodes use the PUBLIC default salt, so a policy that imports the "
+          "open generator could regenerate their truth. For closed evaluation: docker run -e AUDITGYM_SALT=<secret> ...", file=sys.stderr)
 
 
 def cmd_generate(a) -> int:
@@ -110,7 +116,11 @@ def cmd_run(a) -> int:
     from .runner import run_policies, summarize
     episodes = _episodes(a)
     specs = a.policy.split(",")
-    name = lambda spec: spec.replace(":", "_").replace("/", "_").replace(" ", "_")[:60]
+    def name(spec: str) -> str:
+        n = "".join(c if c.isalnum() or c in "._-" else "_" for c in spec)
+        return n if len(n) <= 60 else n[:51] + "_" + hashlib.sha256(spec.encode()).hexdigest()[:8]
+    if len({name(s) for s in specs}) < len(specs):
+        raise ValueError(f"policy specs must be distinct (run dirs: {[name(s) for s in specs]})")
     source = a.split if not (a.episodes or a.seeds or a.config) else {"episodes": a.episodes, "seeds": a.seeds, "config": a.config}
     results = run_policies(specs, episodes, Path(a.out), mode=a.mode, args=a.policy_arg, policy_path=a.policy_path,
                            isolate=not a.no_isolate, allow_forks=a.allow_forks, meta={"sources": source}, dir_name=name)
@@ -122,7 +132,8 @@ def cmd_run(a) -> int:
         print(f"{spec}: {len(res)} episodes -> {Path(a.out) / name(spec)}", file=sys.stderr)
         if bad:
             print(f"warning: {spec}: {len(bad)}/{len(res)} episodes ended by {sorted({r['termination'] for r in bad})} "
-                  f"(policy failed to start, crashed or timed out; graded as empty answers)", file=sys.stderr)
+                  f"(policy failed to start, crashed or timed out; graded as empty answers). If the policy needs threads or "
+                  f"subprocesses, re-run with --allow-forks (lifts RLIMIT_NPROC=1)", file=sys.stderr)
     print_table(rows, f"AuditGym {a.mode} run", a.format)
     return 0
 
@@ -333,6 +344,7 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--policy-arg", action="append", default=[], help="k=v passed to the policy constructor")
     r.add_argument("--policy-path", help="directory added to the policy child's sys.path")
     r.add_argument("--no-isolate", action="store_true", help="run builtin policies in-process (debug only)")
+    r.add_argument("--public-salt", action="store_true", help="allow an eval run of non-open episodes without AUDITGYM_SALT (not a closed evaluation)")
     r.add_argument("--allow-forks", action="store_true", help="let the policy spawn processes/threads (weakens isolation; e.g. node)")
     r.add_argument("--format", choices=["auto", "md", "json", "csv"], default="auto")
     r.set_defaults(fn=cmd_run)
@@ -384,7 +396,7 @@ def main(argv: list[str] | None = None) -> int:
         return a.fn(a)
     except KeyboardInterrupt:
         return 130
-    except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
+    except (OSError, RuntimeError, json.JSONDecodeError, ValueError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
 

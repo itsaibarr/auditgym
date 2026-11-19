@@ -66,7 +66,11 @@ def recompute(pub: dict, issue_type: str, affected: list[str], evidence: list[st
         event = (d["delivered_at"] if d.get("doc_type") == "invoice" else d["issued_at"]) if t == "invoices" else d["timestamp"]
         if b.bucket(event) == b.bucket(row["timestamp"]):
             raise EvidenceError("no cutoff break visible")
-        return amt
+        # amount = correct base value of the posting (equals the row when only the date is wrong)
+        rate_ts = d["issued_at"] if t == "invoices" else d["timestamp"]
+        total = d["total_minor"] if t == "invoices" else d["amount_minor"]
+        rate = rate_from_evidence(d["currency"], rate_ts)
+        return amt if rate is None else convert(total, d["currency"], b.base, rate)
     if issue_type == "payment_allocation":
         pay = next(r for t, r in docs.values() if t == "payments")
         inv = next(r for t, r in docs.values() if t == "invoices")

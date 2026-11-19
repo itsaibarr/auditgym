@@ -98,8 +98,93 @@
   },
   "config_hash": "dc5c8fd9ce2bde22",
   "config_version": "1.0.0",
-  "public_fingerprint": "7961479f97d39a85be255d8aafe06fb8327599a2ced7c601c69ef67b7a5177ec",
-  "events": [],
+  "public_fingerprint": "cb66aaed1801dc259b0f626bbd2d971e5375eb10ca9e73fb3e0ab59494eb2a1e",
+  "events": [
+    {
+      "issue_id": "I-01",
+      "injector": "E3.wrong_rate_date",
+      "params": {
+        "used_rate_date": "2026-02-27",
+        "correct_rate_date": "2026-02-25"
+      },
+      "before": [
+        {
+          "je": 26183,
+          "timestamp": "2026-02-25T12:57:00+00:00",
+          "rows": [
+            {
+              "row_id": "L-26183-1",
+              "account": "1020",
+              "debit_minor": 918195,
+              "credit_minor": 0,
+              "currency": "USD",
+              "entity_id": "C-1854",
+              "invoice_id": null,
+              "payment_id": "PAY-2669"
+            },
+            {
+              "row_id": "L-26183-2",
+              "account": "1100",
+              "debit_minor": 0,
+              "credit_minor": 923507,
+              "currency": "USD",
+              "entity_id": "C-1854",
+              "invoice_id": "INV-3109",
+              "payment_id": "PAY-2669"
+            },
+            {
+              "row_id": "L-26183-3",
+              "account": "7200",
+              "debit_minor": 5312,
+              "credit_minor": 0,
+              "currency": "USD",
+              "entity_id": "C-1854",
+              "invoice_id": null,
+              "payment_id": "PAY-2669"
+            }
+          ]
+        }
+      ],
+      "after": [
+        {
+          "je": 26183,
+          "timestamp": "2026-02-25T12:57:00+00:00",
+          "rows": [
+            {
+              "row_id": "L-26183-1",
+              "account": "1020",
+              "debit_minor": 913087,
+              "credit_minor": 0,
+              "currency": "USD",
+              "entity_id": "C-1854",
+              "invoice_id": null,
+              "payment_id": "PAY-2669"
+            },
+            {
+              "row_id": "L-26183-2",
+              "account": "1100",
+              "debit_minor": 0,
+              "credit_minor": 923507,
+              "currency": "USD",
+              "entity_id": "C-1854",
+              "invoice_id": "INV-3109",
+              "payment_id": "PAY-2669"
+            },
+            {
+              "row_id": "L-26183-3",
+              "account": "7200",
+              "debit_minor": 10420,
+              "credit_minor": 0,
+              "currency": "USD",
+              "entity_id": "C-1854",
+              "invoice_id": null,
+              "payment_id": "PAY-2669"
+            }
+          ]
+        }
+      ]
+    }
+  ],
   "invariants_before_injection": {
     "checked": [
       "I1",
@@ -113,5 +198,6 @@
     ],
     "violations": []
   },
+  "skipped_injectors": [],
   "inserted_documents": []
 }

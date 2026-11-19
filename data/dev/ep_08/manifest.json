@@ -8,11 +8,11 @@
   "export_end": "2026-09-06T00:00:00+05:00",
   "timezone": "Asia/Almaty",
   "counts": {
-    "ledger": 649,
-    "invoices": 91,
-    "payments": 59,
+    "ledger": 695,
+    "invoices": 92,
+    "payments": 74,
     "fx": 183,
-    "documents": 150
+    "documents": 166
   },
   "rounding": {
     "mode": "ROUND_HALF_EVEN",

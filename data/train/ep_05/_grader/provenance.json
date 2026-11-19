@@ -98,7 +98,7 @@
   },
   "config_hash": "c345a1740811bd21",
   "config_version": "1.0.0",
-  "public_fingerprint": "e6e6baa58247fc9f6d8edc3649513c7198d17032a688ca57ab7e8ebb092b2ba9",
+  "public_fingerprint": "86edf188b15fc4d1dcacf47db477b43db89675526c0829e85eeaa0711439cd8a",
   "events": [
     {
       "issue_id": "I-01",
@@ -108,27 +108,27 @@
       },
       "before": [
         {
-          "je": 16072,
-          "timestamp": "2026-09-03T10:30:00+04:00",
+          "je": 16071,
+          "timestamp": "2026-09-02T17:38:00+04:00",
           "rows": [
             {
-              "row_id": "L-16072-1",
+              "row_id": "L-16071-1",
               "account": "1100",
-              "debit_minor": 629245,
+              "debit_minor": 873718,
               "credit_minor": 0,
               "currency": "USD",
-              "entity_id": "C-7207",
-              "invoice_id": "INV/2026/5108",
+              "entity_id": "C-1153",
+              "invoice_id": "INV-4598",
               "payment_id": null
             },
             {
-              "row_id": "L-16072-2",
+              "row_id": "L-16071-2",
               "account": "4000",
               "debit_minor": 0,
-              "credit_minor": 629245,
+              "credit_minor": 873718,
               "currency": "USD",
-              "entity_id": "C-7207",
-              "invoice_id": "INV/2026/5108",
+              "entity_id": "C-1153",
+              "invoice_id": "INV-4598",
               "payment_id": null
             }
           ]
@@ -136,27 +136,27 @@
       ],
       "after": [
         {
-          "je": 16072,
+          "je": 16071,
           "timestamp": "2026-08-31T17:52:00+04:00",
           "rows": [
             {
-              "row_id": "L-16072-1",
+              "row_id": "L-16071-1",
               "account": "1100",
-              "debit_minor": 629245,
+              "debit_minor": 873718,
               "credit_minor": 0,
               "currency": "USD",
-              "entity_id": "C-7207",
-              "invoice_id": "INV/2026/5108",
+              "entity_id": "C-1153",
+              "invoice_id": "INV-4598",
               "payment_id": null
             },
             {
-              "row_id": "L-16072-2",
+              "row_id": "L-16071-2",
               "account": "4000",
               "debit_minor": 0,
-              "credit_minor": 629245,
+              "credit_minor": 873718,
               "currency": "USD",
-              "entity_id": "C-7207",
-              "invoice_id": "INV/2026/5108",
+              "entity_id": "C-1153",
+              "invoice_id": "INV-4598",
               "payment_id": null
             }
           ]
@@ -177,5 +177,6 @@
     ],
     "violations": []
   },
+  "skipped_injectors": [],
   "inserted_documents": []
 }

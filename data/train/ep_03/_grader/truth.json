@@ -1,4 +1,55 @@
 {
   "episode_id": "ep_4324ea98a1aad6b2",
-  "issues": []
+  "issues": [
+    {
+      "issue_id": "I-01",
+      "type": "payment_allocation",
+      "affected_ids": [
+        "D-31348",
+        "D-68123"
+      ],
+      "expected_amount_minor": 43200090,
+      "currency": "KZT",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-31348",
+          "D-68123",
+          "L-52744-2"
+        ],
+        [
+          "D-31348",
+          "D-68123",
+          "L-52744-3"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I7"
+    },
+    {
+      "issue_id": "I-02",
+      "type": "payment_allocation",
+      "affected_ids": [
+        "D-55018",
+        "D-67735"
+      ],
+      "expected_amount_minor": 63448979,
+      "currency": "KZT",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-55018",
+          "D-67735",
+          "L-52737-2"
+        ],
+        [
+          "D-55018",
+          "D-67735",
+          "L-52737-3"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I7"
+    }
+  ]
 }

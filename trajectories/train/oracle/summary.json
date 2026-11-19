@@ -8,9 +8,9 @@
     "mean_return_experimental": 1.0,
     "mean_steps": 1.0,
     "mean_wall_s": 0.0,
-    "clean_episodes": 4,
+    "clean_episodes": 2,
     "clean_fp_rate": 0.0,
-    "tp": 19,
+    "tp": 22,
     "fp": 0,
     "fn": 0,
     "per_type": {
@@ -19,18 +19,18 @@
         "fp": 0,
         "fn": 0
       },
-      "period_cutoff": {
-        "tp": 6,
-        "fp": 0,
-        "fn": 0
-      },
       "payment_allocation": {
-        "tp": 5,
+        "tp": 7,
         "fp": 0,
         "fn": 0
       },
       "fx_conversion": {
-        "tp": 3,
+        "tp": 4,
+        "fp": 0,
+        "fn": 0
+      },
+      "period_cutoff": {
+        "tp": 6,
         "fp": 0,
         "fn": 0
       }
@@ -48,9 +48,9 @@
     "mean_return_experimental": 1.0,
     "mean_steps": 1.0,
     "mean_wall_s": 0.0,
-    "clean_episodes": 4,
+    "clean_episodes": 2,
     "clean_fp_rate": 0.0,
-    "tp": 19,
+    "tp": 22,
     "fp": 0,
     "fn": 0,
     "per_type": {
@@ -59,18 +59,18 @@
         "fp": 0,
         "fn": 0
       },
-      "period_cutoff": {
-        "tp": 6,
-        "fp": 0,
-        "fn": 0
-      },
       "payment_allocation": {
-        "tp": 5,
+        "tp": 7,
         "fp": 0,
         "fn": 0
       },
       "fx_conversion": {
-        "tp": 3,
+        "tp": 4,
+        "fp": 0,
+        "fn": 0
+      },
+      "period_cutoff": {
+        "tp": 6,
         "fp": 0,
         "fn": 0
       }

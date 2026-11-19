@@ -102,7 +102,7 @@ def check(pub: dict) -> list[Violation]:
             continue
         event = d["delivered_at"] if is_inv else d["issued_at"]
         if b.bucket(r["timestamp"]) != b.bucket(event):
-            out.append(Violation("I6", d["doc_id"], amt))
+            out.append(Violation("I6", d["doc_id"], exp))
 
     # I5 + I6 for payments (source row: bank debit for receipts, bank credit for refunds)
     for p in pub["payments"]:
@@ -116,7 +116,7 @@ def check(pub: dict) -> list[Violation]:
         if amt != exp:
             out.append(Violation("I5", p["doc_id"], abs(amt - exp)))
         if b.bucket(r["timestamp"]) != b.bucket(p["timestamp"]):
-            out.append(Violation("I6", p["doc_id"], amt))
+            out.append(Violation("I6", p["doc_id"], exp))
 
     # I7 (+ I3): simulate the AR subledger from documents, compare per-(payment, invoice) AR credits
     carried, open_doc = {}, {}

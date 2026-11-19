@@ -98,39 +98,39 @@
   },
   "config_hash": "4e0681fec9220c1e",
   "config_version": "1.0.0",
-  "public_fingerprint": "c27f3714ba4aa9ae9514aba4cfdf202cc014066f5d8f60d6c4cda4264de96b3b",
+  "public_fingerprint": "7e4169a1b0148018c79ecf48f2db349d123b33096688690b66202ad3ca01d69c",
   "events": [
     {
       "issue_id": "I-01",
       "injector": "E1.clone_invoice",
       "params": {
-        "same_number": false,
-        "shift_minutes": 1920
+        "same_number": true,
+        "shift_minutes": 2239
       },
       "before": [],
       "after": [
         {
-          "je": 14404,
-          "timestamp": "2026-03-16T17:05:00+04:00",
+          "je": 14330,
+          "timestamp": "2026-03-02T22:24:00+04:00",
           "rows": [
             {
-              "row_id": "L-14404-1",
+              "row_id": "L-14330-1",
               "account": "1100",
-              "debit_minor": 6622402,
+              "debit_minor": 6675581,
               "credit_minor": 0,
               "currency": "KZT",
               "entity_id": "C-2858",
-              "invoice_id": "INV2617",
+              "invoice_id": "INV-2579",
               "payment_id": null
             },
             {
-              "row_id": "L-14404-2",
+              "row_id": "L-14330-2",
               "account": "4000",
               "debit_minor": 0,
-              "credit_minor": 6622402,
+              "credit_minor": 6675581,
               "currency": "KZT",
               "entity_id": "C-2858",
-              "invoice_id": "INV2617",
+              "invoice_id": "INV-2579",
               "payment_id": null
             }
           ]
@@ -141,33 +141,33 @@
       "issue_id": "I-02",
       "injector": "E1.clone_invoice",
       "params": {
-        "same_number": true,
-        "shift_minutes": 2040
+        "same_number": false,
+        "shift_minutes": 2134
       },
       "before": [],
       "after": [
         {
-          "je": 14462,
-          "timestamp": "2026-03-27T00:54:00+04:00",
+          "je": 14407,
+          "timestamp": "2026-03-16T20:39:00+04:00",
           "rows": [
             {
-              "row_id": "L-14462-1",
+              "row_id": "L-14407-1",
               "account": "1100",
-              "debit_minor": 526200006,
+              "debit_minor": 6622402,
               "credit_minor": 0,
               "currency": "KZT",
-              "entity_id": "C-1838",
-              "invoice_id": "INV-2631",
+              "entity_id": "C-2858",
+              "invoice_id": "INV2617",
               "payment_id": null
             },
             {
-              "row_id": "L-14462-2",
+              "row_id": "L-14407-2",
               "account": "4000",
               "debit_minor": 0,
-              "credit_minor": 526200006,
+              "credit_minor": 6622402,
               "currency": "KZT",
-              "entity_id": "C-1838",
-              "invoice_id": "INV-2631",
+              "entity_id": "C-2858",
+              "invoice_id": "INV2617",
               "payment_id": null
             }
           ]
@@ -188,6 +188,7 @@
     ],
     "violations": []
   },
+  "skipped_injectors": [],
   "inserted_documents": [
     "D-23545",
     "D-23755"

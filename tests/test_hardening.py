@@ -68,6 +68,17 @@ class Reporter:
     def reset(self, o, i):
         self.ep = o["manifest"]["episode_id"]
         return {"name": "submit", "arguments": {"findings": {"episode_id": self.ep, "findings": []}}}
+class Forger:
+    """Round-2 PoC: plants symlinks where the runner will write (no bytes written, no fork)."""
+    def __init__(self, root=""):
+        self.root = root
+    def reset(self, o, i):
+        for name, target in (("evil:Forger", "oracle"), ("dangling", "nowhere")):
+            try:
+                os.symlink(os.path.join(self.root, target), os.path.join(self.root, name))
+            except OSError:
+                pass
+        return {"name": "submit", "arguments": {"findings": {"episode_id": o["manifest"]["episode_id"], "findings": []}}}
 class ReadRuns:
     def __init__(self, root=""):
         self.root = root
@@ -94,6 +105,7 @@ def _ask_reset(evil, cls, env=None):
         child.close()
 
 
+@pytest.mark.skipif(hasattr(os, "geteuid") and os.geteuid() == 0, reason="RLIMIT_NPROC is not enforced for root; run as a normal user")
 def test_child_cannot_fork_or_read_parent_environment(evil, monkeypatch):
     monkeypatch.setenv("AUDITGYM_SALT", "closed-secret")
     action, status = _ask_reset(evil, "Fork")
@@ -160,7 +172,7 @@ def test_open_splits_ignore_closed_salt(monkeypatch):
 
 def test_closed_split_file_is_honoured_by_cli(capsys):
     from auditgym.cli import build_parser, _episodes
-    a = build_parser().parse_args(["run", "--policy", "oracle", "--config", "configs/closed_example.json"])
+    a = build_parser().parse_args(["run", "--policy", "oracle", "--config", "configs/closed_example.json", "--public-salt"])
     eps = _episodes(a)
     assert len(eps) == 20 and sum(1 for _, e in eps if not e.truth["issues"]) == 5
     assert sum(1 for _, e in eps if any(i["link_id"] for i in e.truth["issues"])) >= 5
@@ -256,3 +268,94 @@ def test_no_real_brand_names():
     blob = json.dumps([ep.public["invoices"] for ep in EPS])
     for brand in ("Kaspi", "Halyk", "Air Astana", "Altyn", "Tulpar", "Kazakhtelecom"):
         assert brand not in blob
+
+
+# ---------------------------------------------------------------------------------------- council round 2
+def test_planted_symlinks_cannot_forge_or_crash_outputs(evil, dirty, tmp_path):
+    (tmp_path / "dangling").symlink_to(tmp_path / "nowhere")
+    out = run_policies(["evil:Forger", "oracle"], [("dev", dirty)], tmp_path, mode="eval", policy_path=evil,
+                       args=[f"root={json.dumps(str(tmp_path))}"])
+    d = tmp_path / "evil:Forger"
+    assert d.is_dir() and not d.is_symlink()
+    assert not any(f.is_symlink() for f in d.iterdir())
+    on_disk = json.loads((d / "summary.json").read_text())["all"]["mean_return"]
+    assert on_disk == out["evil:Forger"][0]["reward"] < 0
+    assert json.loads((tmp_path / "oracle" / "summary.json").read_text())["all"]["mean_return"] == 1.0
+
+
+def test_closed_eval_without_salt_is_refused(monkeypatch, tmp_path):
+    from auditgym.cli import main
+    monkeypatch.delenv("AUDITGYM_SALT", raising=False)
+    assert main(["run", "--policy", "oracle", "--split", "configs/closed_example.json", "--out", str(tmp_path)]) == 2
+    assert main(["run", "--policy", "oracle", "--seeds", "7", "--out", str(tmp_path)]) == 2
+
+
+def test_duplicate_keys_rejected_in_string_findings_and_gym():
+    from auditgym.schemas import parse_findings
+    f, err = parse_findings('{"episode_id": "bogus", "episode_id": "E", "findings": []}', "E")
+    assert f is None and "duplicate" in err
+    gym = pytest.importorskip("gymnasium")
+    import auditgym.contrib.gymnasium_env  # noqa: F401  (registers the env)
+    env = gym.make("AuditGym-v1")
+    env.reset(seed=3)
+    obs, r, term, trunc, info = env.step('{"name": "calculator", "name": "submit", "arguments": {"expression": "1"}}')
+    assert not term and json.loads(obs)["error"]["code"] == "invalid_action"
+
+
+def test_leakscan_ignores_the_policys_own_echo():
+    from auditgym.env import AuditEnv
+    from auditgym.leakscan import scan_records
+    env = AuditEnv("eval")
+    env.reset(seed=1)
+    act = {"name": "list_records", "arguments": {"table": "truth_grader"}}
+    obs, r, term, trunc, info = env.step(act)
+    assert "truth_grader" in json.dumps(obs)
+    assert scan_records([{"episode_id": "e", "step": 1, "action": act, "observation": obs, "reward": r, "info": info}], "eval") == []
+
+
+def test_x1_cutoff_amount_does_not_double_count_fx():
+    from auditgym.invariants import BANKS
+    n = 0
+    for ep in EPS:
+        x1 = {i["type"]: i for i in ep.truth["issues"] if i["link_id"] == "X1"}
+        if not x1:
+            continue
+        pay = x1["period_cutoff"]["affected_ids"][0]
+        pid = next(p["payment_id"] for p in ep.public["payments"] if p["doc_id"] == pay)
+        row = next(r for r in ep.public["ledger"] if r["account"] in BANKS and r["payment_id"] == pid)
+        assert abs(row["debit_minor"] - x1["period_cutoff"]["expected_amount_minor"]) == x1["fx_conversion"]["expected_amount_minor"]
+        assert all(any(e.startswith("FX-") for e in s) for s in x1["period_cutoff"]["evidence_sets"])
+        n += 1
+    assert n >= 3
+
+
+def test_duplicate_issue_timing_is_not_a_tell():
+    flagged = dup_flagged = dups = 0
+    for ep in EPS:
+        zi = __import__("zoneinfo").ZoneInfo(ep.public["manifest"]["timezone"])
+        later = {max((d for d in ep.public["invoices"] if d["doc_id"] in i["affected_ids"]), key=lambda d: parse(d["issued_at"]))["doc_id"]
+                 for i in ep.truth["issues"] if i["type"] == "duplicate_invoice"}
+        for d in ep.public["invoices"]:
+            if d["doc_type"] != "invoice" or not d["delivered_at"]:
+                continue
+            lag = (parse(d["issued_at"]) - parse(d["delivered_at"])).total_seconds() / 3600
+            hour = parse(d["issued_at"]).astimezone(zi).hour
+            rule = (lag > 4 and lag != int(lag)) or 4 < lag < 24 or 2 <= hour < 8   # round-2 auditor's classifier
+            flagged += rule
+            dup_flagged += rule and d["doc_id"] in later
+            dups += d["doc_id"] in later
+    assert dups >= 10 and dup_flagged / max(flagged, 1) < 0.5
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="/proc environ exposure is Linux-specific")
+def test_runner_refuses_when_salt_is_exposed_by_another_process(dirty, tmp_path, monkeypatch):
+    import subprocess
+    monkeypatch.setenv("AUDITGYM_SALT", "closed-secret")
+    holder = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])  # stands in for tini / sh -c
+    try:
+        time.sleep(0.2)
+        with pytest.raises(RuntimeError, match="AUDITGYM_SALT"):
+            run_policies(["reconcile"], [("dev", dirty)], tmp_path, mode="eval")
+    finally:
+        holder.kill()
+        holder.wait()

@@ -5,22 +5,22 @@
       "issue_id": "I-01",
       "type": "duplicate_invoice",
       "affected_ids": [
-        "D-49457",
-        "D-50099"
+        "D-21111",
+        "D-56260"
       ],
-      "expected_amount_minor": 74546496,
+      "expected_amount_minor": 59723605,
       "currency": "KZT",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-49457",
-          "D-50099",
-          "L-18670-1"
+          "D-21111",
+          "D-56260",
+          "L-49323-1"
         ],
         [
-          "D-49457",
-          "D-50099",
-          "L-18670-2"
+          "D-21111",
+          "D-56260",
+          "L-49323-2"
         ]
       ],
       "link_id": "X2",
@@ -30,61 +30,61 @@
       "issue_id": "I-02",
       "type": "fx_conversion",
       "affected_ids": [
-        "D-29298"
+        "D-49457"
       ],
-      "expected_amount_minor": 409256,
+      "expected_amount_minor": 105785,
       "currency": "KZT",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-29298",
-          "FX-2026-08-31-USD-KZT",
-          "L-18852-1"
-        ]
-      ],
-      "link_id": "X1",
-      "invariant": "I5"
-    },
-    {
-      "issue_id": "I-03",
-      "type": "fx_conversion",
-      "affected_ids": [
-        "D-77259"
-      ],
-      "expected_amount_minor": 103401,
-      "currency": "KZT",
-      "tolerance_minor": 1,
-      "evidence_sets": [
-        [
-          "D-77259",
-          "FX-2026-08-14-USD-KZT",
-          "L-18705-1"
+          "D-49457",
+          "FX-2026-08-25-USD-KZT",
+          "L-49346-1"
         ],
         [
-          "D-77259",
-          "FX-2026-08-14-USD-KZT",
-          "L-18705-2"
+          "D-49457",
+          "FX-2026-08-25-USD-KZT",
+          "L-49346-2"
         ]
       ],
       "link_id": "X2",
       "invariant": "I5"
     },
     {
+      "issue_id": "I-03",
+      "type": "fx_conversion",
+      "affected_ids": [
+        "D-56894"
+      ],
+      "expected_amount_minor": 409256,
+      "currency": "KZT",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-56894",
+          "FX-2026-08-31-USD-KZT",
+          "L-49411-1"
+        ]
+      ],
+      "link_id": "X1",
+      "invariant": "I5"
+    },
+    {
       "issue_id": "I-04",
       "type": "payment_allocation",
       "affected_ids": [
-        "D-29298",
-        "D-59836"
+        "D-56894",
+        "D-77259"
       ],
       "expected_amount_minor": 43894462,
       "currency": "KZT",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-29298",
-          "D-59836",
+          "D-56894",
+          "D-77259",
           "FX-2026-08-17-USD-KZT",
-          "L-18852-2"
+          "L-49411-2"
         ]
       ],
       "link_id": "X1",
@@ -94,15 +94,16 @@
       "issue_id": "I-05",
       "type": "period_cutoff",
       "affected_ids": [
-        "D-29298"
+        "D-56894"
       ],
-      "expected_amount_minor": 71115888,
+      "expected_amount_minor": 70706632,
       "currency": "KZT",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-29298",
-          "L-18852-1"
+          "D-56894",
+          "FX-2026-08-31-USD-KZT",
+          "L-49411-1"
         ]
       ],
       "link_id": "X1",

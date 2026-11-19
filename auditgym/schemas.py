@@ -6,6 +6,8 @@ from typing import Annotated, Literal
 import msgspec
 from msgspec import Meta
 
+from .canon import loads_strict
+
 FindingType = Literal["duplicate_invoice", "payment_allocation", "fx_conversion", "period_cutoff"]
 Id = Annotated[str, Meta(min_length=1, max_length=64)]
 Currency = Literal["KZT", "USD", "EUR", "CNY", "GBP", "JPY", "KWD"]  # money.EXPONENTS keys
@@ -32,10 +34,9 @@ def parse_findings(obj, episode_id: str) -> tuple[list[dict] | None, str | None]
         if isinstance(obj, (str, bytes)) and len(obj) > 2_000_000:
             return None, "schema: payload too large"
         if isinstance(obj, (str, bytes)):
-            parsed = msgspec.json.decode(obj, type=Findings, strict=True)
-        else:
-            parsed = msgspec.convert(obj, Findings, strict=True)
-    except (msgspec.ValidationError, msgspec.DecodeError, TypeError, ValueError, RecursionError) as exc:
+            obj = loads_strict(obj)
+        parsed = msgspec.convert(obj, Findings, strict=True)
+    except (msgspec.ValidationError, msgspec.DecodeError, TypeError, ValueError, RecursionError, UnicodeDecodeError) as exc:
         return None, f"schema: {str(exc)[:200]}"
     if parsed.episode_id != episode_id:
         return None, "schema: episode_id mismatch"

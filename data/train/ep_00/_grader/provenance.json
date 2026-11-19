@@ -98,7 +98,7 @@
   },
   "config_hash": "7c94e16120a30e63",
   "config_version": "1.0.0",
-  "public_fingerprint": "a075b94f34ef647bfc370e0cce2e35902fd5bb5f22db5c225db41402a8d512bb",
+  "public_fingerprint": "ad751ca34053145ddbb3ab378ab513c314556dd624114b455251c18fea73ddcf",
   "events": [],
   "invariants_before_injection": {
     "checked": [
@@ -113,5 +113,6 @@
     ],
     "violations": []
   },
+  "skipped_injectors": [],
   "inserted_documents": []
 }

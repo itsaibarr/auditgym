@@ -7,12 +7,12 @@
     "mean_return": -1.0,
     "mean_return_experimental": -1.0,
     "mean_steps": 4.3,
-    "mean_wall_s": 0.052,
-    "clean_episodes": 4,
+    "mean_wall_s": 0.025,
+    "clean_episodes": 2,
     "clean_fp_rate": 1.0,
     "tp": 0,
     "fp": 300,
-    "fn": 19,
+    "fn": 22,
     "per_type": {
       "duplicate_invoice": {
         "tp": 0,
@@ -22,12 +22,12 @@
       "payment_allocation": {
         "tp": 0,
         "fp": 80,
-        "fn": 5
+        "fn": 7
       },
       "fx_conversion": {
         "tp": 0,
         "fp": 70,
-        "fn": 3
+        "fn": 4
       },
       "period_cutoff": {
         "tp": 0,
@@ -47,12 +47,12 @@
     "mean_return": -1.0,
     "mean_return_experimental": -1.0,
     "mean_steps": 4.3,
-    "mean_wall_s": 0.052,
-    "clean_episodes": 4,
+    "mean_wall_s": 0.025,
+    "clean_episodes": 2,
     "clean_fp_rate": 1.0,
     "tp": 0,
     "fp": 300,
-    "fn": 19,
+    "fn": 22,
     "per_type": {
       "duplicate_invoice": {
         "tp": 0,
@@ -62,12 +62,12 @@
       "payment_allocation": {
         "tp": 0,
         "fp": 80,
-        "fn": 5
+        "fn": 7
       },
       "fx_conversion": {
         "tp": 0,
         "fp": 70,
-        "fn": 3
+        "fn": 4
       },
       "period_cutoff": {
         "tp": 0,

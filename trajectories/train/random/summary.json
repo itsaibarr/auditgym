@@ -3,16 +3,16 @@
     "episodes": 10,
     "micro_precision": 0.0,
     "micro_recall": 0.0,
-    "mean_f1": 0.1,
-    "mean_return": -0.82,
-    "mean_return_experimental": -0.82,
+    "mean_f1": 0.0,
+    "mean_return": -1.0,
+    "mean_return_experimental": -1.0,
     "mean_steps": 70.0,
-    "mean_wall_s": 0.063,
-    "clean_episodes": 4,
-    "clean_fp_rate": 0.75,
+    "mean_wall_s": 0.031,
+    "clean_episodes": 2,
+    "clean_fp_rate": 1.0,
     "tp": 0,
     "fp": 13,
-    "fn": 19,
+    "fn": 22,
     "per_type": {
       "period_cutoff": {
         "tp": 0,
@@ -22,7 +22,7 @@
       "fx_conversion": {
         "tp": 0,
         "fp": 2,
-        "fn": 3
+        "fn": 4
       },
       "duplicate_invoice": {
         "tp": 0,
@@ -32,7 +32,7 @@
       "payment_allocation": {
         "tp": 0,
         "fp": 2,
-        "fn": 5
+        "fn": 7
       }
     },
     "termination": {
@@ -44,16 +44,16 @@
     "episodes": 10,
     "micro_precision": 0.0,
     "micro_recall": 0.0,
-    "mean_f1": 0.1,
-    "mean_return": -0.82,
-    "mean_return_experimental": -0.82,
+    "mean_f1": 0.0,
+    "mean_return": -1.0,
+    "mean_return_experimental": -1.0,
     "mean_steps": 70.0,
-    "mean_wall_s": 0.063,
-    "clean_episodes": 4,
-    "clean_fp_rate": 0.75,
+    "mean_wall_s": 0.031,
+    "clean_episodes": 2,
+    "clean_fp_rate": 1.0,
     "tp": 0,
     "fp": 13,
-    "fn": 19,
+    "fn": 22,
     "per_type": {
       "period_cutoff": {
         "tp": 0,
@@ -63,7 +63,7 @@
       "fx_conversion": {
         "tp": 0,
         "fp": 2,
-        "fn": 3
+        "fn": 4
       },
       "duplicate_invoice": {
         "tp": 0,
@@ -73,7 +73,7 @@
       "payment_allocation": {
         "tp": 0,
         "fp": 2,
-        "fn": 5
+        "fn": 7
       }
     },
     "termination": {

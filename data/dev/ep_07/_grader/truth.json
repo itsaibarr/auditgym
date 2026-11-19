@@ -5,22 +5,22 @@
       "issue_id": "I-01",
       "type": "duplicate_invoice",
       "affected_ids": [
-        "D-79943",
-        "D-81719"
+        "D-12904",
+        "D-59081"
       ],
-      "expected_amount_minor": 973974,
+      "expected_amount_minor": 274331,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-79943",
-          "D-81719",
-          "L-20646-1"
+          "D-12904",
+          "D-59081",
+          "L-18408-1"
         ],
         [
-          "D-79943",
-          "D-81719",
-          "L-20646-2"
+          "D-12904",
+          "D-59081",
+          "L-18408-2"
         ]
       ],
       "link_id": "X2",
@@ -30,43 +30,48 @@
       "issue_id": "I-02",
       "type": "fx_conversion",
       "affected_ids": [
-        "D-56170"
+        "D-46858"
       ],
-      "expected_amount_minor": 870,
+      "expected_amount_minor": 8013,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-56170",
-          "FX-2026-07-15-KWD-USD",
-          "L-20699-1"
+          "D-46858",
+          "FX-2026-07-28-JPY-USD",
+          "L-18476-1"
         ],
         [
-          "D-56170",
-          "FX-2026-07-15-KWD-USD",
-          "L-20699-2"
+          "D-46858",
+          "FX-2026-07-28-JPY-USD",
+          "L-18476-2"
         ]
       ],
-      "link_id": "X2",
+      "link_id": null,
       "invariant": "I5"
     },
     {
       "issue_id": "I-03",
       "type": "fx_conversion",
       "affected_ids": [
-        "D-83186"
+        "D-47193"
       ],
-      "expected_amount_minor": 6708,
+      "expected_amount_minor": 831,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-83186",
-          "FX-2026-07-31-KWD-USD",
-          "L-20880-1"
+          "D-47193",
+          "FX-2026-07-27-KWD-USD",
+          "L-18455-1"
+        ],
+        [
+          "D-47193",
+          "FX-2026-07-27-KWD-USD",
+          "L-18455-2"
         ]
       ],
-      "link_id": null,
+      "link_id": "X2",
       "invariant": "I5"
     }
   ]

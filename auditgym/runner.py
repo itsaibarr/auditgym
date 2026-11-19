@@ -17,6 +17,7 @@ import os
 import platform
 import selectors
 import shlex
+import shutil
 import signal
 import subprocess
 import sys
@@ -26,14 +27,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import __version__
-from .canon import dumps
+from .canon import dumps, loads_strict
 from .env import AuditEnv
 from .episode import Episode
 from .policies import BUILTIN, OraclePolicy
 
 STEP_TIMEOUT_S = 30.0
 EPISODE_TIMEOUT_S = 60.0
-MAX_LINE = 2_000_000
+MAX_LINE = 512_000  # the largest schema-valid submission is ~225 KB
 _PKG = Path(__file__).resolve().parent
 
 
@@ -47,6 +48,23 @@ def harden_runner() -> None:
             pass
 
 
+def salt_exposures() -> list[int]:
+    """Linux: pids of *other* processes whose environment we (and so a same-user policy) can read and that hold
+    AUDITGYM_SALT, e.g. `docker run --init` (tini as PID 1), an `sh -c` wrapper or `uv run` as the parent."""
+    if not sys.platform.startswith("linux") or not os.environ.get("AUDITGYM_SALT"):
+        return []
+    hits = []
+    for d in Path("/proc").iterdir():
+        if not d.name.isdigit() or int(d.name) == os.getpid():
+            continue
+        try:
+            if b"AUDITGYM_SALT=" in (d / "environ").read_bytes():
+                hits.append(int(d.name))
+        except OSError:
+            continue
+    return hits
+
+
 def code_hash() -> str:
     h = hashlib.sha256()
     for p in sorted(_PKG.rglob("*.py")):
@@ -55,19 +73,10 @@ def code_hash() -> str:
     return h.hexdigest()[:16]
 
 
-def _no_dup_keys(pairs):
-    d = {}
-    for k, v in pairs:
-        if k in d:
-            raise ValueError(f"duplicate key {k!r}")
-        d[k] = v
-    return d
-
-
 def parse_action_line(line: bytes):
     """Returns (action, status): ok | invalid. Never raises."""
     try:
-        return json.loads(line, object_pairs_hook=_no_dup_keys), "ok"
+        return loads_strict(line), "ok"
     except (ValueError, RecursionError, UnicodeDecodeError):
         return line[:200].decode("utf-8", "replace"), "invalid"
 
@@ -239,6 +248,16 @@ def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root
                  dir_name=None) -> dict[str, list[dict]]:
     """Run several policies (oracle last); write every output only after all of them have finished."""
     order = sorted(specs, key=lambda s: s == "oracle")
+    out_root = Path(out_root)
+    out_root.mkdir(parents=True, exist_ok=True)
+    if isolate and not allow_forks and hasattr(os, "geteuid") and os.geteuid() == 0:
+        print("warning: running as root: RLIMIT_NPROC is not enforced for root, so policies can fork. "
+              "Run as an unprivileged user (the Docker image does).", file=sys.stderr)
+    exposed = salt_exposures() if isolate else []
+    if exposed:
+        raise RuntimeError(f"AUDITGYM_SALT is readable in the environment of other process(es) {exposed[:5]} (e.g. docker --init, "
+                           "an sh -c / uv run wrapper); a policy could read it. Start the runner directly: "
+                           "docker run --rm -e AUDITGYM_SALT=... auditgym:1.0.0 run ...")
     done: dict[str, list[EpisodeRun]] = {}
     for spec in order:
         runs = []
@@ -247,10 +266,21 @@ def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root
             er.result["split"] = split
             runs.append(er)
         done[spec] = runs
+    # Every child is dead now. A child could still have planted symlinks/dirs under out_root (it may know the
+    # path from our argv), so never write through existing paths: build each run dir fresh, then swap it in.
+    if out_root.is_symlink() or not out_root.is_dir():
+        raise RuntimeError(f"output root {out_root} was replaced during the run; refusing to write")
     out = {}
     for spec in specs:
         d = out_root / (dir_name(spec) if dir_name else spec)
-        _write_run(spec, done[spec], episodes, d, mode, args, meta)
+        tmp = Path(tempfile.mkdtemp(prefix=".tmp-", dir=out_root))
+        tmp.chmod(0o755)
+        _write_run(spec, done[spec], episodes, tmp, mode, args, meta)
+        if d.is_symlink() or d.is_file():
+            d.unlink()
+        elif d.exists():
+            shutil.rmtree(d)
+        os.replace(tmp, d)
         out[spec] = [er.result for er in done[spec]]
     return out
 
@@ -261,7 +291,6 @@ def run_policy(spec: str, episodes, out: Path, mode: str = "eval", args=None, po
 
 
 def _write_run(spec, runs, episodes, out: Path, mode, args, meta) -> None:
-    out.mkdir(parents=True, exist_ok=True)
     with open(out / "trajectories.jsonl", "w", encoding="utf-8", errors="backslashreplace") as f:
         for er in runs:
             for t in er.trajectory:

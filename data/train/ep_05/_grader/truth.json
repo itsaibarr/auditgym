@@ -5,19 +5,21 @@
       "issue_id": "I-01",
       "type": "period_cutoff",
       "affected_ids": [
-        "D-45351"
+        "D-74704"
       ],
-      "expected_amount_minor": 629245,
+      "expected_amount_minor": 873718,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-45351",
-          "L-16072-1"
+          "D-74704",
+          "FX-2026-09-02-CNY-USD",
+          "L-16071-1"
         ],
         [
-          "D-45351",
-          "L-16072-2"
+          "D-74704",
+          "FX-2026-09-02-CNY-USD",
+          "L-16071-2"
         ]
       ],
       "link_id": null,
