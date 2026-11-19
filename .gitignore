@@ -4,3 +4,8 @@ secrets/
 __pycache__/
 .venv/
 research/case.pdf
+runs/
+.pytest_cache/
+*.egg-info/
+dist/
+.hypothesis/
