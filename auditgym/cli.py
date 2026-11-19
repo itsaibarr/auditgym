@@ -147,6 +147,13 @@ def cmd_run(a) -> int:
     specs = a.policy.split(",")
     if any(x.startswith("-") or "=" not in x for x in (a.policy_arg or [])):
         raise ValueError(f"--policy-arg takes key=value pairs, got {a.policy_arg!r}")
+    from .policies import BUILTIN
+    from .runner import install_writable
+    custom = [s for s in specs if s != "oracle" and s not in BUILTIN]
+    if custom and not a.no_isolate and not a.trust_policies and install_writable():
+        raise ValueError("this auditgym installation is writable by your user, and the grader runs in this process: an "
+                         "untrusted policy could modify it persistently (e.g. through __pycache__). Evaluate third-party "
+                         "policies in the Docker image (package owned by root), or pass --trust-policies for your own code.")
     def name(spec: str) -> str:
         n = "".join(c if c.isalnum() or c in "._-" else "_" for c in spec).lstrip(".")
         if not n:
@@ -400,6 +407,7 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--policy-arg", action="append", default=[], help="k=v passed to the policy constructor")
     r.add_argument("--policy-path", help="directory added to the policy child's sys.path")
     r.add_argument("--no-isolate", action="store_true", help="run builtin policies in-process (debug only)")
+    r.add_argument("--trust-policies", action="store_true", help="allow custom policies on a user-writable install (your own code only)")
     r.add_argument("--public-salt", action="store_true", help="allow an eval run of non-open episodes without AUDITGYM_SALT (not a closed evaluation)")
     r.add_argument("--allow-forks", action="store_true", help="let the policy spawn processes/threads (weakens isolation; e.g. node)")
     r.add_argument("--format", choices=["auto", "md", "json", "csv"], default="auto")

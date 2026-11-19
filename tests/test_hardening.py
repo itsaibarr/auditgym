@@ -812,13 +812,14 @@ def test_keyed_integrity_is_fail_closed(monkeypatch, tmp_path, dirty):
     assert any("wrong AUDITGYM_SALT" in p for p in verify_run(tmp_path / "oracle"))
 
 
-def test_closed_eval_refuses_untrusted_policy_on_writable_install(evil, dirty, tmp_path, monkeypatch):
+def test_cli_refuses_custom_policies_on_a_writable_install(tmp_path, monkeypatch):
     import auditgym.runner as R
-    monkeypatch.setenv("AUDITGYM_SALT", "k" * 40)
-    monkeypatch.setattr(R, "_install_writable", lambda: True)
-    with pytest.raises(RuntimeError, match="writable"):
-        run_policies(["evil:Learner"], [("dev", dirty)], tmp_path, mode="eval", policy_path=evil)
-    run_policies(["reconcile"], [("dev", dirty)], tmp_path, mode="eval")   # builtins are fine
+    from auditgym.cli import main
+    monkeypatch.setattr(R, "install_writable", lambda: True)
+    args = ["run", "--policy", "my_policy:LookAround", "--policy-path", "examples", "--split", "dev", "--out", str(tmp_path)]
+    assert main(args) == 2
+    assert main(args + ["--trust-policies"]) == 0
+    assert main(["run", "--policy", "reconcile", "--split", "dev", "--out", str(tmp_path / "b")]) == 0   # builtins are fine
 
 
 def test_policy_args_cannot_smuggle_a_path_into_builtins(tmp_path):

@@ -372,12 +372,6 @@ def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root
               "Run as an unprivileged user (the Docker image does).", file=sys.stderr)
     custom = [s for s in specs if s != "oracle" and s not in BUILTIN]
     closed = bool(os.environ.get("AUDITGYM_SALT"))
-    if isolate and custom and _install_writable():
-        msg = (f"the auditgym installation ({_PKG}) is writable by this user, so an untrusted policy could persistently "
-               "modify the grader (e.g. via __pycache__ symlinks). Evaluate third-party policies in the Docker image.")
-        if closed:
-            raise RuntimeError(msg)
-        print(f"warning: {msg}", file=sys.stderr)
     if isolate and sys.platform.startswith("linux") and os.getpid() != 1 and (allow_forks or closed) and custom:
         print("warning: the runner is not PID 1, so leftover policy processes are reaped by a /proc walk instead of "
               "kill(-1); for closed or --allow-forks evaluation use `docker run ... auditgym:1.0.0 run ...`", file=sys.stderr)
@@ -452,7 +446,7 @@ def _integrity_key() -> bytes | None:
     return hmac.new(salt.encode(), b"auditgym-run-integrity-v1", hashlib.sha256).digest() if salt else None
 
 
-def _install_writable() -> bool:
+def install_writable() -> bool:
     """True if this user could modify the installed package (source files or bytecode caches)."""
     if os.access(_PKG, os.W_OK):
         return True
