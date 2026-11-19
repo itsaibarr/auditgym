@@ -326,6 +326,10 @@ def x1_prepare(c: Ctx):
             convert(un, inv.ccy, w.base, w.fx[(new_day, inv.ccy)])]       # the 2150 row as it will be recorded
     if any(abs(a - alloc_delta) <= 2 for a in alts) or abs(correct_bank - convert(amt, inv.ccy, w.base, inv_rate)) <= 2:
         raise Abort("x1 alternatives too close")
+    rec_fx = wrong_bank - convert(part, inv.ccy, w.base, inv_rate) - alts[1]   # the recorded 7100/7200 row
+    cor_fx = correct_bank - convert(amt, inv.ccy, w.base, inv_rate)
+    if any(0 < abs(x - abs(wrong_bank - correct_bank)) <= 2 for x in (abs(rec_fx), abs(rec_fx - cor_fx))):
+        raise Abort("x1 fx alternatives too close")
     c.mark(inv)
     p = Payment(f"pay{len(w.payments)}", "receipt", inv.cust, inv.ccy, ts, amt, [inv], utc_written=c.r.chance(0.3))
     w.payments.append(p)

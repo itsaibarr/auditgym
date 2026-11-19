@@ -60,6 +60,14 @@ def _fmt(v) -> str:
 # ------------------------------------------------------------------------------------------ episodes
 def _episodes(a) -> list:
     if getattr(a, "episodes", None):
+        import os
+        has_truth = any((Path(d) / "_grader").is_dir() or any(Path(d).glob("*/_grader")) for d in a.episodes)
+        if has_truth and getattr(a, "fn", None) is cmd_run and a.mode == "eval":
+            if os.environ.get("AUDITGYM_SALT"):
+                raise ValueError("closed evaluation must not read episodes from disk: their _grader/ truth is readable by the "
+                                 "policy. Use --split - < closed_split.json")
+            print("warning: these episode dirs contain _grader/ truth that the policy can read; fine for open data, "
+                  "not for a closed evaluation", file=sys.stderr)
         out = []
         for d in a.episodes:
             p = Path(d)
@@ -69,7 +77,7 @@ def _episodes(a) -> list:
     cfg = json.loads(Path(a.config).read_text()) if getattr(a, "config", None) else None
     if cfg is not None and "episodes" in cfg:
         if getattr(a, "seeds", None):
-            raise ValueError("--config is a split file with its own episodes/seeds; use --split <file> (without --seeds)")
+            raise ValueError("--config is a split file with its own episodes/seeds; use --split <file> (or --split - for a closed eval), without --seeds")
         _closed_guard(a, "config")
         return split_episodes(a.config)
     if getattr(a, "seeds", None):
@@ -80,7 +88,10 @@ def _episodes(a) -> list:
     for s in a.split.split(","):
         if s == "-":  # closed split on stdin: never in argv or on a path the policy could read
             _closed_guard(a, "stdin")
-            cfg_in = loads_strict(sys.stdin.read())
+            text = sys.stdin.read()
+            if not text.strip():
+                raise ValueError("no split on stdin: docker run -i ... --split - < closed_split.json")
+            cfg_in = loads_strict(text)
             sys.stdin.close()
             out += sorted(split_episodes("-", cfg_in), key=lambda x: x[1].episode_id)  # order reveals nothing
         elif s in ("train", "dev"):
@@ -153,8 +164,7 @@ def cmd_run(a) -> int:
         if bad:
             print(f"warning: {spec}: {len(bad)}/{len(res)} episodes ended by {sorted({r['termination'] for r in bad})} "
                   f"(policy failed to start, crashed or timed out; graded as empty answers). Only if the policy itself needs "
-                  f"threads or subprocesses: --allow-forks lifts RLIMIT_NPROC=1 (weaker isolation; on Linux escaped processes "
-                  f"are killed before outputs are written)", file=sys.stderr)
+                  f"threads or subprocesses: --allow-forks lifts RLIMIT_NPROC=1 (trusted policies only; see README, Isolation)", file=sys.stderr)
     print_table(rows, f"AuditGym {a.mode} run", a.format)
     return 0
 
@@ -199,6 +209,8 @@ def cmd_grade(a) -> int:
 def cmd_replay(a) -> int:
     from .canon import dumps
     from .env import AuditEnv
+    from .policies import OraclePolicy
+    from .runner import WITHHELD
     run = Path(a.run)
     if not _verified([run]):
         return 1
@@ -222,7 +234,10 @@ def cmd_replay(a) -> int:
         obs, info = env.reset(options={"episode": eps[eid]})
         ok = dumps(obs) == dumps(steps[0]["observation"])
         for r in steps[1:]:
-            got = env.abort(r["info"].get("error_code") or "timeout") if r["action"] is None else env.step(r["action"])
+            act = r["action"]
+            if meta.get("policy") == "oracle" and isinstance(act, dict) and act.get("arguments") == WITHHELD:
+                act = OraclePolicy(eps[eid].truth).reset(steps[0]["observation"], None)  # closed run: rebuild from regenerated truth
+            got = env.abort(r["info"].get("error_code") or "timeout") if act is None else env.step(act)
             ok &= dumps(list(got[:4])) == dumps([r["observation"], r["reward"], r["terminated"], r["truncated"]])
         replayed += 1
         mismatches += not ok
@@ -431,6 +446,9 @@ def main(argv: list[str] | None = None) -> int:
         return 130
     except (OSError, RuntimeError, KeyError, json.JSONDecodeError, ValueError) as e:
         print(f"error: {e}", file=sys.stderr)
+        if isinstance(e, PermissionError):
+            print("hint: in Docker the image runs as user `auditor`; on Linux add --user \"$(id -u):$(id -g)\" for mounted "
+                  "output dirs, and write generate/schema output under /tmp or a mounted dir", file=sys.stderr)
         return 2
 
 

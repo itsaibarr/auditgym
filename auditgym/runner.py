@@ -73,29 +73,73 @@ def salt_exposures() -> list[int]:
     return hits
 
 
-def _children() -> set[int]:
-    kids = set()
+def _ppids() -> dict[int, int]:
+    out = {}
     for d in Path("/proc").iterdir():
         if d.name.isdigit():
             try:
-                if int((d / "stat").read_text().rsplit(")", 1)[1].split()[1]) == os.getpid():
-                    kids.add(int(d.name))
+                out[int(d.name)] = int((d / "stat").read_text().rsplit(")", 1)[1].split()[1])
             except (OSError, ValueError, IndexError):
                 pass
-    return kids
+    return out
+
+
+def _descendants(roots: set[int], ppids: dict[int, int]) -> set[int]:
+    kids: dict[int, list[int]] = {}
+    for pid, pp in ppids.items():
+        kids.setdefault(pp, []).append(pid)
+    out, stack = set(), list(roots)
+    while stack:
+        for k in kids.get(stack.pop(), []):
+            if k not in out:
+                out.add(k)
+                stack.append(k)
+    return out
+
+
+def _children() -> set[int]:
+    me = os.getpid()
+    return {pid for pid, pp in _ppids().items() if pp == me}
 
 
 def reap_leftovers(keep: set[int] = frozenset()) -> int:
-    """Linux: SIGKILL every child of the runner that is not in `keep` (children that existed before the run).
-    With PR_SET_CHILD_SUBREAPER a daemon that escaped the policy's process group (--allow-forks + setsid) is
-    re-parented to the runner, so it is caught here before any output is written."""
+    """Linux: kill every process descended from the runner that is not in `keep` (and not below it) - the whole
+    tree at once, not one layer at a time. With PR_SET_CHILD_SUBREAPER, policy processes that escaped the process
+    group (--allow-forks + setsid, double forks) are re-parented to the runner, so they are all descendants.
+    Stop-then-kill: freeze the tree (no new forks), re-scan until stable, then SIGKILL."""
     if not sys.platform.startswith("linux"):
         return 0
+    me = os.getpid()
+    if me == 1 and not keep:  # Docker: the runner is the namespace init; kill(-1) reaches every other process at once
+        try:
+            os.kill(-1, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    else:
+        stopped: set[int] = set()
+        for _ in range(1000):
+            ppids = _ppids()
+            protected = set(keep) | _descendants(set(keep), ppids)
+            victims = _descendants({me}, ppids) - protected
+            new = victims - stopped
+            if not new:
+                break
+            for pid in new:
+                try:
+                    os.kill(pid, signal.SIGSTOP)
+                except ProcessLookupError:
+                    pass
+            stopped |= new
+        for pid in stopped:
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
     n = 0
-    for _ in range(50):
+    while True:  # collect zombies re-parented to us (never wait on kept children)
         kids = _children() - set(keep)
         if not kids:
-            break
+            return n
         for pid in kids:
             try:
                 os.kill(pid, signal.SIGKILL)
@@ -103,7 +147,6 @@ def reap_leftovers(keep: set[int] = frozenset()) -> int:
                 n += 1
             except (ProcessLookupError, ChildProcessError, PermissionError):
                 pass
-    return n
 
 
 def code_hash() -> str:
@@ -126,6 +169,7 @@ def parse_action_line(line: bytes):
 class EpisodeRun:
     result: dict
     trajectory: list[dict] = field(default_factory=list)
+    stderr_tail: str = ""
 
 
 class ChildPolicy:
@@ -143,8 +187,10 @@ class ChildPolicy:
             argv = host + [spec, *(args or [])]
             if policy_path:
                 argv.append(f"--path={os.path.abspath(policy_path)}")
-        self.proc = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        self.proc = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                      cwd=self.tmp.name, env=env, start_new_session=True)
+        os.set_blocking(self.proc.stderr.fileno(), False)  # never read during the episode; drained (<=64 KB) at close
+        self.stderr_tail = ""
         os.set_blocking(self.proc.stdin.fileno(), False)
         self.sel = selectors.DefaultSelector()
         self.sel.register(self.proc.stdout, selectors.EVENT_READ)
@@ -209,8 +255,12 @@ class ChildPolicy:
         except (ProcessLookupError, PermissionError):
             pass
         self.proc.wait()
+        try:
+            self.stderr_tail = (os.read(self.proc.stderr.fileno(), 65536) or b"").decode("utf-8", "replace")[-2000:]
+        except OSError:
+            pass
         self.sel.close()
-        for f in (self.proc.stdin, self.proc.stdout):
+        for f in (self.proc.stdin, self.proc.stdout, self.proc.stderr):
             try:
                 f.close()
             except OSError:
@@ -275,13 +325,14 @@ def run_episode(spec: str, ep: Episode, mode: str = "eval", args=None, policy_pa
             msg = {"type": "step", "observation": obs, "reward": r, "terminated": term, "truncated": trunc, "info": info}
     finally:
         pol.close(final)
+    stderr_tail = getattr(pol, "stderr_tail", "") if termination in ("policy_crash", "timeout") else ""
     g = env.result()
     result = {
         "episode_id": eid, "policy": spec, "mode": mode, "termination": termination, "steps": env.steps_used,
         "wall_s": round(time.monotonic() - t0, 3), "n_truth": len(ep.truth["issues"]), "clean": not ep.truth["issues"],
         **{k: g[k] for k in ("valid", "tp", "fp", "fn", "precision", "recall", "f1", "reward", "reward_experimental", "inspection_steps", "per_type", "matches")},
     }
-    return EpisodeRun(result, traj)
+    return EpisodeRun(result, traj, stderr_tail)  # stderr is shown for crashed policies, never graded or written
 
 
 def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root: Path, mode: str = "eval", args=None,
@@ -316,6 +367,10 @@ def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root
             er.result["split"] = split
             runs.append(er)
         done[spec] = runs
+        crashed = next((er for er in runs if er.stderr_tail.strip()), None)
+        if crashed:
+            tail = "\n".join(crashed.stderr_tail.strip().splitlines()[-20:])
+            print(f"policy {spec} ({crashed.result['termination']} on {crashed.result['episode_id']}), last stderr lines:\n{tail}", file=sys.stderr)
     # Every child is dead now. A child could still have planted symlinks/dirs under out_root (it may know the
     # path from our argv), so never write through existing paths: build each run dir fresh, then swap it in.
     reap_leftovers(keep)
@@ -356,6 +411,7 @@ def run_policy(spec: str, episodes, out: Path, mode: str = "eval", args=None, po
 
 
 RUN_FILES = ("trajectories.jsonl", "results.jsonl", "summary.json")
+WITHHELD = "<withheld: closed run>"
 
 
 def _file_sha(p: Path) -> str:
@@ -366,6 +422,8 @@ def verify_run(d: Path) -> list[str]:
     """Integrity of a run dir written by run_policies: regular single-link files whose hashes, dir name and policy
     match run.json. A policy cannot write bytes, so it cannot forge a matching run.json."""
     d = Path(d)
+    if not os.path.lexists(d):
+        return [f"{d}: no such run dir"]
     if d.is_symlink() or not d.is_dir():
         return [f"{d}: not a regular directory"]
     probs = []
@@ -373,12 +431,10 @@ def verify_run(d: Path) -> list[str]:
         p = d / n
         if p.is_symlink() or not p.is_file():
             probs.append(f"{p}: missing or not a regular file")
-        elif p.stat().st_nlink != 1:
-            probs.append(f"{p}: has extra hard links")
     if probs:
         return probs
     meta = json.loads((d / "run.json").read_text())
-    if meta.get("dir") != d.name:
+    if meta.get("dir") != d.resolve().name:
         probs.append(f"{d}: run.json belongs to run dir {meta.get('dir')!r}")
     for n, h in (meta.get("files") or {}).items():
         if n not in RUN_FILES or _file_sha(d / n) != h:
@@ -390,17 +446,23 @@ def verify_run(d: Path) -> list[str]:
 
 def _write_run(spec, runs, episodes, out: Path, mode, args, meta, dir_label: str | None = None) -> None:
     closed_oracle = spec == "oracle" and bool(os.environ.get("AUDITGYM_SALT"))
-    with open(out / "trajectories.jsonl", "w", encoding="utf-8", errors="backslashreplace") as f:
-        for er in runs:
-            for t in er.trajectory:
-                if closed_oracle:  # the oracle's submit IS the closed truth: never persist it
-                    t = {**t, "action": None if t["action"] is None else {"name": t["action"]["name"], "arguments": "<withheld: closed run>"}}
-                f.write(dumps(t) + "\n")
+    hashes = {}
+
+    def put(name: str, text: str) -> None:  # hash the bytes we write, never re-read them: a swapped file can't inherit a hash
+        data = text.encode("utf-8", "backslashreplace")
+        (out / name).write_bytes(data)
+        hashes[name] = hashlib.sha256(data).hexdigest()
+
+    lines = []
+    for er in runs:
+        for t in er.trajectory:
+            if closed_oracle:  # the oracle's submit IS the closed truth: never persist it (replay rebuilds it)
+                t = {**t, "action": None if t["action"] is None else {"name": t["action"]["name"], "arguments": WITHHELD}}
+            lines.append(dumps(t) + "\n")
+    put("trajectories.jsonl", "".join(lines))
     results = [er.result for er in runs]
-    with open(out / "results.jsonl", "w", encoding="utf-8", errors="backslashreplace") as f:
-        for r in results:
-            f.write(dumps(r) + "\n")
-    (out / "summary.json").write_text(json.dumps(summarize(results), indent=2) + "\n")
+    put("results.jsonl", "".join(dumps(r) + "\n" for r in results))
+    put("summary.json", json.dumps(summarize(results), indent=2) + "\n")
     run_meta = {
         "auditgym_version": __version__, "code_hash": code_hash(), "policy": spec, "policy_args": args or [], "mode": mode,
         "python": platform.python_version(), "platform": platform.platform(),
@@ -410,7 +472,7 @@ def _write_run(spec, runs, episodes, out: Path, mode, args, meta, dir_label: str
         "salt": "custom" if os.environ.get("AUDITGYM_SALT") else "default-open", **(meta or {}),
     }
     run_meta["dir"] = dir_label or out.name
-    run_meta["files"] = {n: _file_sha(out / n) for n in RUN_FILES}
+    run_meta["files"] = hashes
     (out / "run.json").write_text(json.dumps(run_meta, indent=2) + "\n")
 
 

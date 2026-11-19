@@ -50,14 +50,40 @@ DEFAULT_CONFIG: dict = {
 def make_config(overrides: dict | None = None) -> dict:
     cfg = json.loads(json.dumps(DEFAULT_CONFIG))
     for k, v in (overrides or {}).items():
+        if k not in DEFAULT_CONFIG:
+            raise ValueError(f"unknown config key {k!r} (known: {sorted(DEFAULT_CONFIG)})")
         if k == "errors":
             for t, spec in v.items():
-                cfg["errors"][t] = {**cfg["errors"].get(t, {}), **spec}
+                if t not in cfg["errors"] or not isinstance(spec, dict) or set(spec) - {"on", "count"}:
+                    raise ValueError(f"bad errors entry {t!r}: types {sorted(cfg['errors'])}, keys on/count")
+                cfg["errors"][t] = {**cfg["errors"][t], **spec}
         elif k == "interacting":
+            if set(v) - {"X1", "X2"}:
+                raise ValueError(f"interacting takes X1/X2 probabilities, got {sorted(v)}")
             cfg["interacting"].update(v)
         else:
             cfg[k] = v
+    _validate_config(cfg)
     return cfg
+
+
+def _validate_config(cfg: dict) -> None:
+    def rng(name, v):
+        if not (isinstance(v, list) and len(v) == 2 and all(isinstance(x, int) and not isinstance(x, bool) for x in v) and 0 <= v[0] <= v[1]):
+            raise ValueError(f"{name} must be [min, max] integers with 0 <= min <= max, got {v!r}")
+    for k in ("customers", "opening_invoices", "invoices", "on_account", "expenses"):
+        rng(k, cfg[k])
+    for t, spec in cfg["errors"].items():
+        rng(f"errors.{t}.count", spec.get("count", [1, 1]))
+    if cfg["customers"][0] < 2:
+        raise ValueError("customers min must be >= 2 (one base-currency and one foreign-currency customer)")
+    if not cfg["base_currencies"] or not all(c in EXPONENTS for c in cfg["base_currencies"] + cfg["foreign_currencies"]):
+        raise ValueError(f"currencies must be non-empty and among {sorted(EXPONENTS)}")
+    for b in cfg["base_currencies"]:
+        if not any(c != b for c in cfg["foreign_currencies"]):
+            raise ValueError(f"foreign_currencies needs at least one currency other than base {b}")
+    if not all(0 <= p <= 1 for p in cfg["interacting"].values()):
+        raise ValueError("interacting probabilities must be in [0, 1]")
 
 
 def current_salt() -> str:

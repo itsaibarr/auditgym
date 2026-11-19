@@ -122,6 +122,33 @@ class Chmod:
     def reset(self, o, i):
         os.chmod(self.root, 0o555)
         return {"name": "submit", "arguments": {"findings": {"episode_id": o["manifest"]["episode_id"], "findings": []}}}
+class Hydra:
+    """--allow-forks: a deep setsid process chain; the deepest process moves the oracle's finished files into the
+    attacker's run dir while the runner writes (round-4 jury PoC)."""
+    def __init__(self, root="", depth=300):
+        self.root, self.depth = root, depth
+    def reset(self, o, i):
+        if os.fork() == 0:
+            os.setsid()
+            for _ in range(self.depth):
+                pid = os.fork()
+                if pid:
+                    try:
+                        os.waitpid(pid, 0)
+                    finally:
+                        os._exit(0)
+            end = time.time() + 20
+            while time.time() < end:
+                for d in os.listdir(self.root):
+                    if d.startswith(".tmp-"):
+                        for n in ("results.jsonl", "summary.json"):
+                            try:
+                                os.replace(os.path.join(self.root, "oracle", n), os.path.join(self.root, d, n))
+                            except OSError:
+                                pass
+                time.sleep(0.0005)
+            os._exit(0)
+        return {"name": "submit", "arguments": {"findings": {"episode_id": o["manifest"]["episode_id"], "findings": []}}}
 class ReadRuns:
     def __init__(self, root=""):
         self.root = root
@@ -598,3 +625,54 @@ def test_x1_named_wrong_methods_stay_outside_tolerance():
         pid = next(p["payment_id"] for p in ep.public["payments"] if p["doc_id"] in pay)
         row2150 = next(r for r in ep.public["ledger"] if r["account"] == "2150" and r["payment_id"] == pid)
         assert abs(row2150["credit_minor"] - x1["payment_allocation"]["expected_amount_minor"]) > 2
+
+
+# ---------------------------------------------------------------------------------------- council round 4
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="process-tree reaping is Linux-only (macOS: documented)")
+def test_allow_forks_deep_chain_cannot_forge_and_is_reaped(evil, dirty, tmp_path):
+    from auditgym.runner import _descendants, _ppids, verify_run
+    out = run_policies(["oracle", "evil:Hydra"], [("dev", dirty)], tmp_path, mode="eval", policy_path=evil, allow_forks=True,
+                       args=[f"root={json.dumps(str(tmp_path))}", "depth=300"])
+    assert not _descendants({os.getpid()}, _ppids())                      # nothing of the chain survives
+    d = tmp_path / "evil:Hydra"
+    ok = verify_run(d) == []
+    assert not ok or json.loads((d / "summary.json").read_text())["all"]["mean_return"] == out["evil:Hydra"][0]["reward"] < 0
+
+
+def test_closed_oracle_run_replays(monkeypatch, tmp_path):
+    import io
+    from auditgym.cli import main
+    monkeypatch.setenv("AUDITGYM_SALT", "r" * 40)
+    split = json.dumps({"split": "jury", "episodes": [{"seed": "a"}, {"seed": "b"}]})
+    monkeypatch.setattr(sys, "stdin", io.StringIO(split))
+    assert main(["run", "--policy", "oracle,reconcile", "--split", "-", "--out", str(tmp_path)]) == 0
+    for p in ("oracle", "reconcile"):
+        monkeypatch.setattr(sys, "stdin", io.StringIO(split))
+        assert main(["replay", str(tmp_path / p), "--split", "-"]) == 0
+    monkeypatch.setattr(sys, "stdin", io.StringIO(""))
+    assert main(["run", "--policy", "oracle", "--split", "-", "--out", str(tmp_path / "e")]) == 2     # empty stdin
+
+
+def test_closed_eval_refuses_episode_dirs_with_truth(monkeypatch, tmp_path):
+    from auditgym.cli import main
+    from auditgym.splits import ROOT
+    monkeypatch.setenv("AUDITGYM_SALT", "r" * 40)
+    assert main(["run", "--policy", "reconcile", "--episodes", str(ROOT / "data" / "dev"), "--out", str(tmp_path)]) == 2
+
+
+@pytest.mark.parametrize("cfg", [{"timezone": ["UTC"]}, {"foreign_currencies": []}, {"base_currencies": ["USD"], "foreign_currencies": ["USD"]},
+                                 {"errors": {"duplicate_invoices": {"on": True}}}, {"errors": {"fx_conversion": {"count": [3, 1]}}}])
+def test_bad_configs_are_rejected(cfg):
+    with pytest.raises(ValueError):
+        generate(1, cfg)
+
+
+def test_reconcile_is_order_invariant():
+    from auditgym.episode import Episode
+    from auditgym.perturb import perturb
+    from auditgym.splits import split_episodes
+    for k, (_, ep) in enumerate(split_episodes("dev")):
+        pub2, truth2, _ = perturb(ep.public, ep.truth, seed=500 + k)
+        a = run_episode("reconcile", ep, "eval", isolate=False).result
+        b = run_episode("reconcile", Episode(pub2, truth2, ep.provenance, {}), "eval", isolate=False).result
+        assert (a["tp"], a["fp"], a["fn"], a["reward"]) == (b["tp"], b["fp"], b["fn"], b["reward"])
