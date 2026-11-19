@@ -216,9 +216,9 @@ The fee must be stated on the doc, or this case cannot be told apart from a part
 
 | Linked finding | ids | amount | evidence |
 |---|---|---|---|
-| period_cutoff | {pay} | 19260000 (correct value) | pay doc, Bank row |
+| period_cutoff | {pay} | 19260000 (correct value) | pay doc, `fx:2026-10-30:USD:KZT`, Bank row |
 | fx_conversion | {pay} | 136000 (19396000 - 19260000) | pay doc, `fx:2026-10-30:USD:KZT`, Bank row |
-| payment_allocation | {pay, inv} | 11956250 (USD 250 x 478.25) | pay doc, inv doc, 2150 row |
+| payment_allocation | {pay, inv} | 11956250 (USD 250 x 478.25) | pay doc, inv doc, invoice-date fx row, the payment's AR (1100) row |
 
 The alternative amounts 12037500 (USD 250 at 481.50) and 12122500 (the 2150 row as recorded) must fall outside the matcher tolerance.
 

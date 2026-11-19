@@ -304,7 +304,8 @@ def make_policy(w: World) -> dict:
             "rate_direction": "rate = units of base currency per 1 unit of source currency; never invert",
             "rate_date": {"invoice": "company-local date of issued_at", "credit_note": "company-local date of issued_at",
                           "payment": "company-local date of timestamp", "refund": "company-local date of timestamp",
-                          "note": "an invoice translates at its issue date even when delivery (revenue recognition) was on an earlier date"},
+                          "note": "an invoice translates at its issue date even when delivery (revenue recognition) was on an earlier date "
+                                  "(IAS 21.22 practical rate: an invoice is always issued in the same period as, and never before, its delivery)"},
             "missing_date_rule": "use the last rate on or before that date (fx.csv has business days only)",
             "conversion": "base_minor = round(doc_minor * rate * 10**(exp(base) - exp(doc))), once per document total",
             "rounding_mode": ROUNDING,

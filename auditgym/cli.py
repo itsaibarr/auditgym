@@ -152,8 +152,9 @@ def cmd_run(a) -> int:
         print(f"{spec}: {len(res)} episodes -> {Path(a.out) / name(spec)}", file=sys.stderr)
         if bad:
             print(f"warning: {spec}: {len(bad)}/{len(res)} episodes ended by {sorted({r['termination'] for r in bad})} "
-                  f"(policy failed to start, crashed or timed out; graded as empty answers). If the policy needs threads or "
-                  f"subprocesses, re-run with --allow-forks (lifts RLIMIT_NPROC=1)", file=sys.stderr)
+                  f"(policy failed to start, crashed or timed out; graded as empty answers). Only if the policy itself needs "
+                  f"threads or subprocesses: --allow-forks lifts RLIMIT_NPROC=1 (weaker isolation; on Linux escaped processes "
+                  f"are killed before outputs are written)", file=sys.stderr)
     print_table(rows, f"AuditGym {a.mode} run", a.format)
     return 0
 

@@ -5,22 +5,22 @@
       "issue_id": "I-01",
       "type": "duplicate_invoice",
       "affected_ids": [
-        "D-11019",
-        "D-23755"
+        "D-23755",
+        "D-39688"
       ],
-      "expected_amount_minor": 6675581,
+      "expected_amount_minor": 6657106,
       "currency": "KZT",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-11019",
           "D-23755",
-          "L-14330-1"
+          "D-39688",
+          "L-14408-1"
         ],
         [
-          "D-11019",
           "D-23755",
-          "L-14330-2"
+          "D-39688",
+          "L-14408-2"
         ]
       ],
       "link_id": null,
@@ -30,22 +30,22 @@
       "issue_id": "I-02",
       "type": "duplicate_invoice",
       "affected_ids": [
-        "D-23545",
-        "D-39688"
+        "D-38737",
+        "D-73617"
       ],
-      "expected_amount_minor": 6622402,
+      "expected_amount_minor": 779938374,
       "currency": "KZT",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-23545",
-          "D-39688",
-          "L-14407-1"
+          "D-38737",
+          "D-73617",
+          "L-14399-1"
         ],
         [
-          "D-23545",
-          "D-39688",
-          "L-14407-2"
+          "D-38737",
+          "D-73617",
+          "L-14399-2"
         ]
       ],
       "link_id": null,

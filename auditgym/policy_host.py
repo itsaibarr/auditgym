@@ -39,8 +39,10 @@ def apply_limits(allow_forks: bool = False) -> None:
 
 def load_policy(spec: str, kwargs: dict):
     from auditgym.policies import BUILTIN
-    if spec in BUILTIN:
-        return BUILTIN[spec](**kwargs)
+    if spec in BUILTIN:  # --policy-arg is shared by every policy of a run: builtins take only the args they know
+        import inspect
+        params = inspect.signature(BUILTIN[spec]).parameters
+        return BUILTIN[spec](**{k: v for k, v in kwargs.items() if k in params})
     mod, _, cls = spec.partition(":")
     if not cls:
         raise SystemExit(f"policy spec must be a builtin name or module:Class, got {spec!r}")

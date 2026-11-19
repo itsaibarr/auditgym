@@ -43,7 +43,9 @@ def harden_runner() -> None:
     if sys.platform.startswith("linux"):
         try:
             import ctypes
-            ctypes.CDLL(None, use_errno=True).prctl(4, 0, 0, 0, 0)  # PR_SET_DUMPABLE = 4
+            libc = ctypes.CDLL(None, use_errno=True)
+            libc.prctl(4, 0, 0, 0, 0)   # PR_SET_DUMPABLE = 0
+            libc.prctl(36, 1, 0, 0, 0)  # PR_SET_CHILD_SUBREAPER: escaped (setsid) policy descendants re-parent to us
         except Exception:
             pass
 
@@ -69,6 +71,39 @@ def salt_exposures() -> list[int]:
                 hits.append(int(d.name))
                 break
     return hits
+
+
+def _children() -> set[int]:
+    kids = set()
+    for d in Path("/proc").iterdir():
+        if d.name.isdigit():
+            try:
+                if int((d / "stat").read_text().rsplit(")", 1)[1].split()[1]) == os.getpid():
+                    kids.add(int(d.name))
+            except (OSError, ValueError, IndexError):
+                pass
+    return kids
+
+
+def reap_leftovers(keep: set[int] = frozenset()) -> int:
+    """Linux: SIGKILL every child of the runner that is not in `keep` (children that existed before the run).
+    With PR_SET_CHILD_SUBREAPER a daemon that escaped the policy's process group (--allow-forks + setsid) is
+    re-parented to the runner, so it is caught here before any output is written."""
+    if not sys.platform.startswith("linux"):
+        return 0
+    n = 0
+    for _ in range(50):
+        kids = _children() - set(keep)
+        if not kids:
+            break
+        for pid in kids:
+            try:
+                os.kill(pid, signal.SIGKILL)
+                os.waitpid(pid, 0)
+                n += 1
+            except (ProcessLookupError, ChildProcessError, PermissionError):
+                pass
+    return n
 
 
 def code_hash() -> str:
@@ -256,6 +291,14 @@ def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root
     order = sorted(specs, key=lambda s: s == "oracle")
     out_root = Path(out_root)
     out_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryFile(dir=out_root):  # fail now, not after the whole run, if --out is not writable
+        pass
+    root_st = os.stat(out_root)
+    harden_runner()
+    keep = _children() if sys.platform.startswith("linux") else set()
+    if isolate and allow_forks and not sys.platform.startswith("linux"):
+        print("warning: --allow-forks on a non-Linux host: escaped policy processes cannot be reaped, so run outputs are "
+              "not tamper-proof. Use the Docker image for evaluation.", file=sys.stderr)
     if isolate and not allow_forks and hasattr(os, "geteuid") and os.geteuid() == 0:
         print("warning: running as root: RLIMIT_NPROC is not enforced for root, so policies can fork. "
               "Run as an unprivileged user (the Docker image does).", file=sys.stderr)
@@ -269,13 +312,17 @@ def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root
         runs = []
         for split, ep in episodes:
             er = run_episode(spec, ep, mode, args, policy_path, isolate, allow_forks=allow_forks)
+            reap_leftovers(keep)
             er.result["split"] = split
             runs.append(er)
         done[spec] = runs
     # Every child is dead now. A child could still have planted symlinks/dirs under out_root (it may know the
     # path from our argv), so never write through existing paths: build each run dir fresh, then swap it in.
-    if out_root.is_symlink() or not out_root.is_dir():
+    reap_leftovers(keep)
+    st = os.stat(out_root) if out_root.is_dir() else None
+    if st is None or (st.st_dev, st.st_ino) != (root_st.st_dev, root_st.st_ino):
         raise RuntimeError(f"output root {out_root} was replaced during the run; refusing to write")
+    os.chmod(out_root, root_st.st_mode & 0o7777)  # a same-user policy may have chmod-ed it
     out = {}
     for spec in specs:
         d = out_root / (dir_name(spec) if dir_name else spec)
@@ -288,9 +335,16 @@ def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root
             aside = Path(tempfile.mktemp(prefix=".old-", dir=out_root))
             os.replace(d, aside)
             if aside.is_dir() and not aside.is_symlink():
+                try:
+                    os.chmod(aside, 0o700)
+                except OSError:
+                    pass
                 shutil.rmtree(aside, ignore_errors=True)
             else:
-                aside.unlink(missing_ok=True)
+                try:
+                    aside.unlink()
+                except OSError:
+                    pass
         os.replace(tmp, d)
         out[spec] = [er.result for er in done[spec]]
     return out

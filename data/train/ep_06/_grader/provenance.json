@@ -98,66 +98,76 @@
   },
   "config_hash": "b74e622211a5d0e3",
   "config_version": "1.0.0",
-  "public_fingerprint": "66e263686d44af5e9bad47f0b9b0931678bfa03635a2fc1fb29890fbb3bd84ae",
+  "public_fingerprint": "a7c79c100ef5288c8e39ce30ad637c613adf28ee646d2398722196984037662d",
   "events": [
     {
       "issue_id": "I-01",
-      "injector": "E2.unallocated_missing",
+      "injector": "E2.unallocated_partial",
       "params": {
-        "mode": "missing"
+        "mode": "partial"
       },
       "before": [
         {
-          "je": 15715,
-          "timestamp": "2026-06-21T13:48:00+05:00",
+          "je": 26607,
+          "timestamp": "2026-06-28T17:44:00+05:00",
           "rows": [
             {
-              "row_id": "L-15715-1",
+              "row_id": "L-26607-1",
               "account": "1000",
-              "debit_minor": 95055007,
+              "debit_minor": 17800047,
               "credit_minor": 0,
               "currency": "KZT",
-              "entity_id": "C-9481",
+              "entity_id": "C-7935",
               "invoice_id": null,
-              "payment_id": "PAY-7506"
+              "payment_id": "PAY-3006"
             },
             {
-              "row_id": "L-15715-2",
+              "row_id": "L-26607-2",
               "account": "1100",
               "debit_minor": 0,
-              "credit_minor": 95055007,
+              "credit_minor": 17800047,
               "currency": "KZT",
-              "entity_id": "C-9481",
-              "invoice_id": "SF-2288",
-              "payment_id": "PAY-7506"
+              "entity_id": "C-7935",
+              "invoice_id": "SF-3314",
+              "payment_id": "PAY-3006"
             }
           ]
         }
       ],
       "after": [
         {
-          "je": 15715,
-          "timestamp": "2026-06-21T13:48:00+05:00",
+          "je": 26607,
+          "timestamp": "2026-06-28T17:44:00+05:00",
           "rows": [
             {
-              "row_id": "L-15715-1",
+              "row_id": "L-26607-1",
               "account": "1000",
-              "debit_minor": 95055007,
+              "debit_minor": 17800047,
               "credit_minor": 0,
               "currency": "KZT",
-              "entity_id": "C-9481",
+              "entity_id": "C-7935",
               "invoice_id": null,
-              "payment_id": "PAY-7506"
+              "payment_id": "PAY-3006"
             },
             {
-              "row_id": "L-15715-2",
+              "row_id": "L-26607-2",
+              "account": "1100",
+              "debit_minor": 0,
+              "credit_minor": 12460033,
+              "currency": "KZT",
+              "entity_id": "C-7935",
+              "invoice_id": "SF-3314",
+              "payment_id": "PAY-3006"
+            },
+            {
+              "row_id": "L-26607-3",
               "account": "2150",
               "debit_minor": 0,
-              "credit_minor": 95055007,
+              "credit_minor": 5340014,
               "currency": "KZT",
-              "entity_id": "C-9481",
+              "entity_id": "C-7935",
               "invoice_id": null,
-              "payment_id": "PAY-7506"
+              "payment_id": "PAY-3006"
             }
           ]
         }
@@ -165,72 +175,62 @@
     },
     {
       "issue_id": "I-02",
-      "injector": "E2.unallocated_partial",
+      "injector": "E2.unallocated_missing",
       "params": {
-        "mode": "partial"
+        "mode": "missing"
       },
       "before": [
         {
-          "je": 15652,
-          "timestamp": "2026-06-15T11:22:00+05:00",
+          "je": 26631,
+          "timestamp": "2026-06-30T13:24:00+05:00",
           "rows": [
             {
-              "row_id": "L-15652-1",
+              "row_id": "L-26631-1",
               "account": "1000",
-              "debit_minor": 305500602,
+              "debit_minor": 545600000,
               "credit_minor": 0,
               "currency": "KZT",
-              "entity_id": "C-4886",
+              "entity_id": "C-5702",
               "invoice_id": null,
-              "payment_id": "PAY-7493"
+              "payment_id": "PAY-3011"
             },
             {
-              "row_id": "L-15652-2",
+              "row_id": "L-26631-2",
               "account": "1100",
               "debit_minor": 0,
-              "credit_minor": 305500602,
+              "credit_minor": 545600000,
               "currency": "KZT",
-              "entity_id": "C-4886",
-              "invoice_id": "INV-2306",
-              "payment_id": "PAY-7493"
+              "entity_id": "C-5702",
+              "invoice_id": "INV-3323",
+              "payment_id": "PAY-3011"
             }
           ]
         }
       ],
       "after": [
         {
-          "je": 15652,
-          "timestamp": "2026-06-15T11:22:00+05:00",
+          "je": 26631,
+          "timestamp": "2026-06-30T13:24:00+05:00",
           "rows": [
             {
-              "row_id": "L-15652-1",
+              "row_id": "L-26631-1",
               "account": "1000",
-              "debit_minor": 305500602,
+              "debit_minor": 545600000,
               "credit_minor": 0,
               "currency": "KZT",
-              "entity_id": "C-4886",
+              "entity_id": "C-5702",
               "invoice_id": null,
-              "payment_id": "PAY-7493"
+              "payment_id": "PAY-3011"
             },
             {
-              "row_id": "L-15652-2",
-              "account": "1100",
-              "debit_minor": 0,
-              "credit_minor": 213850422,
-              "currency": "KZT",
-              "entity_id": "C-4886",
-              "invoice_id": "INV-2306",
-              "payment_id": "PAY-7493"
-            },
-            {
-              "row_id": "L-15652-3",
+              "row_id": "L-26631-2",
               "account": "2150",
               "debit_minor": 0,
-              "credit_minor": 91650180,
+              "credit_minor": 545600000,
               "currency": "KZT",
-              "entity_id": "C-4886",
+              "entity_id": "C-5702",
               "invoice_id": null,
-              "payment_id": "PAY-7493"
+              "payment_id": "PAY-3011"
             }
           ]
         }
@@ -238,33 +238,33 @@
     },
     {
       "issue_id": "I-03",
-      "injector": "E4.late",
+      "injector": "E4.premature",
       "params": {
-        "mode": "late"
+        "mode": "premature"
       },
       "before": [
         {
-          "je": 15839,
-          "timestamp": "2026-06-30T12:09:00+05:00",
+          "je": 26640,
+          "timestamp": "2026-07-03T19:17:00+05:00",
           "rows": [
             {
-              "row_id": "L-15839-1",
+              "row_id": "L-26640-1",
               "account": "1100",
-              "debit_minor": 83079335,
+              "debit_minor": 254435226,
               "credit_minor": 0,
               "currency": "KZT",
-              "entity_id": "C-6905",
-              "invoice_id": "SF-2347",
+              "entity_id": "C-9591",
+              "invoice_id": "SF-3384",
               "payment_id": null
             },
             {
-              "row_id": "L-15839-2",
+              "row_id": "L-26640-2",
               "account": "4000",
               "debit_minor": 0,
-              "credit_minor": 83079335,
+              "credit_minor": 254435226,
               "currency": "KZT",
-              "entity_id": "C-6905",
-              "invoice_id": "SF-2347",
+              "entity_id": "C-9591",
+              "invoice_id": "SF-3384",
               "payment_id": null
             }
           ]
@@ -272,27 +272,27 @@
       ],
       "after": [
         {
-          "je": 15839,
-          "timestamp": "2026-07-04T12:05:00+05:00",
+          "je": 26640,
+          "timestamp": "2026-06-30T20:46:00+05:00",
           "rows": [
             {
-              "row_id": "L-15839-1",
+              "row_id": "L-26640-1",
               "account": "1100",
-              "debit_minor": 83079335,
+              "debit_minor": 254435226,
               "credit_minor": 0,
               "currency": "KZT",
-              "entity_id": "C-6905",
-              "invoice_id": "SF-2347",
+              "entity_id": "C-9591",
+              "invoice_id": "SF-3384",
               "payment_id": null
             },
             {
-              "row_id": "L-15839-2",
+              "row_id": "L-26640-2",
               "account": "4000",
               "debit_minor": 0,
-              "credit_minor": 83079335,
+              "credit_minor": 254435226,
               "currency": "KZT",
-              "entity_id": "C-6905",
-              "invoice_id": "SF-2347",
+              "entity_id": "C-9591",
+              "invoice_id": "SF-3384",
               "payment_id": null
             }
           ]

@@ -12,7 +12,7 @@
     "clean_fp_rate": 1.0,
     "tp": 0,
     "fp": 13,
-    "fn": 22,
+    "fn": 21,
     "per_type": {
       "period_cutoff": {
         "tp": 0,
@@ -22,7 +22,7 @@
       "fx_conversion": {
         "tp": 0,
         "fp": 2,
-        "fn": 4
+        "fn": 3
       },
       "duplicate_invoice": {
         "tp": 0,
@@ -53,7 +53,7 @@
     "clean_fp_rate": 1.0,
     "tp": 0,
     "fp": 13,
-    "fn": 22,
+    "fn": 21,
     "per_type": {
       "period_cutoff": {
         "tp": 0,
@@ -63,7 +63,7 @@
       "fx_conversion": {
         "tp": 0,
         "fp": 2,
-        "fn": 4
+        "fn": 3
       },
       "duplicate_invoice": {
         "tp": 0,

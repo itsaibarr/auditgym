@@ -5,22 +5,22 @@
       "issue_id": "I-01",
       "type": "duplicate_invoice",
       "affected_ids": [
-        "D-14122",
-        "D-28366"
+        "D-12639",
+        "D-14122"
       ],
-      "expected_amount_minor": 140044,
+      "expected_amount_minor": 140067,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
+          "D-12639",
           "D-14122",
-          "D-28366",
-          "L-11058-1"
+          "L-55363-1"
         ],
         [
+          "D-12639",
           "D-14122",
-          "D-28366",
-          "L-11058-2"
+          "L-55363-2"
         ]
       ],
       "link_id": null,
@@ -30,16 +30,16 @@
       "issue_id": "I-02",
       "type": "fx_conversion",
       "affected_ids": [
-        "D-95418"
+        "D-34202"
       ],
       "expected_amount_minor": 146,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-95418",
+          "D-34202",
           "FX-2026-03-31-EUR-USD",
-          "L-11206-1"
+          "L-55565-1"
         ]
       ],
       "link_id": "X1",
@@ -49,18 +49,18 @@
       "issue_id": "I-03",
       "type": "payment_allocation",
       "affected_ids": [
-        "D-56784",
-        "D-95418"
+        "D-34202",
+        "D-56784"
       ],
       "expected_amount_minor": 23878,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
+          "D-34202",
           "D-56784",
-          "D-95418",
           "FX-2026-03-20-EUR-USD",
-          "L-11206-2"
+          "L-55565-2"
         ]
       ],
       "link_id": "X1",
@@ -68,6 +68,25 @@
     },
     {
       "issue_id": "I-04",
+      "type": "period_cutoff",
+      "affected_ids": [
+        "D-34202"
+      ],
+      "expected_amount_minor": 29992,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-34202",
+          "FX-2026-03-31-EUR-USD",
+          "L-55565-1"
+        ]
+      ],
+      "link_id": "X1",
+      "invariant": "I6"
+    },
+    {
+      "issue_id": "I-05",
       "type": "period_cutoff",
       "affected_ids": [
         "D-45757"
@@ -79,34 +98,15 @@
         [
           "D-45757",
           "FX-2026-03-30-GBP-USD",
-          "L-11212-1"
+          "L-55570-1"
         ],
         [
           "D-45757",
           "FX-2026-03-30-GBP-USD",
-          "L-11212-2"
+          "L-55570-2"
         ]
       ],
       "link_id": null,
-      "invariant": "I6"
-    },
-    {
-      "issue_id": "I-05",
-      "type": "period_cutoff",
-      "affected_ids": [
-        "D-95418"
-      ],
-      "expected_amount_minor": 29992,
-      "currency": "USD",
-      "tolerance_minor": 1,
-      "evidence_sets": [
-        [
-          "D-95418",
-          "FX-2026-03-31-EUR-USD",
-          "L-11206-1"
-        ]
-      ],
-      "link_id": "X1",
       "invariant": "I6"
     }
   ]

@@ -8,7 +8,7 @@
   "export_end": "2026-06-06T00:00:00+05:00",
   "timezone": "Asia/Tashkent",
   "counts": {
-    "ledger": 580,
+    "ledger": 578,
     "invoices": 44,
     "payments": 21,
     "fx": 186,

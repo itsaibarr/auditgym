@@ -5,22 +5,22 @@
       "issue_id": "I-01",
       "type": "duplicate_invoice",
       "affected_ids": [
-        "D-17461",
-        "D-38431"
+        "D-38431",
+        "D-92722"
       ],
-      "expected_amount_minor": 1076300,
+      "expected_amount_minor": 877725,
       "currency": "EUR",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-17461",
           "D-38431",
-          "L-49445-1"
+          "D-92722",
+          "L-49462-1"
         ],
         [
-          "D-17461",
           "D-38431",
-          "L-49445-2"
+          "D-92722",
+          "L-49462-2"
         ]
       ],
       "link_id": null,
@@ -30,22 +30,22 @@
       "issue_id": "I-02",
       "type": "duplicate_invoice",
       "affected_ids": [
-        "D-58292",
-        "D-79018"
+        "D-48531",
+        "D-58292"
       ],
-      "expected_amount_minor": 886187,
+      "expected_amount_minor": 1912121,
       "currency": "EUR",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
+          "D-48531",
           "D-58292",
-          "D-79018",
-          "L-49335-1"
+          "L-49401-1"
         ],
         [
+          "D-48531",
           "D-58292",
-          "D-79018",
-          "L-49335-2"
+          "L-49401-2"
         ]
       ],
       "link_id": "X2",
@@ -57,41 +57,22 @@
       "affected_ids": [
         "D-15254"
       ],
-      "expected_amount_minor": 393,
+      "expected_amount_minor": 4344,
       "currency": "EUR",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
           "D-15254",
-          "FX-2026-05-06-KWD-EUR",
-          "L-49365-1"
+          "FX-2026-05-15-KWD-EUR",
+          "L-49431-1"
         ],
         [
           "D-15254",
-          "FX-2026-05-06-KWD-EUR",
-          "L-49365-2"
+          "FX-2026-05-15-KWD-EUR",
+          "L-49431-2"
         ]
       ],
       "link_id": "X2",
-      "invariant": "I5"
-    },
-    {
-      "issue_id": "I-04",
-      "type": "fx_conversion",
-      "affected_ids": [
-        "D-73860"
-      ],
-      "expected_amount_minor": 393,
-      "currency": "EUR",
-      "tolerance_minor": 1,
-      "evidence_sets": [
-        [
-          "D-73860",
-          "FX-2026-05-22-USD-EUR",
-          "L-49506-1"
-        ]
-      ],
-      "link_id": null,
       "invariant": "I5"
     }
   ]

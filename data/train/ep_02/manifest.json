@@ -8,9 +8,9 @@
   "export_end": "2026-04-06T00:00:00+04:00",
   "timezone": "Asia/Dubai",
   "counts": {
-    "ledger": 455,
-    "invoices": 81,
-    "payments": 53,
+    "ledger": 452,
+    "invoices": 80,
+    "payments": 54,
     "fx": 183,
     "documents": 134
   },

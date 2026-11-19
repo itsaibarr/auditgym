@@ -98,7 +98,7 @@
   },
   "config_hash": "fbad4e6bcbe2b508",
   "config_version": "1.0.0",
-  "public_fingerprint": "35c2ff11b6775be10942fad3f810ab85f170f70796e3e6aab1599b9870abf4d0",
+  "public_fingerprint": "6a4b2b818bec359a96d3257e3260882a02f203788ec4dd3788e30ad4f782fcca",
   "events": [
     {
       "issue_id": "I-01",
@@ -110,27 +110,27 @@
       "before": [],
       "after": [
         {
-          "je": 11058,
-          "timestamp": "2026-03-17T08:48:00+05:00",
+          "je": 55363,
+          "timestamp": "2026-03-10T08:48:00+05:00",
           "rows": [
             {
-              "row_id": "L-11058-1",
+              "row_id": "L-55363-1",
               "account": "1100",
-              "debit_minor": 140044,
+              "debit_minor": 140067,
               "credit_minor": 0,
               "currency": "USD",
               "entity_id": "C-9189",
-              "invoice_id": "INV1853",
+              "invoice_id": "SF-5767",
               "payment_id": null
             },
             {
-              "row_id": "L-11058-2",
+              "row_id": "L-55363-2",
               "account": "4000",
               "debit_minor": 0,
-              "credit_minor": 140044,
+              "credit_minor": 140067,
               "currency": "USD",
               "entity_id": "C-9189",
-              "invoice_id": "INV1853",
+              "invoice_id": "SF-5767",
               "payment_id": null
             }
           ]
@@ -145,86 +145,86 @@
       },
       "before": [
         {
-          "je": 11206,
+          "je": 55565,
           "timestamp": "2026-03-31T13:40:00+05:00",
           "rows": [
             {
-              "row_id": "L-11206-1",
+              "row_id": "L-55565-1",
               "account": "1020",
               "debit_minor": 29992,
               "credit_minor": 0,
               "currency": "USD",
               "entity_id": "C-6119",
               "invoice_id": null,
-              "payment_id": "PAY-1151"
+              "payment_id": "PAY-7102"
             },
             {
-              "row_id": "L-11206-2",
+              "row_id": "L-55565-2",
               "account": "1100",
               "debit_minor": 0,
               "credit_minor": 29847,
               "currency": "USD",
               "entity_id": "C-6119",
-              "invoice_id": "INV1868",
-              "payment_id": "PAY-1151"
+              "invoice_id": "SF-5802",
+              "payment_id": "PAY-7102"
             },
             {
-              "row_id": "L-11206-3",
+              "row_id": "L-55565-3",
               "account": "7100",
               "debit_minor": 0,
               "credit_minor": 145,
               "currency": "USD",
               "entity_id": "C-6119",
               "invoice_id": null,
-              "payment_id": "PAY-1151"
+              "payment_id": "PAY-7102"
             }
           ]
         }
       ],
       "after": [
         {
-          "je": 11206,
+          "je": 55565,
           "timestamp": "2026-04-03T12:14:00+05:00",
           "rows": [
             {
-              "row_id": "L-11206-1",
+              "row_id": "L-55565-1",
               "account": "1020",
               "debit_minor": 30138,
               "credit_minor": 0,
               "currency": "USD",
               "entity_id": "C-6119",
               "invoice_id": null,
-              "payment_id": "PAY-1151"
+              "payment_id": "PAY-7102"
             },
             {
-              "row_id": "L-11206-2",
+              "row_id": "L-55565-2",
               "account": "1100",
               "debit_minor": 0,
               "credit_minor": 5969,
               "currency": "USD",
               "entity_id": "C-6119",
-              "invoice_id": "INV1868",
-              "payment_id": "PAY-1151"
+              "invoice_id": "SF-5802",
+              "payment_id": "PAY-7102"
             },
             {
-              "row_id": "L-11206-3",
+              "row_id": "L-55565-3",
               "account": "2150",
               "debit_minor": 0,
               "credit_minor": 24111,
               "currency": "USD",
               "entity_id": "C-6119",
               "invoice_id": null,
-              "payment_id": "PAY-1151"
+              "payment_id": "PAY-7102"
             },
             {
-              "row_id": "L-11206-4",
+              "row_id": "L-55565-4",
               "account": "7100",
               "debit_minor": 0,
               "credit_minor": 58,
               "currency": "USD",
               "entity_id": "C-6119",
               "invoice_id": null,
-              "payment_id": "PAY-1151"
+              "payment_id": "PAY-7102"
             }
           ]
         }
@@ -238,86 +238,86 @@
       },
       "before": [
         {
-          "je": 11206,
+          "je": 55565,
           "timestamp": "2026-03-31T13:40:00+05:00",
           "rows": [
             {
-              "row_id": "L-11206-1",
+              "row_id": "L-55565-1",
               "account": "1020",
               "debit_minor": 29992,
               "credit_minor": 0,
               "currency": "USD",
               "entity_id": "C-6119",
               "invoice_id": null,
-              "payment_id": "PAY-1151"
+              "payment_id": "PAY-7102"
             },
             {
-              "row_id": "L-11206-2",
+              "row_id": "L-55565-2",
               "account": "1100",
               "debit_minor": 0,
               "credit_minor": 29847,
               "currency": "USD",
               "entity_id": "C-6119",
-              "invoice_id": "INV1868",
-              "payment_id": "PAY-1151"
+              "invoice_id": "SF-5802",
+              "payment_id": "PAY-7102"
             },
             {
-              "row_id": "L-11206-3",
+              "row_id": "L-55565-3",
               "account": "7100",
               "debit_minor": 0,
               "credit_minor": 145,
               "currency": "USD",
               "entity_id": "C-6119",
               "invoice_id": null,
-              "payment_id": "PAY-1151"
+              "payment_id": "PAY-7102"
             }
           ]
         }
       ],
       "after": [
         {
-          "je": 11206,
+          "je": 55565,
           "timestamp": "2026-04-03T12:14:00+05:00",
           "rows": [
             {
-              "row_id": "L-11206-1",
+              "row_id": "L-55565-1",
               "account": "1020",
               "debit_minor": 30138,
               "credit_minor": 0,
               "currency": "USD",
               "entity_id": "C-6119",
               "invoice_id": null,
-              "payment_id": "PAY-1151"
+              "payment_id": "PAY-7102"
             },
             {
-              "row_id": "L-11206-2",
+              "row_id": "L-55565-2",
               "account": "1100",
               "debit_minor": 0,
               "credit_minor": 5969,
               "currency": "USD",
               "entity_id": "C-6119",
-              "invoice_id": "INV1868",
-              "payment_id": "PAY-1151"
+              "invoice_id": "SF-5802",
+              "payment_id": "PAY-7102"
             },
             {
-              "row_id": "L-11206-3",
+              "row_id": "L-55565-3",
               "account": "2150",
               "debit_minor": 0,
               "credit_minor": 24111,
               "currency": "USD",
               "entity_id": "C-6119",
               "invoice_id": null,
-              "payment_id": "PAY-1151"
+              "payment_id": "PAY-7102"
             },
             {
-              "row_id": "L-11206-4",
+              "row_id": "L-55565-4",
               "account": "7100",
               "debit_minor": 0,
               "credit_minor": 58,
               "currency": "USD",
               "entity_id": "C-6119",
               "invoice_id": null,
-              "payment_id": "PAY-1151"
+              "payment_id": "PAY-7102"
             }
           ]
         }
@@ -325,69 +325,6 @@
     },
     {
       "issue_id": "I-04",
-      "injector": "E4.late",
-      "params": {
-        "mode": "late"
-      },
-      "before": [
-        {
-          "je": 11212,
-          "timestamp": "2026-03-30T08:54:00+05:00",
-          "rows": [
-            {
-              "row_id": "L-11212-1",
-              "account": "1100",
-              "debit_minor": 118299,
-              "credit_minor": 0,
-              "currency": "USD",
-              "entity_id": "C-9189",
-              "invoice_id": "INV1889",
-              "payment_id": null
-            },
-            {
-              "row_id": "L-11212-2",
-              "account": "4000",
-              "debit_minor": 0,
-              "credit_minor": 118299,
-              "currency": "USD",
-              "entity_id": "C-9189",
-              "invoice_id": "INV1889",
-              "payment_id": null
-            }
-          ]
-        }
-      ],
-      "after": [
-        {
-          "je": 11212,
-          "timestamp": "2026-04-04T09:44:00+05:00",
-          "rows": [
-            {
-              "row_id": "L-11212-1",
-              "account": "1100",
-              "debit_minor": 118299,
-              "credit_minor": 0,
-              "currency": "USD",
-              "entity_id": "C-9189",
-              "invoice_id": "INV1889",
-              "payment_id": null
-            },
-            {
-              "row_id": "L-11212-2",
-              "account": "4000",
-              "debit_minor": 0,
-              "credit_minor": 118299,
-              "currency": "USD",
-              "entity_id": "C-9189",
-              "invoice_id": "INV1889",
-              "payment_id": null
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "issue_id": "I-05",
       "injector": "X1.cutoff",
       "params": {
         "posted_on": "2026-04-03",
@@ -395,86 +332,149 @@
       },
       "before": [
         {
-          "je": 11206,
+          "je": 55565,
           "timestamp": "2026-03-31T13:40:00+05:00",
           "rows": [
             {
-              "row_id": "L-11206-1",
+              "row_id": "L-55565-1",
               "account": "1020",
               "debit_minor": 29992,
               "credit_minor": 0,
               "currency": "USD",
               "entity_id": "C-6119",
               "invoice_id": null,
-              "payment_id": "PAY-1151"
+              "payment_id": "PAY-7102"
             },
             {
-              "row_id": "L-11206-2",
+              "row_id": "L-55565-2",
               "account": "1100",
               "debit_minor": 0,
               "credit_minor": 29847,
               "currency": "USD",
               "entity_id": "C-6119",
-              "invoice_id": "INV1868",
-              "payment_id": "PAY-1151"
+              "invoice_id": "SF-5802",
+              "payment_id": "PAY-7102"
             },
             {
-              "row_id": "L-11206-3",
+              "row_id": "L-55565-3",
               "account": "7100",
               "debit_minor": 0,
               "credit_minor": 145,
               "currency": "USD",
               "entity_id": "C-6119",
               "invoice_id": null,
-              "payment_id": "PAY-1151"
+              "payment_id": "PAY-7102"
             }
           ]
         }
       ],
       "after": [
         {
-          "je": 11206,
+          "je": 55565,
           "timestamp": "2026-04-03T12:14:00+05:00",
           "rows": [
             {
-              "row_id": "L-11206-1",
+              "row_id": "L-55565-1",
               "account": "1020",
               "debit_minor": 30138,
               "credit_minor": 0,
               "currency": "USD",
               "entity_id": "C-6119",
               "invoice_id": null,
-              "payment_id": "PAY-1151"
+              "payment_id": "PAY-7102"
             },
             {
-              "row_id": "L-11206-2",
+              "row_id": "L-55565-2",
               "account": "1100",
               "debit_minor": 0,
               "credit_minor": 5969,
               "currency": "USD",
               "entity_id": "C-6119",
-              "invoice_id": "INV1868",
-              "payment_id": "PAY-1151"
+              "invoice_id": "SF-5802",
+              "payment_id": "PAY-7102"
             },
             {
-              "row_id": "L-11206-3",
+              "row_id": "L-55565-3",
               "account": "2150",
               "debit_minor": 0,
               "credit_minor": 24111,
               "currency": "USD",
               "entity_id": "C-6119",
               "invoice_id": null,
-              "payment_id": "PAY-1151"
+              "payment_id": "PAY-7102"
             },
             {
-              "row_id": "L-11206-4",
+              "row_id": "L-55565-4",
               "account": "7100",
               "debit_minor": 0,
               "credit_minor": 58,
               "currency": "USD",
               "entity_id": "C-6119",
               "invoice_id": null,
-              "payment_id": "PAY-1151"
+              "payment_id": "PAY-7102"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "issue_id": "I-05",
+      "injector": "E4.late",
+      "params": {
+        "mode": "late"
+      },
+      "before": [
+        {
+          "je": 55570,
+          "timestamp": "2026-03-30T08:54:00+05:00",
+          "rows": [
+            {
+              "row_id": "L-55570-1",
+              "account": "1100",
+              "debit_minor": 118299,
+              "credit_minor": 0,
+              "currency": "USD",
+              "entity_id": "C-9189",
+              "invoice_id": "SF-5823",
+              "payment_id": null
+            },
+            {
+              "row_id": "L-55570-2",
+              "account": "4000",
+              "debit_minor": 0,
+              "credit_minor": 118299,
+              "currency": "USD",
+              "entity_id": "C-9189",
+              "invoice_id": "SF-5823",
+              "payment_id": null
+            }
+          ]
+        }
+      ],
+      "after": [
+        {
+          "je": 55570,
+          "timestamp": "2026-04-04T09:44:00+05:00",
+          "rows": [
+            {
+              "row_id": "L-55570-1",
+              "account": "1100",
+              "debit_minor": 118299,
+              "credit_minor": 0,
+              "currency": "USD",
+              "entity_id": "C-9189",
+              "invoice_id": "SF-5823",
+              "payment_id": null
+            },
+            {
+              "row_id": "L-55570-2",
+              "account": "4000",
+              "debit_minor": 0,
+              "credit_minor": 118299,
+              "currency": "USD",
+              "entity_id": "C-9189",
+              "invoice_id": "SF-5823",
+              "payment_id": null
             }
           ]
         }

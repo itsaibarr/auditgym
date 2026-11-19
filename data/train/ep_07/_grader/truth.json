@@ -5,17 +5,17 @@
       "issue_id": "I-01",
       "type": "payment_allocation",
       "affected_ids": [
-        "D-10538",
-        "D-45388"
+        "D-37532",
+        "D-73551"
       ],
-      "expected_amount_minor": 612000,
+      "expected_amount_minor": 296400,
       "currency": "EUR",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-10538",
-          "D-45388",
-          "L-35471-2"
+          "D-37532",
+          "D-73551",
+          "L-31567-2"
         ]
       ],
       "link_id": null,
@@ -25,17 +25,17 @@
       "issue_id": "I-02",
       "type": "payment_allocation",
       "affected_ids": [
-        "D-66971",
+        "D-55340",
         "D-89530"
       ],
-      "expected_amount_minor": 1335800,
+      "expected_amount_minor": 703944,
       "currency": "EUR",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-66971",
+          "D-55340",
           "D-89530",
-          "L-35618-2"
+          "L-31527-2"
         ]
       ],
       "link_id": null,
@@ -53,11 +53,11 @@
       "evidence_sets": [
         [
           "D-28166",
-          "L-35605-1"
+          "L-31726-1"
         ],
         [
           "D-28166",
-          "L-35605-2"
+          "L-31726-2"
         ]
       ],
       "link_id": null,
@@ -75,11 +75,11 @@
       "evidence_sets": [
         [
           "D-87305",
-          "L-35611-1"
+          "L-31732-1"
         ],
         [
           "D-87305",
-          "L-35611-2"
+          "L-31732-2"
         ]
       ],
       "link_id": null,

@@ -9,8 +9,8 @@
   "timezone": "Europe/Berlin",
   "counts": {
     "ledger": 568,
-    "invoices": 41,
-    "payments": 30,
+    "invoices": 40,
+    "payments": 31,
     "fx": 183,
     "documents": 71
   },

@@ -9,10 +9,10 @@
   "timezone": "Asia/Tashkent",
   "counts": {
     "ledger": 906,
-    "invoices": 83,
+    "invoices": 84,
     "payments": 75,
     "fx": 126,
-    "documents": 158
+    "documents": 159
   },
   "rounding": {
     "mode": "ROUND_HALF_EVEN",

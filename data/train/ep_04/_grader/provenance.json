@@ -98,87 +98,87 @@
   },
   "config_hash": "dc5c8fd9ce2bde22",
   "config_version": "1.0.0",
-  "public_fingerprint": "cb66aaed1801dc259b0f626bbd2d971e5375eb10ca9e73fb3e0ab59494eb2a1e",
+  "public_fingerprint": "3f26c88c8c6b73f1a2e920c5da937c8f42db0247dd8e9d39943924f3ca871781",
   "events": [
     {
       "issue_id": "I-01",
       "injector": "E3.wrong_rate_date",
       "params": {
-        "used_rate_date": "2026-02-27",
-        "correct_rate_date": "2026-02-25"
+        "used_rate_date": "2026-02-26",
+        "correct_rate_date": "2026-02-24"
       },
       "before": [
         {
-          "je": 26183,
-          "timestamp": "2026-02-25T12:57:00+00:00",
+          "je": 21986,
+          "timestamp": "2026-02-24T10:22:00+00:00",
           "rows": [
             {
-              "row_id": "L-26183-1",
+              "row_id": "L-21986-1",
               "account": "1020",
-              "debit_minor": 918195,
+              "debit_minor": 38513,
               "credit_minor": 0,
               "currency": "USD",
               "entity_id": "C-1854",
               "invoice_id": null,
-              "payment_id": "PAY-2669"
+              "payment_id": "PAY-4088"
             },
             {
-              "row_id": "L-26183-2",
+              "row_id": "L-21986-2",
               "account": "1100",
               "debit_minor": 0,
-              "credit_minor": 923507,
+              "credit_minor": 39172,
               "currency": "USD",
               "entity_id": "C-1854",
-              "invoice_id": "INV-3109",
-              "payment_id": "PAY-2669"
+              "invoice_id": "INV4758",
+              "payment_id": "PAY-4088"
             },
             {
-              "row_id": "L-26183-3",
+              "row_id": "L-21986-3",
               "account": "7200",
-              "debit_minor": 5312,
+              "debit_minor": 659,
               "credit_minor": 0,
               "currency": "USD",
               "entity_id": "C-1854",
               "invoice_id": null,
-              "payment_id": "PAY-2669"
+              "payment_id": "PAY-4088"
             }
           ]
         }
       ],
       "after": [
         {
-          "je": 26183,
-          "timestamp": "2026-02-25T12:57:00+00:00",
+          "je": 21986,
+          "timestamp": "2026-02-24T10:22:00+00:00",
           "rows": [
             {
-              "row_id": "L-26183-1",
+              "row_id": "L-21986-1",
               "account": "1020",
-              "debit_minor": 913087,
+              "debit_minor": 38241,
               "credit_minor": 0,
               "currency": "USD",
               "entity_id": "C-1854",
               "invoice_id": null,
-              "payment_id": "PAY-2669"
+              "payment_id": "PAY-4088"
             },
             {
-              "row_id": "L-26183-2",
+              "row_id": "L-21986-2",
               "account": "1100",
               "debit_minor": 0,
-              "credit_minor": 923507,
+              "credit_minor": 39172,
               "currency": "USD",
               "entity_id": "C-1854",
-              "invoice_id": "INV-3109",
-              "payment_id": "PAY-2669"
+              "invoice_id": "INV4758",
+              "payment_id": "PAY-4088"
             },
             {
-              "row_id": "L-26183-3",
+              "row_id": "L-21986-3",
               "account": "7200",
-              "debit_minor": 10420,
+              "debit_minor": 931,
               "credit_minor": 0,
               "currency": "USD",
               "entity_id": "C-1854",
               "invoice_id": null,
-              "payment_id": "PAY-2669"
+              "payment_id": "PAY-4088"
             }
           ]
         }

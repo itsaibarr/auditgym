@@ -98,7 +98,7 @@
   },
   "config_hash": "b74e622211a5d0e3",
   "config_version": "1.0.0",
-  "public_fingerprint": "7e592609b404f93673853bee81cd29f95d747dc64c98763ac8549fc053f12713",
+  "public_fingerprint": "298f078d3300fa394058b64880212daacd000d55aeb50807ea22a6ef63c65e25",
   "events": [
     {
       "issue_id": "I-01",
@@ -108,56 +108,56 @@
       },
       "before": [
         {
-          "je": 35471,
-          "timestamp": "2026-11-19T09:41:00+00:00",
+          "je": 31567,
+          "timestamp": "2026-11-17T09:41:00+00:00",
           "rows": [
             {
-              "row_id": "L-35471-1",
+              "row_id": "L-31567-1",
               "account": "1000",
-              "debit_minor": 612000,
+              "debit_minor": 296400,
               "credit_minor": 0,
               "currency": "EUR",
-              "entity_id": "C-2981",
+              "entity_id": "C-5093",
               "invoice_id": null,
-              "payment_id": "PAY-4702"
+              "payment_id": "PAY-1078"
             },
             {
-              "row_id": "L-35471-2",
+              "row_id": "L-31567-2",
               "account": "1100",
               "debit_minor": 0,
-              "credit_minor": 612000,
+              "credit_minor": 296400,
               "currency": "EUR",
-              "entity_id": "C-2981",
-              "invoice_id": "INV/2026/5560",
-              "payment_id": "PAY-4702"
+              "entity_id": "C-5093",
+              "invoice_id": "INV-3552",
+              "payment_id": "PAY-1078"
             }
           ]
         }
       ],
       "after": [
         {
-          "je": 35471,
-          "timestamp": "2026-11-19T09:41:00+00:00",
+          "je": 31567,
+          "timestamp": "2026-11-17T09:41:00+00:00",
           "rows": [
             {
-              "row_id": "L-35471-1",
+              "row_id": "L-31567-1",
               "account": "1000",
-              "debit_minor": 612000,
+              "debit_minor": 296400,
               "credit_minor": 0,
               "currency": "EUR",
-              "entity_id": "C-2981",
+              "entity_id": "C-5093",
               "invoice_id": null,
-              "payment_id": "PAY-4702"
+              "payment_id": "PAY-1078"
             },
             {
-              "row_id": "L-35471-2",
+              "row_id": "L-31567-2",
               "account": "2150",
               "debit_minor": 0,
-              "credit_minor": 612000,
+              "credit_minor": 296400,
               "currency": "EUR",
-              "entity_id": "C-2981",
+              "entity_id": "C-5093",
               "invoice_id": null,
-              "payment_id": "PAY-4702"
+              "payment_id": "PAY-1078"
             }
           ]
         }
@@ -171,56 +171,56 @@
       },
       "before": [
         {
-          "je": 35618,
-          "timestamp": "2026-11-30T22:04:00+00:00",
+          "je": 31527,
+          "timestamp": "2026-11-12T12:24:00+00:00",
           "rows": [
             {
-              "row_id": "L-35618-1",
+              "row_id": "L-31527-1",
               "account": "1000",
-              "debit_minor": 1335800,
+              "debit_minor": 703944,
               "credit_minor": 0,
               "currency": "EUR",
-              "entity_id": "C-4544",
+              "entity_id": "C-2981",
               "invoice_id": null,
-              "payment_id": "PAY-4731"
+              "payment_id": "PAY-1075"
             },
             {
-              "row_id": "L-35618-2",
+              "row_id": "L-31527-2",
               "account": "1100",
               "debit_minor": 0,
-              "credit_minor": 1335800,
+              "credit_minor": 703944,
               "currency": "EUR",
-              "entity_id": "C-4544",
-              "invoice_id": "INV-5546",
-              "payment_id": "PAY-4731"
+              "entity_id": "C-2981",
+              "invoice_id": "INV-3524",
+              "payment_id": "PAY-1075"
             }
           ]
         }
       ],
       "after": [
         {
-          "je": 35618,
-          "timestamp": "2026-11-30T22:04:00+00:00",
+          "je": 31527,
+          "timestamp": "2026-11-12T12:24:00+00:00",
           "rows": [
             {
-              "row_id": "L-35618-1",
+              "row_id": "L-31527-1",
               "account": "1000",
-              "debit_minor": 1335800,
+              "debit_minor": 703944,
               "credit_minor": 0,
               "currency": "EUR",
-              "entity_id": "C-4544",
+              "entity_id": "C-2981",
               "invoice_id": null,
-              "payment_id": "PAY-4731"
+              "payment_id": "PAY-1075"
             },
             {
-              "row_id": "L-35618-2",
+              "row_id": "L-31527-2",
               "account": "2150",
               "debit_minor": 0,
-              "credit_minor": 1335800,
+              "credit_minor": 703944,
               "currency": "EUR",
-              "entity_id": "C-4544",
+              "entity_id": "C-2981",
               "invoice_id": null,
-              "payment_id": "PAY-4731"
+              "payment_id": "PAY-1075"
             }
           ]
         }
@@ -234,27 +234,27 @@
       },
       "before": [
         {
-          "je": 35605,
+          "je": 31726,
           "timestamp": "2026-12-02T12:50:00+00:00",
           "rows": [
             {
-              "row_id": "L-35605-1",
+              "row_id": "L-31726-1",
               "account": "1100",
               "debit_minor": 909416,
               "credit_minor": 0,
               "currency": "EUR",
               "entity_id": "C-4544",
-              "invoice_id": "INV/2026/5592",
+              "invoice_id": "INV-3597",
               "payment_id": null
             },
             {
-              "row_id": "L-35605-2",
+              "row_id": "L-31726-2",
               "account": "4000",
               "debit_minor": 0,
               "credit_minor": 909416,
               "currency": "EUR",
               "entity_id": "C-4544",
-              "invoice_id": "INV/2026/5592",
+              "invoice_id": "INV-3597",
               "payment_id": null
             }
           ]
@@ -262,27 +262,27 @@
       ],
       "after": [
         {
-          "je": 35605,
+          "je": 31726,
           "timestamp": "2026-11-30T16:34:00+00:00",
           "rows": [
             {
-              "row_id": "L-35605-1",
+              "row_id": "L-31726-1",
               "account": "1100",
               "debit_minor": 909416,
               "credit_minor": 0,
               "currency": "EUR",
               "entity_id": "C-4544",
-              "invoice_id": "INV/2026/5592",
+              "invoice_id": "INV-3597",
               "payment_id": null
             },
             {
-              "row_id": "L-35605-2",
+              "row_id": "L-31726-2",
               "account": "4000",
               "debit_minor": 0,
               "credit_minor": 909416,
               "currency": "EUR",
               "entity_id": "C-4544",
-              "invoice_id": "INV/2026/5592",
+              "invoice_id": "INV-3597",
               "payment_id": null
             }
           ]
@@ -297,27 +297,27 @@
       },
       "before": [
         {
-          "je": 35611,
+          "je": 31732,
           "timestamp": "2026-12-02T10:17:00+00:00",
           "rows": [
             {
-              "row_id": "L-35611-1",
+              "row_id": "L-31732-1",
               "account": "1100",
               "debit_minor": 557400,
               "credit_minor": 0,
               "currency": "EUR",
               "entity_id": "C-4507",
-              "invoice_id": "INV/2026/5591",
+              "invoice_id": "INV/2026/3596",
               "payment_id": null
             },
             {
-              "row_id": "L-35611-2",
+              "row_id": "L-31732-2",
               "account": "4000",
               "debit_minor": 0,
               "credit_minor": 557400,
               "currency": "EUR",
               "entity_id": "C-4507",
-              "invoice_id": "INV/2026/5591",
+              "invoice_id": "INV/2026/3596",
               "payment_id": null
             }
           ]
@@ -325,27 +325,27 @@
       ],
       "after": [
         {
-          "je": 35611,
+          "je": 31732,
           "timestamp": "2026-11-30T18:47:00+00:00",
           "rows": [
             {
-              "row_id": "L-35611-1",
+              "row_id": "L-31732-1",
               "account": "1100",
               "debit_minor": 557400,
               "credit_minor": 0,
               "currency": "EUR",
               "entity_id": "C-4507",
-              "invoice_id": "INV/2026/5591",
+              "invoice_id": "INV/2026/3596",
               "payment_id": null
             },
             {
-              "row_id": "L-35611-2",
+              "row_id": "L-31732-2",
               "account": "4000",
               "debit_minor": 0,
               "credit_minor": 557400,
               "currency": "EUR",
               "entity_id": "C-4507",
-              "invoice_id": "INV/2026/5591",
+              "invoice_id": "INV/2026/3596",
               "payment_id": null
             }
           ]

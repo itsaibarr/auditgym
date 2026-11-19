@@ -5,16 +5,16 @@
       "issue_id": "I-01",
       "type": "fx_conversion",
       "affected_ids": [
-        "D-54657"
+        "D-47490"
       ],
-      "expected_amount_minor": 5108,
+      "expected_amount_minor": 272,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-54657",
-          "FX-2026-02-25-EUR-USD",
-          "L-26183-1"
+          "D-47490",
+          "FX-2026-02-24-EUR-USD",
+          "L-21986-1"
         ]
       ],
       "link_id": null,

@@ -43,7 +43,7 @@ CHART_OF_ACCOUNTS = {
 LEVEL = {"USD": 1.0, "KZT": 478.0, "EUR": 0.93, "JPY": 152.0, "KWD": 0.307, "CNY": 7.15, "GBP": 0.79}
 
 _ADJ = ["Zhasyl", "Sary", "Kok", "Zhana", "Ak", "Biryuza", "Severo", "Nord", "Step", "Tau", "Samal", "Orion",
-        "Vega", "Ornek", "Arman", "Dala", "Kokzhal", "Zhuldyz", "Kumis", "Sapa", "Shyn", "Ural", "Irtysh", "Baikonur"]
+        "Vega", "Ornek", "Arman", "Dala", "Kokzhal", "Zhuldyz", "Kumis", "Talqyn", "Shyn", "Ural", "Irtysh", "Baikonur"]
 _NOUN = ["Trade", "Logistic", "Agro", "Stroi", "Tech", "Service", "Pack", "Metal", "Textile", "Pharm", "Energy",
          "Media", "Soft", "Market", "Foods", "Line", "Group", "Systems", "Supply", "Print"]
 _SUFFIX = ["LLP", "JSC", "LLC", "GmbH", "Ltd", "TOO"]
@@ -400,7 +400,8 @@ def _make_payments(w: World, cfg: dict) -> None:
                          [{"sku": "ADJ", "description": "Price adjustment", "qty": 1, "unit_price_minor": cn_amount,
                            "amount_minor": cn_amount}], cn_amount, None, ref=inv, utc_written=r.chance(0.3))
             w.invoices.append(cn)
-            add(inv.cust, inv.ccy, _pay_ts(r, w, t, 1, 10), inv.total - cn_amount, [inv], tag="net_of_cn")
+            if r.chance(0.65):  # otherwise the net amount is still open at export (a credited, unpaid invoice is normal)
+                add(inv.cust, inv.ccy, _pay_ts(r, w, t, 1, 10), inv.total - cn_amount, [inv], tag="net_of_cn")
     # D17: on-account receipts without invoice references
     for _ in range(r.randint(*cfg["on_account"])):
         cust = r.choice(w.customers)

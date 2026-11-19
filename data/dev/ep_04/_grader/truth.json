@@ -5,21 +5,16 @@
       "issue_id": "I-01",
       "type": "fx_conversion",
       "affected_ids": [
-        "D-11040"
+        "D-89921"
       ],
-      "expected_amount_minor": 2662,
+      "expected_amount_minor": 861,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-11040",
-          "FX-2026-08-28-EUR-USD",
-          "L-37832-1"
-        ],
-        [
-          "D-11040",
-          "FX-2026-08-28-EUR-USD",
-          "L-37832-2"
+          "D-89921",
+          "FX-2026-08-24-EUR-USD",
+          "L-37793-1"
         ]
       ],
       "link_id": null,
@@ -31,14 +26,14 @@
       "affected_ids": [
         "D-99383"
       ],
-      "expected_amount_minor": 272,
+      "expected_amount_minor": 461,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
           "D-99383",
           "FX-2026-08-31-EUR-USD",
-          "L-37858-1"
+          "L-37860-1"
         ]
       ],
       "link_id": "X1",
@@ -48,60 +43,62 @@
       "issue_id": "I-03",
       "type": "payment_allocation",
       "affected_ids": [
-        "D-23648",
-        "D-99383"
+        "D-32058",
+        "D-67417"
       ],
-      "expected_amount_minor": 61547,
+      "expected_amount_minor": 197403,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-23648",
-          "D-99383",
-          "FX-2026-08-25-EUR-USD",
-          "L-37858-2"
-        ]
-      ],
-      "link_id": "X1",
-      "invariant": "I7"
-    },
-    {
-      "issue_id": "I-04",
-      "type": "payment_allocation",
-      "affected_ids": [
-        "D-31506",
-        "D-50252"
-      ],
-      "expected_amount_minor": 52716,
-      "currency": "USD",
-      "tolerance_minor": 1,
-      "evidence_sets": [
-        [
-          "D-31506",
-          "D-50252",
-          "L-37758-2"
+          "D-32058",
+          "D-67417",
+          "L-37783-2"
         ]
       ],
       "link_id": null,
       "invariant": "I7"
     },
     {
-      "issue_id": "I-05",
-      "type": "period_cutoff",
+      "issue_id": "I-04",
+      "type": "payment_allocation",
       "affected_ids": [
-        "D-12803"
+        "D-59607",
+        "D-99383"
       ],
-      "expected_amount_minor": 1402352,
+      "expected_amount_minor": 141465,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-12803",
-          "L-37853-1"
+          "D-59607",
+          "D-99383",
+          "FX-2026-08-06-EUR-USD",
+          "L-37860-2"
+        ]
+      ],
+      "link_id": "X1",
+      "invariant": "I7"
+    },
+    {
+      "issue_id": "I-05",
+      "type": "period_cutoff",
+      "affected_ids": [
+        "D-77687"
+      ],
+      "expected_amount_minor": 329363,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-77687",
+          "FX-2026-08-31-EUR-USD",
+          "L-37868-1"
         ],
         [
-          "D-12803",
-          "L-37853-2"
+          "D-77687",
+          "FX-2026-08-31-EUR-USD",
+          "L-37868-2"
         ]
       ],
       "link_id": null,
@@ -113,14 +110,14 @@
       "affected_ids": [
         "D-99383"
       ],
-      "expected_amount_minor": 102415,
+      "expected_amount_minor": 173717,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
           "D-99383",
           "FX-2026-08-31-EUR-USD",
-          "L-37858-1"
+          "L-37860-1"
         ]
       ],
       "link_id": "X1",

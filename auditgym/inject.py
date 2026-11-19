@@ -274,7 +274,8 @@ def e4_prepare(c: Ctx):
         return (i.kind == "invoice" and not i.opening and c.free(i) and i.dup_of is None and not c.cns_of(i)
                 and "tz_boundary" not in i.tags)
     early = [i for i in w.invoices if ok(i) and "boundary" in i.tags and w.local(i.delivered_at) >= w.period_end]
-    late = [i for i in w.invoices if ok(i) and "boundary" in i.tags and c.in_p(i.delivered_at)]
+    # late: no receipts on the invoice, so cash is never applied before the (late) AR debit
+    late = [i for i in w.invoices if ok(i) and "boundary" in i.tags and c.in_p(i.delivered_at) and not c.pays_of(i)]
     pool = [("premature", i) for i in early] + [("late", i) for i in late]
     if not pool:
         raise Abort("no E4 target")
@@ -319,6 +320,12 @@ def x1_prepare(c: Ctx):
     alloc_delta = convert(amt, inv.ccy, w.base, inv_rate) - convert(part, inv.ccy, w.base, inv_rate)
     if abs(wrong_bank - correct_bank) < MIN_DELTA or alloc_delta < MIN_DELTA or part <= 0:
         raise Abort("x1 deltas too small")
+    # named wrong methods must stay outside tolerance (> 2 x tolerance) so they can never be graded TP
+    un = amt - part
+    alts = [convert(un, inv.ccy, w.base, w.rate(w.local(ts), inv.ccy)),   # unallocated part at the payment-date rate
+            convert(un, inv.ccy, w.base, w.fx[(new_day, inv.ccy)])]       # the 2150 row as it will be recorded
+    if any(abs(a - alloc_delta) <= 2 for a in alts) or abs(correct_bank - convert(amt, inv.ccy, w.base, inv_rate)) <= 2:
+        raise Abort("x1 alternatives too close")
     c.mark(inv)
     p = Payment(f"pay{len(w.payments)}", "receipt", inv.cust, inv.ccy, ts, amt, [inv], utc_written=c.r.chance(0.3))
     w.payments.append(p)
@@ -369,7 +376,8 @@ def x2_prepare(c: Ctx):
     w = c.w
     cands = c.unpaid_foreign(10)
     inv = c.r.choice(cands) if cands and c.r.chance(0.7) else _fresh_foreign_invoice(c, 10)
-    t = inv.issued_at + timedelta(days=c.r.randint(3, 6), hours=c.r.randint(0, 4))
+    # drawn exactly like a legit credit note (world.py D5) so its timing is not a tell
+    t = inv.issued_at + timedelta(days=c.r.randint(1, 6), hours=c.r.randint(0, 5), minutes=c.r.randint(0, 59))
     if w.rate_date(w.local(t), inv.ccy) == w.rate_date(w.local(inv.issued_at), inv.ccy) or not c.in_p(t):
         raise Abort("x2 cn date")
     cn_amt = inv.total * c.r.randint(1, 3) // 10

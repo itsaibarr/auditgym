@@ -93,6 +93,35 @@ class NaNAct:
                              '"affected_ids": ["x"], "claimed_amount_minor": 1e400, "currency": "KZT", "evidence_ids": [], "explanation": ""}]}}}\\n' % self.ep)
             sys.stdout.flush()
         return {"name": "submit", "arguments": {"findings": {"episode_id": self.ep, "findings": []}}}
+class ForkForge:
+    """--allow-forks: a setsid daemon keeps planting symlinks to the oracle's files while the runner writes."""
+    def __init__(self, root=""):
+        self.root = root
+    def reset(self, o, i):
+        if os.fork() == 0:
+            os.setsid()
+            if os.fork() == 0:
+                me = os.path.join(self.root, "evil:ForkForge")
+                end = time.time() + 15
+                while time.time() < end:
+                    for n in ("summary.json", "results.jsonl"):
+                        try:
+                            os.symlink(os.path.join(self.root, "oracle", n), os.path.join(me, n))
+                        except OSError:
+                            pass
+                        try:
+                            os.replace(os.path.join(me, n + ".l"), os.path.join(me, n))
+                        except OSError:
+                            pass
+                    time.sleep(0.001)
+            os._exit(0)
+        return {"name": "submit", "arguments": {"findings": {"episode_id": o["manifest"]["episode_id"], "findings": []}}}
+class Chmod:
+    def __init__(self, root=""):
+        self.root = root
+    def reset(self, o, i):
+        os.chmod(self.root, 0o555)
+        return {"name": "submit", "arguments": {"findings": {"episode_id": o["manifest"]["episode_id"], "findings": []}}}
 class ReadRuns:
     def __init__(self, root=""):
         self.root = root
@@ -488,3 +517,84 @@ def test_runner_refuses_when_salt_value_is_in_another_cmdline(dirty, tmp_path, m
     finally:
         holder.kill()
         holder.wait()
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="subreaper reaping is Linux-only (macOS: documented)")
+def test_allow_forks_daemon_is_reaped_before_outputs(evil, dirty, tmp_path):
+    from auditgym.runner import verify_run
+    run_policies(["evil:ForkForge", "oracle"], [("dev", dirty)], tmp_path, mode="eval", policy_path=evil, allow_forks=True,
+                 args=[f"root={json.dumps(str(tmp_path))}"])
+    time.sleep(0.5)
+    d = tmp_path / "evil:ForkForge"
+    assert verify_run(d) == [] and json.loads((d / "summary.json").read_text())["all"]["mean_return"] < 0
+
+
+def test_policy_chmod_of_out_root_does_not_abort_the_run(evil, dirty, tmp_path):
+    out = run_policies(["evil:Chmod", "oracle"], [("dev", dirty)], tmp_path, mode="eval", policy_path=evil,
+                       args=[f"root={json.dumps(str(tmp_path))}"])
+    from auditgym.runner import verify_run
+    assert verify_run(tmp_path / "oracle") == [] and out["oracle"][0]["reward"] == 1.0
+
+
+def test_symlinked_out_root_given_by_the_user_works(dirty, tmp_path):
+    (tmp_path / "real").mkdir()
+    (tmp_path / "link").symlink_to(tmp_path / "real")
+    run_policies(["reconcile"], [("dev", dirty)], tmp_path / "link", mode="eval")
+    assert (tmp_path / "real" / "reconcile" / "summary.json").exists()
+
+
+def test_builtins_ignore_policy_args_meant_for_others(dirty, tmp_path):
+    out = run_policies(["reconcile", "random"], [("dev", dirty)], tmp_path, mode="eval", args=["root=1", "seed=3"])
+    assert all(r["termination"] in ("submitted", "step_limit") for rs in out.values() for r in rs)
+
+
+def _rate(ep, ccy, day):
+    rows = [r for r in ep.public["fx"] if r["source_currency"] == ccy and r["date"] <= day]
+    return max(rows, key=lambda r: r["date"])["rate"] if rows else None
+
+
+def test_e3_invoice_error_is_never_the_delivery_date_rate():
+    from auditgym.money import convert
+    n = 0
+    for ep in EPS:
+        tz, base = ep.public["manifest"]["timezone"], ep.public["manifest"]["base_currency"]
+        for iss in ep.truth["issues"]:
+            if iss["type"] != "fx_conversion" or iss["link_id"]:
+                continue
+            d = next((x for x in ep.public["invoices"] if x["doc_id"] == iss["affected_ids"][0] and x["doc_type"] == "invoice"), None)
+            if not d or not d["delivered_at"]:
+                continue
+            row = next(r for r in ep.public["ledger"] if r["invoice_id"] == d["invoice_id"] and r["account"] == "1100" and r["debit_minor"] > 0)
+            rate = _rate(ep, d["currency"], local_date(d["delivered_at"], tz).isoformat())
+            assert rate is None or convert(d["total_minor"], d["currency"], base, rate) != row["debit_minor"]
+            n += 1
+    assert n >= 3
+
+
+def test_x2_credit_notes_look_like_legit_ones():
+    x2 = legit = x2_flag = legit_flag = 0
+    for ep in EPS:
+        x2_cns = {i["affected_ids"][0] for i in ep.truth["issues"] if i["type"] == "fx_conversion" and i["link_id"] == "X2"}
+        inv_by_id = {d["invoice_id"]: d for d in ep.public["invoices"]}
+        paid = {ref for p in ep.public["payments"] for ref in (p["invoice_refs"] or [])}
+        for cn in (d for d in ep.public["invoices"] if d["doc_type"] == "credit_note"):
+            ref = inv_by_id[cn["ref_invoice_id"]]
+            gap = (parse(cn["issued_at"]) - parse(ref["issued_at"])).total_seconds()
+            flag = gap % 3600 == 0 and ref["invoice_id"] not in paid      # the round-3 auditor's classifier
+            if cn["doc_id"] in x2_cns:
+                x2, x2_flag = x2 + 1, x2_flag + flag
+            else:
+                legit, legit_flag = legit + 1, legit_flag + flag
+    assert x2 >= 3 and legit >= 20
+    assert x2_flag / x2 < 0.5
+
+
+def test_x1_named_wrong_methods_stay_outside_tolerance():
+    for ep in EPS:
+        x1 = {i["type"]: i for i in ep.truth["issues"] if i["link_id"] == "X1"}
+        if not x1:
+            continue
+        pay = x1["payment_allocation"]["affected_ids"]
+        pid = next(p["payment_id"] for p in ep.public["payments"] if p["doc_id"] in pay)
+        row2150 = next(r for r in ep.public["ledger"] if r["account"] == "2150" and r["payment_id"] == pid)
+        assert abs(row2150["credit_minor"] - x1["payment_allocation"]["expected_amount_minor"]) > 2
