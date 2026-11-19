@@ -1,0 +1,698 @@
+{
+  "split": "closed_example",
+  "config_version": "1.0.0",
+  "note": "Shape of a closed evaluation: jury picks secret seeds and new combinations, sets AUDITGYM_SALT in the runner. 5 clean + 5 interacting + 10 other.",
+  "base_config": {},
+  "episodes": [
+    {
+      "seed": 9000,
+      "profile": "clean",
+      "config": {
+        "errors": {
+          "duplicate_invoice": {
+            "on": false
+          },
+          "payment_allocation": {
+            "on": false
+          },
+          "fx_conversion": {
+            "on": false
+          },
+          "period_cutoff": {
+            "on": false
+          }
+        },
+        "interacting": {
+          "X1": 0.0,
+          "X2": 0.0
+        }
+      }
+    },
+    {
+      "seed": 9001,
+      "profile": "clean",
+      "config": {
+        "errors": {
+          "duplicate_invoice": {
+            "on": false
+          },
+          "payment_allocation": {
+            "on": false
+          },
+          "fx_conversion": {
+            "on": false
+          },
+          "period_cutoff": {
+            "on": false
+          }
+        },
+        "interacting": {
+          "X1": 0.0,
+          "X2": 0.0
+        }
+      }
+    },
+    {
+      "seed": 9002,
+      "profile": "clean",
+      "config": {
+        "errors": {
+          "duplicate_invoice": {
+            "on": false
+          },
+          "payment_allocation": {
+            "on": false
+          },
+          "fx_conversion": {
+            "on": false
+          },
+          "period_cutoff": {
+            "on": false
+          }
+        },
+        "interacting": {
+          "X1": 0.0,
+          "X2": 0.0
+        }
+      }
+    },
+    {
+      "seed": 9003,
+      "profile": "clean",
+      "config": {
+        "errors": {
+          "duplicate_invoice": {
+            "on": false
+          },
+          "payment_allocation": {
+            "on": false
+          },
+          "fx_conversion": {
+            "on": false
+          },
+          "period_cutoff": {
+            "on": false
+          }
+        },
+        "interacting": {
+          "X1": 0.0,
+          "X2": 0.0
+        }
+      }
+    },
+    {
+      "seed": 9004,
+      "profile": "clean",
+      "config": {
+        "errors": {
+          "duplicate_invoice": {
+            "on": false
+          },
+          "payment_allocation": {
+            "on": false
+          },
+          "fx_conversion": {
+            "on": false
+          },
+          "period_cutoff": {
+            "on": false
+          }
+        },
+        "interacting": {
+          "X1": 0.0,
+          "X2": 0.0
+        }
+      }
+    },
+    {
+      "seed": 9100,
+      "profile": "interacting",
+      "config": {
+        "interacting": {
+          "X1": 1.0
+        },
+        "errors": {
+          "duplicate_invoice": {
+            "on": true,
+            "count": [
+              0,
+              1
+            ]
+          },
+          "payment_allocation": {
+            "on": true,
+            "count": [
+              0,
+              1
+            ]
+          },
+          "fx_conversion": {
+            "on": true,
+            "count": [
+              0,
+              1
+            ]
+          },
+          "period_cutoff": {
+            "on": true,
+            "count": [
+              0,
+              1
+            ]
+          }
+        }
+      }
+    },
+    {
+      "seed": 9101,
+      "profile": "interacting",
+      "config": {
+        "interacting": {
+          "X2": 1.0
+        },
+        "errors": {
+          "duplicate_invoice": {
+            "on": true,
+            "count": [
+              0,
+              1
+            ]
+          },
+          "payment_allocation": {
+            "on": true,
+            "count": [
+              0,
+              1
+            ]
+          },
+          "fx_conversion": {
+            "on": true,
+            "count": [
+              0,
+              1
+            ]
+          },
+          "period_cutoff": {
+            "on": true,
+            "count": [
+              0,
+              1
+            ]
+          }
+        }
+      }
+    },
+    {
+      "seed": 9102,
+      "profile": "interacting",
+      "config": {
+        "interacting": {
+          "X1": 1.0,
+          "X2": 1.0
+        },
+        "errors": {
+          "duplicate_invoice": {
+            "on": false
+          },
+          "payment_allocation": {
+            "on": false
+          },
+          "fx_conversion": {
+            "on": false
+          },
+          "period_cutoff": {
+            "on": false
+          }
+        }
+      }
+    },
+    {
+      "seed": 9103,
+      "profile": "interacting",
+      "config": {
+        "interacting": {
+          "X1": 1.0
+        },
+        "errors": {
+          "duplicate_invoice": {
+            "on": true,
+            "count": [
+              0,
+              1
+            ]
+          },
+          "payment_allocation": {
+            "on": true,
+            "count": [
+              0,
+              1
+            ]
+          },
+          "fx_conversion": {
+            "on": true,
+            "count": [
+              0,
+              1
+            ]
+          },
+          "period_cutoff": {
+            "on": true,
+            "count": [
+              0,
+              1
+            ]
+          }
+        }
+      }
+    },
+    {
+      "seed": 9104,
+      "profile": "interacting",
+      "config": {
+        "interacting": {
+          "X2": 1.0
+        },
+        "errors": {
+          "duplicate_invoice": {
+            "on": true,
+            "count": [
+              0,
+              1
+            ]
+          },
+          "payment_allocation": {
+            "on": true,
+            "count": [
+              0,
+              1
+            ]
+          },
+          "fx_conversion": {
+            "on": true,
+            "count": [
+              0,
+              1
+            ]
+          },
+          "period_cutoff": {
+            "on": true,
+            "count": [
+              0,
+              1
+            ]
+          }
+        }
+      }
+    },
+    {
+      "seed": 9200,
+      "profile": "mixed",
+      "config": {
+        "errors": {
+          "duplicate_invoice": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "payment_allocation": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "fx_conversion": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "period_cutoff": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          }
+        },
+        "months": [
+          1
+        ]
+      }
+    },
+    {
+      "seed": 9201,
+      "profile": "mixed",
+      "config": {
+        "errors": {
+          "duplicate_invoice": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "payment_allocation": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "fx_conversion": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "period_cutoff": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          }
+        },
+        "months": [
+          2
+        ]
+      }
+    },
+    {
+      "seed": 9202,
+      "profile": "mixed",
+      "config": {
+        "errors": {
+          "duplicate_invoice": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "payment_allocation": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "fx_conversion": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "period_cutoff": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          }
+        },
+        "months": [
+          3
+        ]
+      }
+    },
+    {
+      "seed": 9203,
+      "profile": "mixed",
+      "config": {
+        "errors": {
+          "duplicate_invoice": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "payment_allocation": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "fx_conversion": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "period_cutoff": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          }
+        },
+        "months": [
+          4
+        ]
+      }
+    },
+    {
+      "seed": 9204,
+      "profile": "mixed",
+      "config": {
+        "errors": {
+          "duplicate_invoice": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "payment_allocation": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "fx_conversion": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "period_cutoff": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          }
+        },
+        "months": [
+          5
+        ]
+      }
+    },
+    {
+      "seed": 9205,
+      "profile": "mixed",
+      "config": {
+        "errors": {
+          "duplicate_invoice": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "payment_allocation": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "fx_conversion": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "period_cutoff": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          }
+        },
+        "months": [
+          6
+        ]
+      }
+    },
+    {
+      "seed": 9206,
+      "profile": "mixed",
+      "config": {
+        "errors": {
+          "duplicate_invoice": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "payment_allocation": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "fx_conversion": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "period_cutoff": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          }
+        },
+        "months": [
+          7
+        ]
+      }
+    },
+    {
+      "seed": 9207,
+      "profile": "mixed",
+      "config": {
+        "errors": {
+          "duplicate_invoice": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "payment_allocation": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "fx_conversion": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "period_cutoff": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          }
+        },
+        "months": [
+          8
+        ]
+      }
+    },
+    {
+      "seed": 9208,
+      "profile": "mixed",
+      "config": {
+        "errors": {
+          "duplicate_invoice": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "payment_allocation": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "fx_conversion": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "period_cutoff": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          }
+        },
+        "months": [
+          9
+        ]
+      }
+    },
+    {
+      "seed": 9209,
+      "profile": "mixed",
+      "config": {
+        "errors": {
+          "duplicate_invoice": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "payment_allocation": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "fx_conversion": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          },
+          "period_cutoff": {
+            "on": true,
+            "count": [
+              0,
+              2
+            ]
+          }
+        },
+        "months": [
+          10
+        ]
+      }
+    }
+  ]
+}

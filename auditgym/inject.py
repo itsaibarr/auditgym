@@ -90,6 +90,24 @@ class Ctx:
                 and not self.pays_of(i) and not self.cns_of(i) and i.dup_of is None]
 
 
+def _fresh_foreign_invoice(c: "Ctx", days_before_end: int) -> Invoice:
+    """Add a legitimate, correctly posted, unpaid foreign-currency invoice (prepare phase only)."""
+    from .world import _lines
+    w, r = c.w, c.r
+    cust = r.choice([x for x in w.customers if x.ccy != w.base])
+    span = (w.period_end - w.period_start).days - days_before_end - 1
+    d = w.period_start + timedelta(days=r.randint(1, max(1, span)))
+    t = local_instant(d, r.randint(9, 16), r.randint(0, 59), w.tz)
+    lines = _lines(r, w, cust.ccy)
+    inv = Invoice(f"inv{len(w.invoices)}", "invoice", cust, cust.ccy, t + timedelta(minutes=r.randint(10, 90)),
+                  t + timedelta(days=30), t, lines, sum(l["amount_minor"] for l in lines), f"dn{len(w.invoices)}",
+                  utc_written=r.chance(0.3))
+    w.invoices.append(inv)
+    b = w.to_base(inv.total, inv.ccy, inv.issued_at)
+    c.add_je(JE("", inv.issued_at, [Line(AR, b, 0, inv.cust, inv, role="ar"), Line(REVENUE, 0, b, inv.cust, inv, role="revenue")], "invoice", inv))
+    return inv
+
+
 def _line(je: JE, role: str) -> Line:
     return next(l for l in je.lines if l.role == role)
 
@@ -281,41 +299,45 @@ def x1_prepare(c: Ctx):
     """Partial foreign-currency payment at the period boundary (legit doc; correct posting)."""
     w = c.w
     cands = c.unpaid_foreign(5)
-    if not cands:
-        raise Abort("no X1 target")
-    inv = c.r.choice(cands)
-    c.mark(inv)
+    inv = c.r.choice(cands) if cands and c.r.chance(0.7) else _fresh_foreign_invoice(c, 5)
     ts = local_instant(c.last_day(), 23, c.r.randint(30, 55), w.tz)
     amt = inv.total * c.r.randint(3, 6) // 10
+    part = amt * c.r.randint(2, 5) // 10
+    inv_rate = w.rate(w.local(inv.issued_at), inv.ccy)
+    correct_bank = convert(amt, inv.ccy, w.base, w.rate(w.local(ts), inv.ccy))
+    # the receipt is booked on a business day of the post-period window, at that day's rate
+    days = [d for d in w.fx_dates if w.period_end <= d < w.export_end]
+    new_day = next((d for d in days if abs(convert(amt, inv.ccy, w.base, w.fx[(d, inv.ccy)]) - correct_bank) >= MIN_DELTA), None)
+    if new_day is None:
+        raise Abort("x1 no booking day with a material rate change")
+    wrong_bank = convert(amt, inv.ccy, w.base, w.fx[(new_day, inv.ccy)])
+    alloc_delta = convert(amt, inv.ccy, w.base, inv_rate) - convert(part, inv.ccy, w.base, inv_rate)
+    if abs(wrong_bank - correct_bank) < MIN_DELTA or alloc_delta < MIN_DELTA or part <= 0:
+        raise Abort("x1 deltas too small")
+    c.mark(inv)
     p = Payment(f"pay{len(w.payments)}", "receipt", inv.cust, inv.ccy, ts, amt, [inv], utc_written=c.r.chance(0.5))
     w.payments.append(p)
     c.mark(p)
-    bank = w.to_base(amt, p.ccy, ts)
-    rel = convert(amt, inv.ccy, w.base, w.rate(w.local(inv.issued_at), inv.ccy))
-    je = JE("", ts, [Line(bank_account(w, p.ccy), bank, 0, p.cust, None, p, role="bank"), Line(AR, 0, rel, p.cust, inv, p, role="ar")], "receipt", p)
+    rel = convert(amt, inv.ccy, w.base, inv_rate)
+    je = JE("", ts, [Line(bank_account(w, p.ccy), correct_bank, 0, p.cust, None, p, role="bank"), Line(AR, 0, rel, p.cust, inv, p, role="ar")], "receipt", p)
     _rebalance_fx(je)
     c.add_je(je)
-    return p
+    return p, new_day, part
 
 
-def x1_mutate(c: Ctx, p: Payment) -> list[Issue]:
+def x1_mutate(c: Ctx, target) -> list[Issue]:
     w = c.w
+    p, new_day, part = target
     inv = p.refs[0]
     je = c.je_of(p)
     before = c.snapshot(je)
-    new_day = w.period_end
-    while new_day not in w.fx_dates or new_day == w.rate_date(w.local(p.ts), p.ccy):
-        new_day += timedelta(days=1)
     correct_bank = w.to_base(p.amount, p.ccy, p.ts)
     wrong_rate = w.fx[(new_day, p.ccy)]
     wrong_bank = convert(p.amount, p.ccy, w.base, wrong_rate)
     inv_rate = w.rate(w.local(inv.issued_at), inv.ccy)
-    part = p.amount * c.r.randint(2, 5) // 10
     rel_ok = convert(p.amount, inv.ccy, w.base, inv_rate)
     rel_rec = convert(part, inv.ccy, w.base, inv_rate)
     fx_delta, alloc_delta = abs(wrong_bank - correct_bank), rel_ok - rel_rec
-    if fx_delta < MIN_DELTA or alloc_delta < MIN_DELTA:
-        raise Abort("x1 deltas too small")
     je.ts = local_instant(new_day, c.r.randint(9, 12), c.r.randint(0, 59), w.tz)
     w.jes.sort(key=lambda j: j.ts)
     bank, ar = _line(je, "bank"), _line(je, "ar")
@@ -339,13 +361,14 @@ def x2_prepare(c: Ctx):
     """Foreign invoice with a credit note (legit), later duplicated; the credit note is booked at the wrong rate."""
     w = c.w
     cands = c.unpaid_foreign(10)
-    if not cands:
-        raise Abort("no X2 target")
-    inv = c.r.choice(cands)
+    inv = c.r.choice(cands) if cands and c.r.chance(0.7) else _fresh_foreign_invoice(c, 10)
     t = inv.issued_at + timedelta(days=c.r.randint(3, 6), hours=c.r.randint(0, 4))
     if w.rate_date(w.local(t), inv.ccy) == w.rate_date(w.local(inv.issued_at), inv.ccy) or not c.in_p(t):
         raise Abort("x2 cn date")
     cn_amt = inv.total * c.r.randint(1, 3) // 10
+    inv_rate = w.rate(w.local(inv.issued_at), inv.ccy)
+    if abs(convert(cn_amt, inv.ccy, w.base, inv_rate) - w.to_base(cn_amt, inv.ccy, t)) < MIN_DELTA:
+        raise Abort("x2 delta")
     cn = Invoice(f"inv{len(w.invoices)}", "credit_note", inv.cust, inv.ccy, t, t, None,
                  [{"sku": "ADJ", "description": "Price adjustment", "qty": 1, "unit_price_minor": cn_amt, "amount_minor": cn_amt}],
                  cn_amt, None, ref=inv, utc_written=c.r.chance(0.3))
@@ -403,10 +426,12 @@ def plan(w: World, cfg: dict, key: str) -> tuple[Ctx, list]:
     jobs = jobs[: cfg.get("max_errors", 12)]
     prepared = []
     for name in jobs:
-        try:
-            prepared.append((name, INJECTORS[name][0](c)))
-        except Abort:
-            continue
+        for _attempt in range(6):
+            try:
+                prepared.append((name, INJECTORS[name][0](c)))
+                break
+            except Abort:
+                continue
     return c, prepared
 
 
