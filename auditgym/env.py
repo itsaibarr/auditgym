@@ -32,7 +32,7 @@ ARGS = {
     "calculator": ({"expression"}, set()),
     "submit": ({"findings"}, set()),
 }
-_CURSOR = re.compile(r"^p(0|[1-9][0-9]{0,6})$")
+_CURSOR = re.compile(r"(ledger|invoices|payments|fx):(0|[1-9][0-9]{0,6}):([0-9a-f]{8})")
 TASK = ("You are auditing one company for one reporting period. Inspect the ledger, invoices, payments and FX "
         "rates through the actions, then submit findings with evidence. Error types: duplicate_invoice, "
         "payment_allocation, fx_conversion, period_cutoff. The books may also be clean. Amounts are integer "
@@ -44,14 +44,19 @@ def _copy(x):
 
 
 def _echo(x) -> str:
-    s = x if isinstance(x, str) else json.dumps(x, default=str)
-    return s[:64]
+    """Echo only the policy's own (scalar) input, bounded; never serialise arbitrary structures."""
+    if isinstance(x, str):
+        return x[:64]
+    if isinstance(x, (int, float, bool)) or x is None:
+        return str(x)[:64]
+    return f"<{type(x).__name__}>"
 
 
 class AuditEnv:
     metadata = {"name": "AuditGym-v1", "version": __version__}
 
-    def __init__(self, mode: str = "train", max_steps: int = MAX_STEPS, time_limit_s: float = TIME_LIMIT_S, clock=time.monotonic):
+    def __init__(self, mode: str = "train", max_steps: int = MAX_STEPS, time_limit_s: float | None = TIME_LIMIT_S, clock=time.monotonic):
+        """time_limit_s: wall-clock episode limit (case: 60 s). None disables it (offline RL with slow policies)."""
         if mode not in ("train", "eval"):
             raise ValueError("mode must be 'train' or 'eval'")
         self.mode = mode
@@ -122,7 +127,7 @@ class AuditEnv:
         if self._done:
             return self._obs(None, "episode_over", "the episode is over; call reset()"), 0.0, self._terminated, self._truncated, self._info("episode_over")
         self._steps += 1
-        if self._clock() - self._t0 > self.time_limit_s:
+        if self.time_limit_s is not None and self._clock() - self._t0 > self.time_limit_s:
             return self._finish_truncated(self._obs(None, "time_limit", "episode time limit exceeded"), "time_limit")
         name, args, err = self._parse(action)
         if err:
@@ -173,12 +178,18 @@ class AuditEnv:
         if cursor is None:
             start = 0
         else:
-            m = _CURSOR.match(cursor) if isinstance(cursor, str) else None
-            if not m or int(m.group(1)) > len(rows):
+            m = _CURSOR.fullmatch(cursor) if isinstance(cursor, str) else None
+            if not m or m.group(1) != table or int(m.group(2)) > len(rows) or m.group(3) != self._cursor_tag(table, int(m.group(2))):
                 raise _ActionError("invalid_cursor", f"invalid cursor '{_echo(cursor)}'")
-            start = int(m.group(1))
+            start = int(m.group(2))
         end = min(start + limit, len(rows))
-        return {"table": table, "rows": _copy(rows[start:end]), "next_cursor": f"p{end}" if end < len(rows) else None, "total": len(rows)}
+        nxt = f"{table}:{end}:{self._cursor_tag(table, end)}" if end < len(rows) else None
+        return {"table": table, "rows": _copy(rows[start:end]), "next_cursor": nxt, "total": len(rows)}
+
+    def _cursor_tag(self, table: str, offset: int) -> str:
+        """Cursors are issued by the env only (stable for the episode, bound to the table)."""
+        import hashlib
+        return hashlib.sha256(f"{self._episode_id}|{table}|{offset}|cursor".encode()).hexdigest()[:8]
 
     def _a_get_record(self, table, id):
         self._table(table)

@@ -44,12 +44,15 @@ class RandomPolicy(Policy):
         self.ep = observation["manifest"]["episode_id"]
         self.base = observation["manifest"]["base_currency"]
         self.seen: list[str] = []
+        self.cursors: list = [None]
         return self._act()
 
     def step(self, observation, reward, terminated, truncated, info):
         res = observation.get("result") or {}
         for row in res.get("rows", []):
             self.seen.append(row.get("row_id") or row.get("doc_id") or row.get("fx_id"))
+        if res.get("next_cursor"):
+            self.cursors.append(res["next_cursor"])
         return self._act()
 
     def _act(self):
@@ -60,7 +63,9 @@ class RandomPolicy(Policy):
                                             [self.r.choice(self.seen)], self.r.randint(1, 10**6), self.base,
                                             [self.r.choice(self.seen)], "random") for _ in range(k)])
         if x < 0.55:
-            return {"name": "list_records", "arguments": {"table": self.r.choice(list(TABLE_ORDER)), "cursor": f"p{50 * self.r.randint(0, 3)}"}}
+            c = self.r.choice(self.cursors)
+            table = c.split(":")[0] if c else self.r.choice(list(TABLE_ORDER))
+            return {"name": "list_records", "arguments": {"table": table, "cursor": c}}
         if x < 0.8 and self.seen:
             return {"name": "get_document", "arguments": {"doc_id": self.r.choice(self.seen)}}
         if x < 0.9:

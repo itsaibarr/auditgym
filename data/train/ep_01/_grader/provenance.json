@@ -97,7 +97,21 @@
     "max_errors": 12
   },
   "config_hash": "7c94e16120a30e63",
-  "public_fingerprint": "4f67216d02d3921c7d0dfc5186ab648d6e3bc1f9e659b23a11acaa5826416412",
+  "config_version": "1.0.0",
+  "public_fingerprint": "299129d391e65a2df7485bc24504119d064518fb5ea64d7e0aa3f33f3e695ae3",
   "events": [],
-  "invariants_before_injection": "I1-I8 hold (asserted by tests/test_data.py and `auditgym check`)"
+  "invariants_before_injection": {
+    "checked": [
+      "I1",
+      "I2",
+      "I3",
+      "I4",
+      "I5",
+      "I6",
+      "I7",
+      "I8"
+    ],
+    "violations": []
+  },
+  "inserted_documents": []
 }

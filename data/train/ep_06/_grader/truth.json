@@ -5,17 +5,17 @@
       "issue_id": "I-01",
       "type": "payment_allocation",
       "affected_ids": [
-        "D-13748",
-        "D-95921"
+        "D-20072",
+        "D-38158"
       ],
-      "expected_amount_minor": 225828000,
+      "expected_amount_minor": 95055007,
       "currency": "KZT",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-13748",
-          "D-95921",
-          "L-56517-2"
+          "D-20072",
+          "D-38158",
+          "L-13495-2"
         ]
       ],
       "link_id": null,
@@ -25,22 +25,22 @@
       "issue_id": "I-02",
       "type": "payment_allocation",
       "affected_ids": [
-        "D-24228",
-        "D-82049"
+        "D-41187",
+        "D-96903"
       ],
-      "expected_amount_minor": 43890168,
+      "expected_amount_minor": 254154000,
       "currency": "KZT",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-24228",
-          "D-82049",
-          "L-56570-2"
+          "D-41187",
+          "D-96903",
+          "L-13508-2"
         ],
         [
-          "D-24228",
-          "D-82049",
-          "L-56570-3"
+          "D-41187",
+          "D-96903",
+          "L-13508-3"
         ]
       ],
       "link_id": null,
@@ -52,17 +52,17 @@
       "affected_ids": [
         "D-82546"
       ],
-      "expected_amount_minor": 472832657,
+      "expected_amount_minor": 802800550,
       "currency": "KZT",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
           "D-82546",
-          "L-56635-1"
+          "L-13616-1"
         ],
         [
           "D-82546",
-          "L-56635-2"
+          "L-13616-2"
         ]
       ],
       "link_id": null,

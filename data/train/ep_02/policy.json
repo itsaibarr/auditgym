@@ -32,8 +32,12 @@
     "fee": "fee_minor stated on the payment document is posted to 6500 bank charges"
   },
   "billing": {
-    "rule": "each delivery_ref is billed at most once (net of credit notes)"
+    "rule": "each delivery_ref is billed at most once (net of credit notes)",
+    "duplicate": "when two invoices bill the same delivery_ref, the later-issued one (by issued_at instant) is the duplicate",
+    "service_period": "informational only; revenue is recognised at delivered_at"
   },
+  "opening_balance": "the opening entry (account 3000, at period start) carries prior-period open invoices at their issue-date conversion; it is not an invoice posting for the recognition rule. No event of an opening invoice is dated before the period start.",
+  "revaluation": "no period-end revaluation of open foreign-currency items",
   "chart_of_accounts": {
     "1000": "Bank (base currency)",
     "1010": "Bank USD (valued in base)",
@@ -76,6 +80,13 @@
       "fx_conversion": "doc_id of the document whose conversion is wrong",
       "period_cutoff": "doc_id of the document posted in the wrong period"
     },
-    "evidence_ids": "row_id (ledger), doc_id (invoices/payments) or fx id FX-<date>-<SRC>-<TGT>; policy is context, not evidence"
+    "evidence_ids": "row_id (ledger), doc_id (invoices/payments) or fx id FX-<date>-<SRC>-<TGT>; policy is context, not evidence",
+    "converted_row": "invoice: its AR debit (or revenue credit); credit note: its AR credit (or returns debit); payment: its bank row",
+    "minimal_evidence": {
+      "duplicate_invoice": "both invoice docs + the duplicate's AR (or revenue) row",
+      "payment_allocation": "payment doc + invoice doc + the payment's AR row for that invoice (or its 2150 row for a base-currency payment) + the invoice-date fx row if the invoice is in a foreign currency",
+      "fx_conversion": "the document + the fx row the policy prescribes + the converted ledger row",
+      "period_cutoff": "the document + the mis-dated ledger row (AR/revenue for an invoice, bank for a payment)"
+    }
   }
 }

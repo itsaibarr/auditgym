@@ -42,8 +42,8 @@ CHART_OF_ACCOUNTS = {
 
 LEVEL = {"USD": 1.0, "KZT": 478.0, "EUR": 0.93, "JPY": 152.0, "KWD": 0.307, "CNY": 7.15, "GBP": 0.79}
 
-_ADJ = ["Altyn", "Sary", "Kok", "Zhana", "Ak", "Biryuza", "Severo", "Nord", "Step", "Tau", "Samal", "Orion",
-        "Vega", "Kaspi", "Arman", "Dala", "Tulpar", "Zhuldyz", "Kumis", "Bereke", "Shyn", "Ural", "Irtysh", "Baikonur"]
+_ADJ = ["Zhasyl", "Sary", "Kok", "Zhana", "Ak", "Biryuza", "Severo", "Nord", "Step", "Tau", "Samal", "Orion",
+        "Vega", "Ornek", "Arman", "Dala", "Kokzhal", "Zhuldyz", "Kumis", "Bereke", "Shyn", "Ural", "Irtysh", "Baikonur"]
 _NOUN = ["Trade", "Logistic", "Agro", "Stroi", "Tech", "Service", "Pack", "Metal", "Textile", "Pharm", "Energy",
          "Media", "Soft", "Market", "Foods", "Line", "Group", "Systems", "Supply", "Print"]
 _SUFFIX = ["LLP", "JSC", "LLC", "GmbH", "Ltd", "TOO"]
@@ -277,6 +277,10 @@ def _make_invoices(w: World, cfg: dict) -> None:
         late = r.chance(0.06)  # D10: deliveries just before local midnight (some written in UTC)
         t = _rand_time(r, w, d, late=late)
         issued = t + timedelta(minutes=r.randint(1, 4) if late else r.randint(10, 240))
+        if not late and r.chance(0.15):  # billed 1-3 days after delivery, still within the same period
+            lagged = t + timedelta(days=r.randint(1, 3), hours=r.randint(0, 6))
+            if w.local(lagged) < w.period_end:
+                issued = lagged
         inv = _new_invoice(w, r, r.choice(w.customers), t, issued)
         if late:
             inv.utc_written = True
@@ -312,7 +316,15 @@ def _make_invoices(w: World, cfg: dict) -> None:
 
 
 def _pay_ts(r: Rng, w: World, after: datetime, lo: int = 1, hi: int = 25) -> datetime:
-    d = w.local(after) + timedelta(days=r.randint(lo, hi))
+    """Receipt time: never before the period opens (opening AR is carried at full value), sometimes late in the
+    evening, sometimes on the last day of the period (legitimate twins of the X1 boundary payment)."""
+    d = max(w.local(after), w.period_start) + timedelta(days=r.randint(lo, hi))
+    x = r.random()
+    last = w.period_end - timedelta(days=1)
+    if x < 0.06 and w.local(after) < last:
+        d = last
+    if x < 0.15:
+        return local_instant(d, r.randint(20, 23), r.randint(0, 59), w.tz)
     return _rand_time(r, w, d)
 
 
@@ -371,7 +383,7 @@ def _make_payments(w: World, cfg: dict) -> None:
             add(inv.cust, inv.ccy, _pay_ts(r, w, inv.issued_at), inv.total - fee, [inv], fee=fee, tag="fee")
         elif pat == "credit_note":  # D5
             cn_amount = inv.total * r.randint(1, 3) // 10
-            t = inv.issued_at + timedelta(days=r.randint(1, 6), hours=r.randint(0, 5))
+            t = max(inv.issued_at, local_instant(w.period_start, 9, 0, w.tz)) + timedelta(days=r.randint(1, 6), hours=r.randint(0, 5))
             if t >= export_end_dt:
                 continue
             cn = Invoice(f"inv{len(w.invoices)}", "credit_note", inv.cust, inv.ccy, t, t, None,

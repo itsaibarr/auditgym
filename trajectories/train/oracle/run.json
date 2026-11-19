@@ -1,5 +1,6 @@
 {
   "auditgym_version": "1.0.0",
+  "code_hash": "f305efacf755e605",
   "policy": "oracle",
   "policy_args": [],
   "mode": "train",
@@ -17,6 +18,9 @@
     "ep_84cb4fb7ee5a4463",
     "ep_c163bb75cef6cb26"
   ],
+  "splits": [
+    "train"
+  ],
   "config_hashes": [
     "4e0681fec9220c1e",
     "7c94e16120a30e63",
@@ -26,6 +30,9 @@
     "c345a1740811bd21",
     "dc5c8fd9ce2bde22",
     "fbad4e6bcbe2b508"
+  ],
+  "config_versions": [
+    "1.0.0"
   ],
   "salt": "default-open",
   "sources": "train"

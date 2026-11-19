@@ -97,92 +97,21 @@
     "max_errors": 12
   },
   "config_hash": "dc5c8fd9ce2bde22",
-  "public_fingerprint": "e8e97fdf69f9863d614146a6482c5cbcc8e960e6e3d2d8c909b07e5079e81778",
-  "events": [
-    {
-      "issue_id": "I-01",
-      "injector": "E3.wrong_rate_date",
-      "params": {
-        "used_rate_date": "2026-02-26",
-        "correct_rate_date": "2026-02-24"
-      },
-      "before": [
-        {
-          "je": 39223,
-          "timestamp": "2026-02-24T18:09:00+00:00",
-          "rows": [
-            {
-              "row_id": "L-39223-1",
-              "account": "1020",
-              "debit_minor": 836161,
-              "credit_minor": 0,
-              "currency": "USD",
-              "entity_id": "C-1010",
-              "invoice_id": null,
-              "payment_id": "PAY-6155"
-            },
-            {
-              "row_id": "L-39223-2",
-              "account": "1100",
-              "debit_minor": 0,
-              "credit_minor": 850595,
-              "currency": "USD",
-              "entity_id": "C-1010",
-              "invoice_id": "SF-4297",
-              "payment_id": "PAY-6155"
-            },
-            {
-              "row_id": "L-39223-3",
-              "account": "7200",
-              "debit_minor": 14434,
-              "credit_minor": 0,
-              "currency": "USD",
-              "entity_id": "C-1010",
-              "invoice_id": null,
-              "payment_id": "PAY-6155"
-            }
-          ]
-        }
-      ],
-      "after": [
-        {
-          "je": 39223,
-          "timestamp": "2026-02-24T18:09:00+00:00",
-          "rows": [
-            {
-              "row_id": "L-39223-1",
-              "account": "1020",
-              "debit_minor": 830257,
-              "credit_minor": 0,
-              "currency": "USD",
-              "entity_id": "C-1010",
-              "invoice_id": null,
-              "payment_id": "PAY-6155"
-            },
-            {
-              "row_id": "L-39223-2",
-              "account": "1100",
-              "debit_minor": 0,
-              "credit_minor": 850595,
-              "currency": "USD",
-              "entity_id": "C-1010",
-              "invoice_id": "SF-4297",
-              "payment_id": "PAY-6155"
-            },
-            {
-              "row_id": "L-39223-3",
-              "account": "7200",
-              "debit_minor": 20338,
-              "credit_minor": 0,
-              "currency": "USD",
-              "entity_id": "C-1010",
-              "invoice_id": null,
-              "payment_id": "PAY-6155"
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "invariants_before_injection": "I1-I8 hold (asserted by tests/test_data.py and `auditgym check`)"
+  "config_version": "1.0.0",
+  "public_fingerprint": "7961479f97d39a85be255d8aafe06fb8327599a2ced7c601c69ef67b7a5177ec",
+  "events": [],
+  "invariants_before_injection": {
+    "checked": [
+      "I1",
+      "I2",
+      "I3",
+      "I4",
+      "I5",
+      "I6",
+      "I7",
+      "I8"
+    ],
+    "violations": []
+  },
+  "inserted_documents": []
 }

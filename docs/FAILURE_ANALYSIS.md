@@ -7,36 +7,36 @@
 | policy | episodes | P | R | F1 | return | return (clean) | return (with errors) | steps | clean-FP rate | s/episode |
 |---|---|---|---|---|---|---|---|---|---|---|
 | oracle | 20 | 1.000 | 1.000 | 1.000 | +1.000 | +1.000 | +1.000 | 1.0 | 0.0 | 0.000 |
-| expert | 20 | 1.000 | 1.000 | 1.000 | +0.956 | +0.953 | +0.956 | 23.1 | 0.0 | 0.060 |
-| reconcile | 20 | 0.136 | 0.589 | 0.225 | -0.583 | -1.000 | -0.479 | 23.1 | 1.0 | 0.061 |
-| flag_all | 20 | 0.000 | 0.000 | 0.000 | -1.000 | -1.000 | -1.000 | 4.6 | 1.0 | 0.058 |
-| random | 20 | 0.000 | 0.000 | 0.050 | -0.910 | -0.550 | -1.000 | 79.8 | 0.75 | 0.062 |
+| expert | 20 | 1.000 | 1.000 | 1.000 | +0.956 | +0.957 | +0.956 | 22.8 | 0.0 | 0.068 |
+| reconcile | 20 | 0.130 | 0.611 | 0.218 | -0.595 | -1.000 | -0.421 | 22.8 | 1.0 | 0.061 |
+| flag_all | 20 | 0.000 | 0.000 | 0.000 | -1.000 | -1.000 | -1.000 | 4.5 | 1.0 | 0.055 |
+| random | 20 | 0.000 | 0.000 | 0.050 | -0.910 | -0.700 | -1.000 | 72.5 | 0.8333 | 0.067 |
 
 | policy | FP по причинам | FP по типам | FN по типам | завершение |
 |---|---|---|---|---|
 | oracle | — | — | — | submitted: 20 |
 | expert | — | — | — | submitted: 20 |
-| reconcile | no_issue: 210 | duplicate_invoice: 163, fx_conversion: 6, payment_allocation: 26, period_cutoff: 15 | fx_conversion: 14, payment_allocation: 4, period_cutoff: 5 | submitted: 20 |
-| flag_all | no_issue: 600 | duplicate_invoice: 160, fx_conversion: 140, payment_allocation: 160, period_cutoff: 140 | duplicate_invoice: 13, fx_conversion: 16, payment_allocation: 14, period_cutoff: 13 | submitted: 20 |
-| random | no_issue: 23 | duplicate_invoice: 6, fx_conversion: 4, payment_allocation: 9, period_cutoff: 4 | duplicate_invoice: 13, fx_conversion: 16, payment_allocation: 14, period_cutoff: 13 | step_limit: 11, submitted: 9 |
+| reconcile | no_issue: 220 | duplicate_invoice: 162, fx_conversion: 7, payment_allocation: 36, period_cutoff: 15 | fx_conversion: 13, payment_allocation: 4, period_cutoff: 4 | submitted: 20 |
+| flag_all | no_issue: 600 | duplicate_invoice: 160, fx_conversion: 140, payment_allocation: 160, period_cutoff: 140 | duplicate_invoice: 13, fx_conversion: 15, payment_allocation: 13, period_cutoff: 13 | submitted: 20 |
+| random | no_issue: 26 | duplicate_invoice: 6, fx_conversion: 6, payment_allocation: 6, period_cutoff: 8 | duplicate_invoice: 13, fx_conversion: 15, payment_allocation: 13, period_cutoff: 13 | step_limit: 10, submitted: 10 |
 
 ## closed-shaped new seeds (20)
 
 | policy | episodes | P | R | F1 | return | return (clean) | return (with errors) | steps | clean-FP rate | s/episode |
 |---|---|---|---|---|---|---|---|---|---|---|
 | oracle | 20 | 1.000 | 1.000 | 1.000 | +1.000 | +1.000 | +1.000 | 1.0 | 0.0 | 0.000 |
-| expert | 20 | 1.000 | 1.000 | 1.000 | +0.960 | +0.962 | +0.959 | 21.1 | 0.0 | 0.061 |
-| reconcile | 20 | 0.212 | 0.721 | 0.296 | -0.439 | -1.000 | -0.252 | 21.1 | 1.0 | 0.058 |
-| flag_all | 20 | 0.000 | 0.000 | 0.000 | -1.000 | -1.000 | -1.000 | 4.4 | 1.0 | 0.053 |
-| random | 20 | 0.000 | 0.000 | 0.000 | -1.000 | -1.000 | -1.000 | 58.7 | 1.0 | 0.058 |
+| expert | 20 | 1.000 | 1.000 | 1.000 | +0.961 | +0.962 | +0.960 | 20.7 | 0.0 | 0.067 |
+| reconcile | 20 | 0.223 | 0.750 | 0.327 | -0.375 | -1.000 | -0.167 | 20.7 | 1.0 | 0.057 |
+| flag_all | 20 | 0.000 | 0.000 | 0.000 | -1.000 | -1.000 | -1.000 | 4.3 | 1.0 | 0.066 |
+| random | 20 | 0.000 | 0.000 | 0.150 | -0.730 | +0.080 | -1.000 | 70.3 | 0.4 | 0.064 |
 
 | policy | FP по причинам | FP по типам | FN по типам | завершение |
 |---|---|---|---|---|
 | oracle | — | — | — | submitted: 20 |
 | expert | — | — | — | submitted: 20 |
-| reconcile | no_issue: 182 | duplicate_invoice: 128, fx_conversion: 8, payment_allocation: 28, period_cutoff: 18 | fx_conversion: 13, payment_allocation: 3, period_cutoff: 3 | submitted: 20 |
+| reconcile | no_issue: 178 | duplicate_invoice: 129, fx_conversion: 6, payment_allocation: 25, period_cutoff: 18 | fx_conversion: 11, payment_allocation: 3, period_cutoff: 3 | submitted: 20 |
 | flag_all | no_issue: 600 | duplicate_invoice: 160, fx_conversion: 140, payment_allocation: 160, period_cutoff: 140 | duplicate_invoice: 14, fx_conversion: 18, payment_allocation: 18, period_cutoff: 18 | submitted: 20 |
-| random | no_issue: 32 | duplicate_invoice: 13, fx_conversion: 7, payment_allocation: 8, period_cutoff: 4 | duplicate_invoice: 14, fx_conversion: 18, payment_allocation: 18, period_cutoff: 18 | step_limit: 4, submitted: 16 |
+| random | no_issue: 24 | duplicate_invoice: 4, fx_conversion: 5, payment_allocation: 9, period_cutoff: 6 | duplicate_invoice: 14, fx_conversion: 18, payment_allocation: 18, period_cutoff: 18 | step_limit: 7, submitted: 13 |
 
 ## Интерпретация
 

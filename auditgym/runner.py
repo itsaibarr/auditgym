@@ -1,11 +1,17 @@
-"""Policy runner. The runner owns generation, truth and grading. In eval mode every non-oracle policy runs
-as a child process (JSON lines over stdin/stdout) with a scrubbed environment (no AUDITGYM_SALT), an empty
-temporary cwd, rlimits, per-step and per-episode deadlines and a process-group kill. The oracle is
-privileged and runs in-process, still acting only through env.step(). Results and match traces are
-written only after all policies have exited.
+"""Policy runner. The runner owns generation, truth and grading.
+
+Isolation in eval mode: every non-oracle policy is a child process speaking JSON lines, started through
+auditgym.policy_host with a scrubbed environment (no AUDITGYM_SALT), an empty temporary cwd, rlimits incl.
+RLIMIT_NPROC=1 (no forking), per-step and per-episode deadlines on both reads and writes, and a process-group
+kill. On Linux the runner makes itself non-dumpable (PR_SET_DUMPABLE=0) so a same-user child cannot read its
+/proc/<ppid>/environ (the salt). The oracle is privileged and runs in-process, last, acting only through
+env.step(). All run outputs (trajectories, results, match traces) are written only after every policy of the
+invocation has exited.
 """
 from __future__ import annotations
 
+import errno
+import hashlib
 import json
 import os
 import platform
@@ -28,6 +34,42 @@ from .policies import BUILTIN, OraclePolicy
 STEP_TIMEOUT_S = 30.0
 EPISODE_TIMEOUT_S = 60.0
 MAX_LINE = 2_000_000
+_PKG = Path(__file__).resolve().parent
+
+
+def harden_runner() -> None:
+    """Linux: make the runner non-dumpable so same-user children cannot read /proc/<runner>/environ|mem."""
+    if sys.platform.startswith("linux"):
+        try:
+            import ctypes
+            ctypes.CDLL(None, use_errno=True).prctl(4, 0, 0, 0, 0)  # PR_SET_DUMPABLE = 4
+        except Exception:
+            pass
+
+
+def code_hash() -> str:
+    h = hashlib.sha256()
+    for p in sorted(_PKG.rglob("*.py")):
+        h.update(p.relative_to(_PKG).as_posix().encode())
+        h.update(p.read_bytes())
+    return h.hexdigest()[:16]
+
+
+def _no_dup_keys(pairs):
+    d = {}
+    for k, v in pairs:
+        if k in d:
+            raise ValueError(f"duplicate key {k!r}")
+        d[k] = v
+    return d
+
+
+def parse_action_line(line: bytes):
+    """Returns (action, status): ok | invalid. Never raises."""
+    try:
+        return json.loads(line, object_pairs_hook=_no_dup_keys), "ok"
+    except (ValueError, RecursionError, UnicodeDecodeError):
+        return line[:200].decode("utf-8", "replace"), "invalid"
 
 
 @dataclass
@@ -37,53 +79,75 @@ class EpisodeRun:
 
 
 class ChildPolicy:
-    """Talks to a policy process over JSON lines."""
+    """Talks to a policy process over JSON lines with deadline-bounded reads and writes."""
 
-    def __init__(self, spec: str, args: list[str] | None = None, policy_path: str | None = None):
+    def __init__(self, spec: str, args: list[str] | None = None, policy_path: str | None = None, allow_forks: bool = False):
+        harden_runner()
         self.tmp = tempfile.TemporaryDirectory(prefix="auditgym-policy-")
-        env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "PYTHONHASHSEED": "0", "HOME": self.tmp.name, "LANG": "C.UTF-8"}
+        env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "PYTHONHASHSEED": "0", "HOME": self.tmp.name, "LANG": "C.UTF-8",
+               "OMP_NUM_THREADS": "1", "OPENBLAS_NUM_THREADS": "1", "MKL_NUM_THREADS": "1"}
+        host = [sys.executable, "-I", "-m", "auditgym.policy_host"] + (["--allow-forks"] if allow_forks else [])
         if spec.startswith("cmd:"):
-            argv = shlex.split(spec[4:])
+            argv = host + ["--exec", "--"] + shlex.split(spec[4:])
         else:
-            argv = [sys.executable, "-I", "-m", "auditgym.policy_host", spec, *(args or [])]
+            argv = host + [spec, *(args or [])]
             if policy_path:
                 argv.append(f"--path={os.path.abspath(policy_path)}")
         self.proc = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                                      cwd=self.tmp.name, env=env, start_new_session=True)
+        os.set_blocking(self.proc.stdin.fileno(), False)
         self.sel = selectors.DefaultSelector()
         self.sel.register(self.proc.stdout, selectors.EVENT_READ)
         self.buf = b""
 
+    def _write(self, data: bytes, deadline: float) -> bool:
+        fd = self.proc.stdin.fileno()
+        view = memoryview(data)
+        with selectors.DefaultSelector() as ws:
+            ws.register(fd, selectors.EVENT_WRITE)
+            while view:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0 or not ws.select(timeout=remaining):
+                    return False
+                try:
+                    n = os.write(fd, view)
+                except BlockingIOError:
+                    continue
+                except OSError as e:
+                    if e.errno in (errno.EPIPE, errno.EBADF):
+                        raise BrokenPipeError from e
+                    raise
+                view = view[n:]
+        return True
+
     def ask(self, msg: dict, deadline: float):
         """Send a message and read one action line. Returns (action, status) with status ok|timeout|crash|invalid."""
         try:
-            self.proc.stdin.write((json.dumps(msg, separators=(",", ":")) + "\n").encode())
-            self.proc.stdin.flush()
+            if not self._write((json.dumps(msg, separators=(",", ":")) + "\n").encode(), deadline):
+                return None, "timeout"
         except (BrokenPipeError, OSError):
             return None, "crash"
         while b"\n" not in self.buf:
             remaining = deadline - time.monotonic()
-            if remaining <= 0:
+            if remaining <= 0 or not self.sel.select(timeout=remaining):
                 return None, "timeout"
-            if not self.sel.select(timeout=remaining):
-                return None, "timeout"
-            chunk = os.read(self.proc.stdout.fileno(), 65536)
+            try:
+                chunk = os.read(self.proc.stdout.fileno(), 65536)
+            except OSError:
+                return None, "crash"
             if not chunk:
                 return None, "crash"
             self.buf += chunk
-            if len(self.buf) > MAX_LINE:
+            if len(self.buf) > MAX_LINE and b"\n" not in self.buf:
                 self.buf = b""
                 return "<oversized line>", "invalid"
         line, _, self.buf = self.buf.partition(b"\n")
-        try:
-            return json.loads(line), "ok"
-        except ValueError:
-            return line.decode("utf-8", "replace")[:200], "invalid"
+        return parse_action_line(line)
 
-    def close(self) -> None:
+    def close(self, final: dict | None = None) -> None:
+        msg = {"type": "close", **(final or {})}
         try:
-            self.proc.stdin.write(b'{"type":"close"}\n')
-            self.proc.stdin.flush()
+            self._write((json.dumps(msg, separators=(",", ":")) + "\n").encode(), time.monotonic() + 2)
         except (BrokenPipeError, OSError):
             pass
         try:
@@ -96,6 +160,11 @@ class ChildPolicy:
             pass
         self.proc.wait()
         self.sel.close()
+        for f in (self.proc.stdin, self.proc.stdout):
+            try:
+                f.close()
+            except OSError:
+                pass
         self.tmp.cleanup()
 
 
@@ -108,51 +177,54 @@ class InProcess:
             return self.p.reset(msg["observation"], msg["info"]), "ok"
         return self.p.step(msg["observation"], msg["reward"], msg["terminated"], msg["truncated"], msg["info"]), "ok"
 
-    def close(self):
-        pass
+    def close(self, final=None):
+        if final and hasattr(self.p, "end"):
+            self.p.end(final["observation"], final["reward"], final["terminated"], final["truncated"], final["info"])
 
 
-def make_policy(spec: str, ep: Episode, mode: str, args: list[str] | None = None, policy_path: str | None = None, isolate: bool = True):
+def make_policy(spec: str, ep: Episode, args=None, policy_path=None, isolate: bool = True, allow_forks: bool = False):
     if spec == "oracle":
         return InProcess(OraclePolicy(ep.truth))
     if not isolate and spec in BUILTIN:
         return InProcess(BUILTIN[spec]())
-    return ChildPolicy(spec, args, policy_path)
+    return ChildPolicy(spec, args, policy_path, allow_forks)
 
 
 def run_episode(spec: str, ep: Episode, mode: str = "eval", args=None, policy_path=None, isolate: bool = True,
-                episode_timeout: float = EPISODE_TIMEOUT_S, step_timeout: float = STEP_TIMEOUT_S) -> EpisodeRun:
+                episode_timeout: float = EPISODE_TIMEOUT_S, step_timeout: float = STEP_TIMEOUT_S, allow_forks: bool = False) -> EpisodeRun:
     env = AuditEnv(mode, time_limit_s=episode_timeout)
     t0 = time.monotonic()
-    pol = make_policy(spec, ep, mode, args, policy_path, isolate)
+    pol = make_policy(spec, ep, args, policy_path, isolate, allow_forks)
     traj = []
-    obs, info = env.reset(options={"episode": ep})
     eid = ep.episode_id
-    traj.append({"episode_id": eid, "step": 0, "action": None, "observation": obs, "reward": 0.0, "terminated": False, "truncated": False, "info": info})
-    msg = {"type": "reset", "observation": obs, "info": info}
+    final = None
     termination = None
+
+    def log(action, obs, r, term, trunc, info):
+        traj.append({"episode_id": eid, "policy": spec, "step": env.steps_used, "action": action, "observation": obs, "reward": r,
+                     "terminated": term, "truncated": trunc, "info": info})
+
     try:
+        obs, info = env.reset(options={"episode": ep})
+        log(None, obs, 0.0, False, False, info)
+        msg = {"type": "reset", "observation": obs, "info": info}
         while True:
             deadline = min(time.monotonic() + step_timeout, t0 + episode_timeout)
             action, status = pol.ask(msg, deadline)
             if status in ("timeout", "crash"):
                 termination = "timeout" if status == "timeout" else "policy_crash"
                 obs, r, term, trunc, info = env.abort(termination)
-                traj.append({"episode_id": eid, "step": env.steps_used, "action": None, "observation": obs, "reward": r,
-                             "terminated": term, "truncated": trunc, "info": info})
+                log(None, obs, r, term, trunc, info)
                 break
             obs, r, term, trunc, info = env.step(action)
-            traj.append({"episode_id": eid, "step": env.steps_used, "action": action, "observation": obs, "reward": r,
-                         "terminated": term, "truncated": trunc, "info": info})
+            log(action, obs, r, term, trunc, info)
             if term or trunc:
-                if term:
-                    termination = "submitted" if env.result()["valid"] else "schema_error"
-                else:
-                    termination = info.get("error_code") or "max_steps"
+                termination = ("submitted" if env.result()["valid"] else "schema_error") if term else (info.get("error_code") or "max_steps")
+                final = {"observation": obs, "reward": r, "terminated": term, "truncated": trunc, "info": info}
                 break
             msg = {"type": "step", "observation": obs, "reward": r, "terminated": term, "truncated": trunc, "info": info}
     finally:
-        pol.close()
+        pol.close(final)
     g = env.result()
     result = {
         "episode_id": eid, "policy": spec, "mode": mode, "termination": termination, "steps": env.steps_used,
@@ -162,32 +234,51 @@ def run_episode(spec: str, ep: Episode, mode: str = "eval", args=None, policy_pa
     return EpisodeRun(result, traj)
 
 
-def run_policy(spec: str, episodes: list[tuple[str, Episode]], out: Path, mode: str = "eval", args=None, policy_path=None,
-               isolate: bool = True, meta: dict | None = None) -> list[dict]:
-    """Run one policy over episodes; write run.json, trajectories.jsonl, results.jsonl, summary.json/.md at the end."""
-    runs = []
-    for split, ep in episodes:
-        er = run_episode(spec, ep, mode, args, policy_path, isolate)
-        er.result["split"] = split
-        runs.append(er)
+def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root: Path, mode: str = "eval", args=None,
+                 policy_path=None, isolate: bool = True, allow_forks: bool = False, meta: dict | None = None,
+                 dir_name=None) -> dict[str, list[dict]]:
+    """Run several policies (oracle last); write every output only after all of them have finished."""
+    order = sorted(specs, key=lambda s: s == "oracle")
+    done: dict[str, list[EpisodeRun]] = {}
+    for spec in order:
+        runs = []
+        for split, ep in episodes:
+            er = run_episode(spec, ep, mode, args, policy_path, isolate, allow_forks=allow_forks)
+            er.result["split"] = split
+            runs.append(er)
+        done[spec] = runs
+    out = {}
+    for spec in specs:
+        d = out_root / (dir_name(spec) if dir_name else spec)
+        _write_run(spec, done[spec], episodes, d, mode, args, meta)
+        out[spec] = [er.result for er in done[spec]]
+    return out
+
+
+def run_policy(spec: str, episodes, out: Path, mode: str = "eval", args=None, policy_path=None, isolate: bool = True,
+               meta: dict | None = None, allow_forks: bool = False) -> list[dict]:
+    return run_policies([spec], episodes, out.parent, mode, args, policy_path, isolate, allow_forks, meta, dir_name=lambda s: out.name)[spec]
+
+
+def _write_run(spec, runs, episodes, out: Path, mode, args, meta) -> None:
     out.mkdir(parents=True, exist_ok=True)
-    with open(out / "trajectories.jsonl", "w") as f:
+    with open(out / "trajectories.jsonl", "w", encoding="utf-8", errors="backslashreplace") as f:
         for er in runs:
             for t in er.trajectory:
                 f.write(dumps(t) + "\n")
     results = [er.result for er in runs]
-    with open(out / "results.jsonl", "w") as f:
+    with open(out / "results.jsonl", "w", encoding="utf-8", errors="backslashreplace") as f:
         for r in results:
             f.write(dumps(r) + "\n")
-    summary = summarize(results)
     (out / "run.json").write_text(json.dumps({
-        "auditgym_version": __version__, "policy": spec, "policy_args": args or [], "mode": mode,
-        "python": platform.python_version(), "platform": platform.platform(), "episodes": [ep.episode_id for _, ep in episodes],
-        "config_hashes": sorted({ep.provenance["config_hash"] for _, ep in episodes}), "salt": "custom" if os.environ.get("AUDITGYM_SALT") else "default-open",
-        **(meta or {}),
+        "auditgym_version": __version__, "code_hash": code_hash(), "policy": spec, "policy_args": args or [], "mode": mode,
+        "python": platform.python_version(), "platform": platform.platform(),
+        "episodes": [ep.episode_id for _, ep in episodes], "splits": sorted({s for s, _ in episodes}),
+        "config_hashes": sorted({ep.provenance["config_hash"] for _, ep in episodes}),
+        "config_versions": sorted({str(ep.provenance.get("config_version")) for _, ep in episodes}),
+        "salt": "custom" if os.environ.get("AUDITGYM_SALT") else "default-open", **(meta or {}),
     }, indent=2) + "\n")
-    (out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
-    return results
+    (out / "summary.json").write_text(json.dumps(summarize(results), indent=2) + "\n")
 
 
 def summarize(results: list[dict]) -> dict:

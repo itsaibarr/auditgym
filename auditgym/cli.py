@@ -64,19 +64,35 @@ def _episodes(a) -> list:
             dirs = sorted(x for x in p.iterdir() if (x / "manifest.json").exists()) if not (p / "manifest.json").exists() else [p]
             out += [(p.name, dir_episode(x)) for x in dirs]
         return out
+    cfg = json.loads(Path(a.config).read_text()) if getattr(a, "config", None) else None
+    if cfg is not None and "episodes" in cfg:
+        if getattr(a, "seeds", None):
+            raise ValueError("--config is a split file with its own episodes/seeds; use --split <file> (without --seeds)")
+        _warn_salt()
+        return split_episodes(a.config)
     if getattr(a, "seeds", None):
-        cfg = json.loads(Path(a.config).read_text()) if a.config else {}
-        cfg = cfg.get("base_config", cfg)
-        return [("seeds", generate(s, cfg)) for s in parse_seeds(a.seeds)]
+        _warn_salt()
+        base = (cfg or {}).get("base_config", cfg or {})
+        return [("seeds", generate(s, base)) for s in parse_seeds(a.seeds)]
     out = []
     for s in a.split.split(","):
+        if s not in ("train", "dev"):
+            _warn_salt()
         out += split_episodes(s)
     return out
+
+
+def _warn_salt() -> None:
+    import os
+    if not os.environ.get("AUDITGYM_SALT"):
+        print("warning: AUDITGYM_SALT is not set; non-open episodes use the PUBLIC default salt, so a policy that imports the "
+              "open generator could regenerate their truth. For closed evaluation: docker run -e AUDITGYM_SALT=<secret> ...", file=sys.stderr)
 
 
 def cmd_generate(a) -> int:
     if a.seed is not None:
         cfg = json.loads(Path(a.config).read_text()) if a.config else {}
+        a.seed = parse_seeds(a.seed)[0]
         ep = generate(a.seed, cfg.get("base_config", cfg))
         write_episode(ep, Path(a.out), with_grader=not a.no_grader)
         print(f"wrote {a.out} ({ep.episode_id})")
@@ -91,18 +107,23 @@ def cmd_generate(a) -> int:
 
 
 def cmd_run(a) -> int:
-    from .runner import run_policy, summarize
+    from .runner import run_policies, summarize
     episodes = _episodes(a)
+    specs = a.policy.split(",")
+    name = lambda spec: spec.replace(":", "_").replace("/", "_").replace(" ", "_")[:60]
+    source = a.split if not (a.episodes or a.seeds or a.config) else {"episodes": a.episodes, "seeds": a.seeds, "config": a.config}
+    results = run_policies(specs, episodes, Path(a.out), mode=a.mode, args=a.policy_arg, policy_path=a.policy_path,
+                           isolate=not a.no_isolate, allow_forks=a.allow_forks, meta={"sources": source}, dir_name=name)
     rows = []
-    for spec in a.policy.split(","):
-        name = spec.replace(":", "_").replace("/", "_").replace(" ", "_")[:60]
-        out = Path(a.out) / name
-        res = run_policy(spec, episodes, out, mode=a.mode, args=a.policy_arg, policy_path=a.policy_path, isolate=not a.no_isolate,
-                         meta={"sources": a.split if not (a.episodes or a.seeds) else (a.episodes or "seeds")})
-        s = summarize(res)["all"]
-        rows.append({"policy": spec, **s})
-        print(f"{spec}: {len(res)} episodes -> {out}", file=sys.stderr)
-    print_table(rows, f"AuditGym {a.mode} on {a.split if not (a.episodes or a.seeds) else 'custom episodes'}", a.format)
+    for spec in specs:
+        res = results[spec]
+        rows.append({"policy": spec, **summarize(res)["all"]})
+        bad = [r for r in res if r["termination"] in ("timeout", "policy_crash")]
+        print(f"{spec}: {len(res)} episodes -> {Path(a.out) / name(spec)}", file=sys.stderr)
+        if bad:
+            print(f"warning: {spec}: {len(bad)}/{len(res)} episodes ended by {sorted({r['termination'] for r in bad})} "
+                  f"(policy failed to start, crashed or timed out; graded as empty answers)", file=sys.stderr)
+    print_table(rows, f"AuditGym {a.mode} run", a.format)
     return 0
 
 
@@ -138,12 +159,17 @@ def cmd_replay(a) -> int:
     from .env import AuditEnv
     run = Path(a.run)
     meta = json.loads((run / "run.json").read_text())
+    if meta.get("auditgym_version") != __version__:
+        print(f"FAIL version mismatch: run made with {meta.get('auditgym_version')}, this is {__version__}")
+        return 1
+    if not (a.episodes or a.seeds or a.config) and a.split == "dev" and isinstance(meta.get("sources"), str):
+        a.split = meta["sources"]
     recs = [json.loads(l) for l in (run / "trajectories.jsonl").read_text().splitlines() if l]
     eps = {ep.episode_id: ep for _, ep in _episodes(a)}
-    mismatches = 0
     by_ep: dict[str, list] = {}
     for r in recs:
         by_ep.setdefault(r["episode_id"], []).append(r)
+    replayed = mismatches = 0
     for eid, steps in by_ep.items():
         if eid not in eps:
             print(f"SKIP {eid}: episode not in the given source")
@@ -152,13 +178,15 @@ def cmd_replay(a) -> int:
         obs, info = env.reset(options={"episode": eps[eid]})
         ok = dumps(obs) == dumps(steps[0]["observation"])
         for r in steps[1:]:
-            if r["action"] is None:
-                got = env.abort(r["info"].get("error_code") or "timeout")
-            else:
-                got = env.step(r["action"])
+            got = env.abort(r["info"].get("error_code") or "timeout") if r["action"] is None else env.step(r["action"])
             ok &= dumps(list(got[:4])) == dumps([r["observation"], r["reward"], r["terminated"], r["truncated"]])
+        replayed += 1
         mismatches += not ok
-        print(f"{'OK ' if ok else 'DIFF'} {eid} ({len(steps) - 1} steps)")
+        print(f"{'OK  ' if ok else 'DIFF'} {eid} ({len(steps) - 1} steps)")
+    if not replayed:
+        print("FAIL nothing replayed: pass the episode source (--split/--episodes/--seeds) used for the run")
+        return 1
+    print(f"{replayed - mismatches}/{replayed} episodes replay byte-identically")
     return 1 if mismatches else 0
 
 
@@ -281,7 +309,7 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--split", default=default, help="split name(s) from configs/, comma separated (default: %(default)s)")
         sp.add_argument("--episodes", nargs="+", help="episode directories (or a directory of episodes) instead of a split")
         sp.add_argument("--seeds", help="seed list/ranges, e.g. 1-20,40 (closed runs: set AUDITGYM_SALT)")
-        sp.add_argument("--config", help="config JSON for --seeds")
+        sp.add_argument("--config", help="config JSON for --seeds (a split file with 'episodes' is used as a split)")
 
     c = sub.add_parser("check", help="the single verification command (offline). Exit 0 = pass")
     c.add_argument("--quick", action="store_true", help="fewer fresh seeds (CI smoke)")
@@ -291,7 +319,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     g = sub.add_parser("generate", help="write episodes for split(s) or one seed")
     g.add_argument("--split", default="train,dev")
-    g.add_argument("--seed", type=int)
+    g.add_argument("--seed", help="integer or string seed")
     g.add_argument("--config")
     g.add_argument("--out", default=str(ROOT / "data"))
     g.add_argument("--no-grader", action="store_true", help="do not write _grader/ (truth, provenance)")
@@ -305,6 +333,7 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--policy-arg", action="append", default=[], help="k=v passed to the policy constructor")
     r.add_argument("--policy-path", help="directory added to the policy child's sys.path")
     r.add_argument("--no-isolate", action="store_true", help="run builtin policies in-process (debug only)")
+    r.add_argument("--allow-forks", action="store_true", help="let the policy spawn processes/threads (weakens isolation; e.g. node)")
     r.add_argument("--format", choices=["auto", "md", "json", "csv"], default="auto")
     r.set_defaults(fn=cmd_run)
 

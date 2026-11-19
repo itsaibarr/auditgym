@@ -5,22 +5,22 @@
       "issue_id": "I-01",
       "type": "duplicate_invoice",
       "affected_ids": [
-        "D-13925",
-        "D-32763"
+        "D-76114",
+        "D-76535"
       ],
-      "expected_amount_minor": 318000000,
+      "expected_amount_minor": 155600000,
       "currency": "KZT",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-13925",
-          "D-32763",
-          "L-12095-1"
+          "D-76114",
+          "D-76535",
+          "L-12199-1"
         ],
         [
-          "D-13925",
-          "D-32763",
-          "L-12095-2"
+          "D-76114",
+          "D-76535",
+          "L-12199-2"
         ]
       ],
       "link_id": null,
@@ -30,21 +30,21 @@
       "issue_id": "I-02",
       "type": "fx_conversion",
       "affected_ids": [
-        "D-63498"
+        "D-40630"
       ],
-      "expected_amount_minor": 5490247,
+      "expected_amount_minor": 5451864,
       "currency": "KZT",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-63498",
-          "FX-2026-06-05-JPY-KZT",
-          "L-11724-1"
+          "D-40630",
+          "FX-2026-06-26-JPY-KZT",
+          "L-12311-1"
         ],
         [
-          "D-63498",
-          "FX-2026-06-05-JPY-KZT",
-          "L-11724-2"
+          "D-40630",
+          "FX-2026-06-26-JPY-KZT",
+          "L-12311-2"
         ]
       ],
       "link_id": null,
@@ -54,16 +54,16 @@
       "issue_id": "I-03",
       "type": "fx_conversion",
       "affected_ids": [
-        "D-68368"
+        "D-44080"
       ],
-      "expected_amount_minor": 69650,
+      "expected_amount_minor": 457153,
       "currency": "KZT",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-68368",
-          "FX-2026-06-23-JPY-KZT",
-          "L-12166-1"
+          "D-44080",
+          "FX-2026-06-19-EUR-KZT",
+          "L-12091-1"
         ]
       ],
       "link_id": null,
@@ -73,22 +73,22 @@
       "issue_id": "I-04",
       "type": "payment_allocation",
       "affected_ids": [
-        "D-14565",
-        "D-40882"
+        "D-46841",
+        "D-85628"
       ],
-      "expected_amount_minor": 4912000,
+      "expected_amount_minor": 20196187,
       "currency": "KZT",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-14565",
-          "D-40882",
-          "L-12304-2"
+          "D-46841",
+          "D-85628",
+          "L-11820-2"
         ],
         [
-          "D-14565",
-          "D-40882",
-          "L-12304-3"
+          "D-46841",
+          "D-85628",
+          "L-11820-3"
         ]
       ],
       "link_id": null,
@@ -100,17 +100,17 @@
       "affected_ids": [
         "D-81482"
       ],
-      "expected_amount_minor": 145800567,
+      "expected_amount_minor": 540720560,
       "currency": "KZT",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
           "D-81482",
-          "L-12400-1"
+          "L-12393-1"
         ],
         [
           "D-81482",
-          "L-12400-2"
+          "L-12393-2"
         ]
       ],
       "link_id": null,

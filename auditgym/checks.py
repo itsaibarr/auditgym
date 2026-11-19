@@ -24,7 +24,7 @@ from .canon import dumps
 from .episode import Episode
 from .leakscan import scan_run
 from .perturb import perturb
-from .runner import run_episode, run_policy, summarize
+from .runner import run_episode, run_policies, summarize
 from .splits import ROOT, split_episodes
 
 POLICIES = ["oracle", "expert", "reconcile", "flag_all", "random"]
@@ -81,9 +81,10 @@ def run_check(quick: bool = False, as_json: bool = False, out: Path | None = Non
         rep.add("data.open_splits", len(episodes) == 20, f"{len(episodes)} episodes (10 train + 10 dev)", time.time() - t0)
 
         summaries = {}
+        t0 = time.time()
+        all_res = run_policies(POLICIES, episodes, out, mode="eval", meta={"sources": "train,dev"})
         for spec in POLICIES:
-            t0 = time.time()
-            res = run_policy(spec, episodes, out / spec, mode="eval", meta={"sources": "train,dev"})
+            res = all_res[spec]
             summaries[spec] = summarize(res)["all"]
             summaries[spec]["_results"] = res
             rep.add(f"baseline.{spec}", True, f"return={summaries[spec]['mean_return']:+.3f} F1={summaries[spec]['mean_f1']:.3f} "
@@ -104,8 +105,9 @@ def run_check(quick: bool = False, as_json: bool = False, out: Path | None = Non
                 f"expert clean={mean('expert', True):+.3f} > reconcile clean={mean('reconcile', True):+.3f} (distractors bite naive rules)")
         rep.add("reward.flag_all_negative", summaries["flag_all"]["mean_return"] < 0 and summaries["flag_all"]["mean_return"] < summaries["reconcile"]["mean_return"],
                 f"flag_all mean={summaries['flag_all']['mean_return']:+.3f}")
-        rep.add("contract.no_schema_errors_from_baselines",
-                all(r["termination"] in ("submitted", "step_limit") for s in POLICIES for r in summaries[s]["_results"]), "")
+        rep.add("contract.no_crash_or_schema_error_in_baselines",
+                all(r["termination"] in ("submitted", "step_limit") for s in POLICIES for r in summaries[s]["_results"]),
+                "every baseline episode ends by submit or the 100-step limit")
 
         t0 = time.time()
         leaks = [p for spec in POLICIES for p in scan_run(out / spec)]

@@ -8,6 +8,7 @@ from msgspec import Meta
 
 FindingType = Literal["duplicate_invoice", "payment_allocation", "fx_conversion", "period_cutoff"]
 Id = Annotated[str, Meta(min_length=1, max_length=64)]
+Currency = Literal["KZT", "USD", "EUR", "CNY", "GBP", "JPY", "KWD"]  # money.EXPONENTS keys
 MAX_FINDINGS, MAX_EVIDENCE, MAX_EXPLANATION = 30, 10, 1000
 
 
@@ -15,7 +16,7 @@ class Finding(msgspec.Struct, forbid_unknown_fields=True):
     type: FindingType
     affected_ids: Annotated[list[Id], Meta(min_length=1, max_length=10)]
     claimed_amount_minor: Annotated[int, Meta(ge=0, le=10**18)]
-    currency: Annotated[str, Meta(pattern="^[A-Z]{3}$")]
+    currency: Currency
     evidence_ids: Annotated[list[Id], Meta(max_length=MAX_EVIDENCE)]
     explanation: Annotated[str, Meta(max_length=MAX_EXPLANATION)]
 
@@ -28,6 +29,8 @@ class Findings(msgspec.Struct, forbid_unknown_fields=True):
 def parse_findings(obj, episode_id: str) -> tuple[list[dict] | None, str | None]:
     """Return (findings, None) or (None, error). Rejects bools/floats/strings for ints, extra/missing keys."""
     try:
+        if isinstance(obj, (str, bytes)) and len(obj) > 2_000_000:
+            return None, "schema: payload too large"
         if isinstance(obj, (str, bytes)):
             parsed = msgspec.json.decode(obj, type=Findings, strict=True)
         else:

@@ -99,8 +99,9 @@ def _fresh_foreign_invoice(c: "Ctx", days_before_end: int) -> Invoice:
     d = w.period_start + timedelta(days=r.randint(1, max(1, span)))
     t = local_instant(d, r.randint(9, 16), r.randint(0, 59), w.tz)
     lines = _lines(r, w, cust.ccy)
-    inv = Invoice(f"inv{len(w.invoices)}", "invoice", cust, cust.ccy, t + timedelta(minutes=r.randint(10, 90)),
-                  t + timedelta(days=30), t, lines, sum(l["amount_minor"] for l in lines), f"dn{len(w.invoices)}",
+    issued = t + timedelta(minutes=r.randint(10, 90))
+    inv = Invoice(f"inv{len(w.invoices)}", "invoice", cust, cust.ccy, issued,
+                  issued + timedelta(days=r.choice([14, 30, 45])), t, lines, sum(l["amount_minor"] for l in lines), f"dn{len(w.invoices)}",
                   utc_written=r.chance(0.3))
     w.invoices.append(inv)
     b = w.to_base(inv.total, inv.ccy, inv.issued_at)
@@ -300,7 +301,7 @@ def x1_prepare(c: Ctx):
     w = c.w
     cands = c.unpaid_foreign(5)
     inv = c.r.choice(cands) if cands and c.r.chance(0.7) else _fresh_foreign_invoice(c, 5)
-    ts = local_instant(c.last_day(), 23, c.r.randint(30, 55), w.tz)
+    ts = local_instant(c.last_day(), c.r.randint(9, 23), c.r.randint(0, 59), w.tz)
     amt = inv.total * c.r.randint(3, 6) // 10
     part = amt * c.r.randint(2, 5) // 10
     inv_rate = w.rate(w.local(inv.issued_at), inv.ccy)
@@ -423,7 +424,13 @@ def plan(w: World, cfg: dict, key: str) -> tuple[Ctx, list]:
         spec = cfg.get("errors", {}).get(t, {"on": False})
         if spec.get("on"):
             jobs += [t] * rp.randint(*spec.get("count", [1, 1]))
-    jobs = jobs[: cfg.get("max_errors", 12)]
+    size = {"X1": 3, "X2": 2}
+    capped, total = [], 0
+    for j in jobs:  # the cap counts issues, not injectors (X1 yields 3 linked issues, X2 yields 2)
+        if total + size.get(j, 1) <= cfg.get("max_errors", 12):
+            capped.append(j)
+            total += size.get(j, 1)
+    jobs = capped
     prepared = []
     for name in jobs:
         for _attempt in range(6):

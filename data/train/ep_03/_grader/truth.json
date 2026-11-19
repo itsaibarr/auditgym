@@ -1,25 +1,4 @@
 {
   "episode_id": "ep_4324ea98a1aad6b2",
-  "issues": [
-    {
-      "issue_id": "I-01",
-      "type": "payment_allocation",
-      "affected_ids": [
-        "D-23154",
-        "D-32958"
-      ],
-      "expected_amount_minor": 410700216,
-      "currency": "KZT",
-      "tolerance_minor": 1,
-      "evidence_sets": [
-        [
-          "D-23154",
-          "D-32958",
-          "L-33540-2"
-        ]
-      ],
-      "link_id": null,
-      "invariant": "I7"
-    }
-  ]
+  "issues": []
 }

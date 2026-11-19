@@ -65,13 +65,13 @@ def grade(findings: list[dict] | None, truth: dict, inspection_steps: int, known
             if n not in matched:
                 matched[n] = iss["issue_id"]
                 break
+    hit = set(matched.values())
     trace = []
     for n, f in enumerate(findings):
         if n in matched:
             trace.append({"finding": n, "result": "TP", "issue_id": matched[n]})
         else:
             trace.append({"finding": n, "result": "FP", "reason": "duplicate" if reasons[n] == "eligible" else reasons[n]})
-    hit = set(matched.values())
     for iss in issues:
         if iss["issue_id"] not in hit:
             trace.append({"issue_id": iss["issue_id"], "result": "FN", "type": iss["type"]})
@@ -79,9 +79,12 @@ def grade(findings: list[dict] | None, truth: dict, inspection_steps: int, known
     f1 = _f1(tp, fp, fn, len(issues), len(findings))
     reward = _clip(2 * f1 - 1 - STEP_COST * inspection_steps)
     # experimental: half credit for right type + affected ids
-    near = sum(1 for n, r in reasons.items() if n not in matched and r in ("currency", "amount", "unknown_evidence_id", "insufficient_evidence"))
+    near_issues = {by_key[(f["type"], tuple(sorted(f["affected_ids"])))]["issue_id"] for n, f in enumerate(findings)
+                   if n not in matched and reasons[n] in ("currency", "amount", "unknown_evidence_id", "insufficient_evidence")}
+    near = len(near_issues - hit)  # at most one half-credit per unmatched issue; copies earn nothing
     xtp = Fraction(tp) + Fraction(near, 2)
     xf1 = _f1(xtp, Fraction(fp) - Fraction(near, 2), Fraction(fn) - Fraction(near, 2), len(issues), len(findings)) if issues else f1
+    xf1 = min(xf1, Fraction(1))
     per_type: dict[str, dict] = {}
     for iss in issues:
         d = per_type.setdefault(iss["type"], {"tp": 0, "fp": 0, "fn": 0})

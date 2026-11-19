@@ -15,12 +15,12 @@
         [
           "D-13452",
           "D-88332",
-          "L-33682-1"
+          "L-10553-1"
         ],
         [
           "D-13452",
           "D-88332",
-          "L-33682-2"
+          "L-10553-2"
         ]
       ],
       "link_id": "X2",
@@ -31,21 +31,21 @@
       "type": "duplicate_invoice",
       "affected_ids": [
         "D-21122",
-        "D-25755"
+        "D-97339"
       ],
-      "expected_amount_minor": 646579,
+      "expected_amount_minor": 1250137,
       "currency": "EUR",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
           "D-21122",
-          "D-25755",
-          "L-33735-1"
+          "D-97339",
+          "L-10613-1"
         ],
         [
           "D-21122",
-          "D-25755",
-          "L-33735-2"
+          "D-97339",
+          "L-10613-2"
         ]
       ],
       "link_id": null,
@@ -57,19 +57,19 @@
       "affected_ids": [
         "D-48301"
       ],
-      "expected_amount_minor": 207,
+      "expected_amount_minor": 949,
       "currency": "EUR",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
           "D-48301",
-          "FX-2026-06-05-USD-EUR",
-          "L-33708-1"
+          "FX-2026-06-08-USD-EUR",
+          "L-10582-1"
         ],
         [
           "D-48301",
-          "FX-2026-06-05-USD-EUR",
-          "L-33708-2"
+          "FX-2026-06-08-USD-EUR",
+          "L-10582-2"
         ]
       ],
       "link_id": "X2",
@@ -79,19 +79,19 @@
       "issue_id": "I-04",
       "type": "period_cutoff",
       "affected_ids": [
-        "D-40044"
+        "D-94068"
       ],
-      "expected_amount_minor": 118000,
+      "expected_amount_minor": 599412,
       "currency": "EUR",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-40044",
-          "L-33901-1"
+          "D-94068",
+          "L-10763-1"
         ],
         [
-          "D-40044",
-          "L-33901-2"
+          "D-94068",
+          "L-10763-2"
         ]
       ],
       "link_id": null,

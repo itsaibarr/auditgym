@@ -5,17 +5,17 @@
       "issue_id": "I-01",
       "type": "payment_allocation",
       "affected_ids": [
-        "D-45388",
-        "D-55340"
+        "D-13844",
+        "D-88429"
       ],
-      "expected_amount_minor": 114600,
+      "expected_amount_minor": 54540,
       "currency": "EUR",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-45388",
-          "D-55340",
-          "L-35114-2"
+          "D-13844",
+          "D-88429",
+          "L-55720-2"
         ]
       ],
       "link_id": null,
@@ -25,17 +25,17 @@
       "issue_id": "I-02",
       "type": "payment_allocation",
       "affected_ids": [
-        "D-56080",
-        "D-76596"
+        "D-34069",
+        "D-90302"
       ],
-      "expected_amount_minor": 239160,
+      "expected_amount_minor": 111000,
       "currency": "EUR",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-56080",
-          "D-76596",
-          "L-34813-2"
+          "D-34069",
+          "D-90302",
+          "L-55715-2"
         ]
       ],
       "link_id": null,
@@ -45,19 +45,19 @@
       "issue_id": "I-03",
       "type": "period_cutoff",
       "affected_ids": [
-        "D-43635"
+        "D-76936"
       ],
-      "expected_amount_minor": 315600,
+      "expected_amount_minor": 1529450,
       "currency": "EUR",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-43635",
-          "L-35128-1"
+          "D-76936",
+          "L-55791-1"
         ],
         [
-          "D-43635",
-          "L-35128-2"
+          "D-76936",
+          "L-55791-2"
         ]
       ],
       "link_id": null,
@@ -67,19 +67,19 @@
       "issue_id": "I-04",
       "type": "period_cutoff",
       "affected_ids": [
-        "D-76936"
+        "D-87305"
       ],
-      "expected_amount_minor": 700427,
+      "expected_amount_minor": 340780,
       "currency": "EUR",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-76936",
-          "L-35140-1"
+          "D-87305",
+          "L-55771-1"
         ],
         [
-          "D-76936",
-          "L-35140-2"
+          "D-87305",
+          "L-55771-2"
         ]
       ],
       "link_id": null,

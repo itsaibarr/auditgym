@@ -97,7 +97,8 @@
     "max_errors": 12
   },
   "config_hash": "c345a1740811bd21",
-  "public_fingerprint": "d109fb30461b359cc985546d19de97a94f91d478f9a9772ac836b9916f89564f",
+  "config_version": "1.0.0",
+  "public_fingerprint": "e6e6baa58247fc9f6d8edc3649513c7198d17032a688ca57ab7e8ebb092b2ba9",
   "events": [
     {
       "issue_id": "I-01",
@@ -107,27 +108,27 @@
       },
       "before": [
         {
-          "je": 56022,
-          "timestamp": "2026-09-03T09:02:00+04:00",
+          "je": 16072,
+          "timestamp": "2026-09-03T10:30:00+04:00",
           "rows": [
             {
-              "row_id": "L-56022-1",
+              "row_id": "L-16072-1",
               "account": "1100",
-              "debit_minor": 1176893,
+              "debit_minor": 629245,
               "credit_minor": 0,
               "currency": "USD",
-              "entity_id": "C-1153",
-              "invoice_id": "INV-1112",
+              "entity_id": "C-7207",
+              "invoice_id": "INV/2026/5108",
               "payment_id": null
             },
             {
-              "row_id": "L-56022-2",
+              "row_id": "L-16072-2",
               "account": "4000",
               "debit_minor": 0,
-              "credit_minor": 1176893,
+              "credit_minor": 629245,
               "currency": "USD",
-              "entity_id": "C-1153",
-              "invoice_id": "INV-1112",
+              "entity_id": "C-7207",
+              "invoice_id": "INV/2026/5108",
               "payment_id": null
             }
           ]
@@ -135,27 +136,27 @@
       ],
       "after": [
         {
-          "je": 56022,
+          "je": 16072,
           "timestamp": "2026-08-31T17:52:00+04:00",
           "rows": [
             {
-              "row_id": "L-56022-1",
+              "row_id": "L-16072-1",
               "account": "1100",
-              "debit_minor": 1176893,
+              "debit_minor": 629245,
               "credit_minor": 0,
               "currency": "USD",
-              "entity_id": "C-1153",
-              "invoice_id": "INV-1112",
+              "entity_id": "C-7207",
+              "invoice_id": "INV/2026/5108",
               "payment_id": null
             },
             {
-              "row_id": "L-56022-2",
+              "row_id": "L-16072-2",
               "account": "4000",
               "debit_minor": 0,
-              "credit_minor": 1176893,
+              "credit_minor": 629245,
               "currency": "USD",
-              "entity_id": "C-1153",
-              "invoice_id": "INV-1112",
+              "entity_id": "C-7207",
+              "invoice_id": "INV/2026/5108",
               "payment_id": null
             }
           ]
@@ -163,5 +164,18 @@
       ]
     }
   ],
-  "invariants_before_injection": "I1-I8 hold (asserted by tests/test_data.py and `auditgym check`)"
+  "invariants_before_injection": {
+    "checked": [
+      "I1",
+      "I2",
+      "I3",
+      "I4",
+      "I5",
+      "I6",
+      "I7",
+      "I8"
+    ],
+    "violations": []
+  },
+  "inserted_documents": []
 }

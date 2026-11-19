@@ -2,11 +2,11 @@
 (pinned tzdata wheel; set PYTHONTZPATH="" so host tz files are never consulted)."""
 from __future__ import annotations
 
-import os
+import zoneinfo
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-os.environ.setdefault("PYTHONTZPATH", "")
+zoneinfo.reset_tzpath([])  # only the pinned tzdata wheel, never host tz files
 
 
 def parse(ts: str) -> datetime:

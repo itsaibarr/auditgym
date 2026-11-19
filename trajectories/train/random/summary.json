@@ -6,38 +6,38 @@
     "mean_f1": 0.1,
     "mean_return": -0.82,
     "mean_return_experimental": -0.82,
-    "mean_steps": 87.7,
-    "mean_wall_s": 0.077,
-    "clean_episodes": 2,
-    "clean_fp_rate": 0.5,
+    "mean_steps": 70.0,
+    "mean_wall_s": 0.063,
+    "clean_episodes": 4,
+    "clean_fp_rate": 0.75,
     "tp": 0,
-    "fp": 11,
-    "fn": 21,
+    "fp": 13,
+    "fn": 19,
     "per_type": {
       "period_cutoff": {
-        "tp": 0,
-        "fp": 2,
-        "fn": 6
-      },
-      "payment_allocation": {
         "tp": 0,
         "fp": 6,
         "fn": 6
       },
+      "fx_conversion": {
+        "tp": 0,
+        "fp": 2,
+        "fn": 3
+      },
       "duplicate_invoice": {
+        "tp": 0,
+        "fp": 3,
+        "fn": 5
+      },
+      "payment_allocation": {
         "tp": 0,
         "fp": 2,
         "fn": 5
-      },
-      "fx_conversion": {
-        "tp": 0,
-        "fp": 1,
-        "fn": 4
       }
     },
     "termination": {
-      "submitted": 4,
-      "step_limit": 6
+      "submitted": 5,
+      "step_limit": 5
     }
   },
   "split:train": {
@@ -47,38 +47,38 @@
     "mean_f1": 0.1,
     "mean_return": -0.82,
     "mean_return_experimental": -0.82,
-    "mean_steps": 87.7,
-    "mean_wall_s": 0.077,
-    "clean_episodes": 2,
-    "clean_fp_rate": 0.5,
+    "mean_steps": 70.0,
+    "mean_wall_s": 0.063,
+    "clean_episodes": 4,
+    "clean_fp_rate": 0.75,
     "tp": 0,
-    "fp": 11,
-    "fn": 21,
+    "fp": 13,
+    "fn": 19,
     "per_type": {
       "period_cutoff": {
-        "tp": 0,
-        "fp": 2,
-        "fn": 6
-      },
-      "payment_allocation": {
         "tp": 0,
         "fp": 6,
         "fn": 6
       },
+      "fx_conversion": {
+        "tp": 0,
+        "fp": 2,
+        "fn": 3
+      },
       "duplicate_invoice": {
+        "tp": 0,
+        "fp": 3,
+        "fn": 5
+      },
+      "payment_allocation": {
         "tp": 0,
         "fp": 2,
         "fn": 5
-      },
-      "fx_conversion": {
-        "tp": 0,
-        "fp": 1,
-        "fn": 4
       }
     },
     "termination": {
-      "submitted": 4,
-      "step_limit": 6
+      "submitted": 5,
+      "step_limit": 5
     }
   }
 }

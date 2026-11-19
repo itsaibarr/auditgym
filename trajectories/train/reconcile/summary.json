@@ -1,38 +1,38 @@
 {
   "all": {
     "episodes": 10,
-    "micro_precision": 0.1471,
-    "micro_recall": 0.7143,
-    "mean_f1": 0.2315,
-    "mean_return": -0.5648,
-    "mean_return_experimental": -0.5648,
-    "mean_steps": 21.3,
-    "mean_wall_s": 0.06,
-    "clean_episodes": 2,
+    "micro_precision": 0.1284,
+    "micro_recall": 0.7368,
+    "mean_f1": 0.1952,
+    "mean_return": -0.6333,
+    "mean_return_experimental": -0.6333,
+    "mean_steps": 20.9,
+    "mean_wall_s": 0.055,
+    "clean_episodes": 4,
     "clean_fp_rate": 1.0,
-    "tp": 15,
-    "fp": 87,
-    "fn": 6,
+    "tp": 14,
+    "fp": 95,
+    "fn": 5,
     "per_type": {
       "duplicate_invoice": {
         "tp": 5,
-        "fp": 64,
+        "fp": 67,
         "fn": 0
-      },
-      "payment_allocation": {
-        "tp": 5,
-        "fp": 10,
-        "fn": 1
       },
       "period_cutoff": {
         "tp": 5,
         "fp": 8,
         "fn": 1
       },
+      "payment_allocation": {
+        "tp": 4,
+        "fp": 14,
+        "fn": 1
+      },
       "fx_conversion": {
         "tp": 0,
-        "fp": 5,
-        "fn": 4
+        "fp": 6,
+        "fn": 3
       }
     },
     "termination": {
@@ -41,38 +41,38 @@
   },
   "split:train": {
     "episodes": 10,
-    "micro_precision": 0.1471,
-    "micro_recall": 0.7143,
-    "mean_f1": 0.2315,
-    "mean_return": -0.5648,
-    "mean_return_experimental": -0.5648,
-    "mean_steps": 21.3,
-    "mean_wall_s": 0.06,
-    "clean_episodes": 2,
+    "micro_precision": 0.1284,
+    "micro_recall": 0.7368,
+    "mean_f1": 0.1952,
+    "mean_return": -0.6333,
+    "mean_return_experimental": -0.6333,
+    "mean_steps": 20.9,
+    "mean_wall_s": 0.055,
+    "clean_episodes": 4,
     "clean_fp_rate": 1.0,
-    "tp": 15,
-    "fp": 87,
-    "fn": 6,
+    "tp": 14,
+    "fp": 95,
+    "fn": 5,
     "per_type": {
       "duplicate_invoice": {
         "tp": 5,
-        "fp": 64,
+        "fp": 67,
         "fn": 0
-      },
-      "payment_allocation": {
-        "tp": 5,
-        "fp": 10,
-        "fn": 1
       },
       "period_cutoff": {
         "tp": 5,
         "fp": 8,
         "fn": 1
       },
+      "payment_allocation": {
+        "tp": 4,
+        "fp": 14,
+        "fn": 1
+      },
       "fx_conversion": {
         "tp": 0,
-        "fp": 5,
-        "fn": 4
+        "fp": 6,
+        "fn": 3
       }
     },
     "termination": {

@@ -5,19 +5,19 @@
       "issue_id": "I-01",
       "type": "period_cutoff",
       "affected_ids": [
-        "D-23640"
+        "D-45351"
       ],
-      "expected_amount_minor": 1176893,
+      "expected_amount_minor": 629245,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-23640",
-          "L-56022-1"
+          "D-45351",
+          "L-16072-1"
         ],
         [
-          "D-23640",
-          "L-56022-2"
+          "D-45351",
+          "L-16072-2"
         ]
       ],
       "link_id": null,

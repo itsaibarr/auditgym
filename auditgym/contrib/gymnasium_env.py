@@ -21,15 +21,17 @@ MAX_LEN = 2_000_000
 class AuditGymEnv(gym.Env):
     metadata = {"render_modes": []}
 
-    def __init__(self, mode: str = "train", config: dict | None = None):
-        self._env = AuditEnv(mode)
+    def __init__(self, mode: str = "train", config: dict | None = None, time_limit_s: float | None = None):
+        """time_limit_s=None: no wall-clock limit (slow LLM rollouts); pass 60 to mirror the official limit."""
+        self._env = AuditEnv(mode, time_limit_s=time_limit_s)
         self._config = config
         self.observation_space = spaces.Text(max_length=MAX_LEN, charset=_CHARS)
         self.action_space = spaces.Text(max_length=200_000, charset=_CHARS)
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
-        obs, info = self._env.reset(seed=0 if seed is None else seed, config=self._config, options=options)
+        ep_seed = seed if seed is not None else int(self.np_random.integers(0, 2**62))
+        obs, info = self._env.reset(seed=ep_seed, config=self._config, options=options)
         return json.dumps(obs, ensure_ascii=True), info
 
     def step(self, action):

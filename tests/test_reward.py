@@ -62,7 +62,7 @@ def test_step_savings_only_slightly_separate_equal_answers(dirty):
 @pytest.mark.parametrize("mutation,reason", [
     (lambda f, ep: {**f, "affected_ids": ["D-00000"]}, "no_issue"),
     (lambda f, ep: {**f, "claimed_amount_minor": f["claimed_amount_minor"] + 2}, "amount"),
-    (lambda f, ep: {**f, "currency": "XXX"}, "currency"),
+    (lambda f, ep: {**f, "currency": "JPY" if f["currency"] != "JPY" else "USD"}, "currency"),
     (lambda f, ep: {**f, "evidence_ids": []}, "insufficient_evidence"),
     (lambda f, ep: {**f, "evidence_ids": f["evidence_ids"][:1]}, "insufficient_evidence"),
     (lambda f, ep: {**f, "evidence_ids": f["evidence_ids"] + ["L-99999-9"]}, "unknown_evidence_id"),

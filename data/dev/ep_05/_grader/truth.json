@@ -5,22 +5,22 @@
       "issue_id": "I-01",
       "type": "duplicate_invoice",
       "affected_ids": [
-        "D-18004",
-        "D-53135"
+        "D-11693",
+        "D-93529"
       ],
-      "expected_amount_minor": 123164,
+      "expected_amount_minor": 1808677,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-18004",
-          "D-53135",
-          "L-42649-1"
+          "D-11693",
+          "D-93529",
+          "L-14113-1"
         ],
         [
-          "D-18004",
-          "D-53135",
-          "L-42649-2"
+          "D-11693",
+          "D-93529",
+          "L-14113-2"
         ]
       ],
       "link_id": null,
@@ -30,21 +30,21 @@
       "issue_id": "I-02",
       "type": "fx_conversion",
       "affected_ids": [
-        "D-13234"
+        "D-19433"
       ],
-      "expected_amount_minor": 1203,
+      "expected_amount_minor": 8907,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-13234",
-          "FX-2026-06-12-KZT-USD",
-          "L-42586-1"
+          "D-19433",
+          "FX-2026-06-03-KZT-USD",
+          "L-13953-1"
         ],
         [
-          "D-13234",
-          "FX-2026-06-12-KZT-USD",
-          "L-42586-2"
+          "D-19433",
+          "FX-2026-06-03-KZT-USD",
+          "L-13953-2"
         ]
       ],
       "link_id": null,
@@ -54,16 +54,16 @@
       "issue_id": "I-03",
       "type": "fx_conversion",
       "affected_ids": [
-        "D-53655"
+        "D-37244"
       ],
-      "expected_amount_minor": 195,
+      "expected_amount_minor": 131,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-53655",
+          "D-37244",
           "FX-2026-06-30-KZT-USD",
-          "L-42766-1"
+          "L-14233-1"
         ]
       ],
       "link_id": "X1",
@@ -73,61 +73,61 @@
       "issue_id": "I-04",
       "type": "payment_allocation",
       "affected_ids": [
-        "D-24502",
-        "D-53655"
+        "D-23491",
+        "D-38769"
       ],
-      "expected_amount_minor": 19944,
+      "expected_amount_minor": 79189,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-24502",
-          "D-53655",
-          "FX-2026-06-03-KZT-USD",
-          "L-42766-2"
-        ]
-      ],
-      "link_id": "X1",
-      "invariant": "I7"
-    },
-    {
-      "issue_id": "I-05",
-      "type": "payment_allocation",
-      "affected_ids": [
-        "D-54928",
-        "D-89726"
-      ],
-      "expected_amount_minor": 143541,
-      "currency": "USD",
-      "tolerance_minor": 1,
-      "evidence_sets": [
-        [
-          "D-54928",
-          "D-89726",
-          "L-42643-2"
+          "D-23491",
+          "D-38769",
+          "L-14187-2"
         ],
         [
-          "D-54928",
-          "D-89726",
-          "L-42643-3"
+          "D-23491",
+          "D-38769",
+          "L-14187-3"
         ]
       ],
       "link_id": null,
       "invariant": "I7"
     },
     {
-      "issue_id": "I-06",
-      "type": "period_cutoff",
+      "issue_id": "I-05",
+      "type": "payment_allocation",
       "affected_ids": [
-        "D-53655"
+        "D-37244",
+        "D-63479"
       ],
-      "expected_amount_minor": 32800,
+      "expected_amount_minor": 11080,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-53655",
-          "L-42766-1"
+          "D-37244",
+          "D-63479",
+          "FX-2026-06-03-KZT-USD",
+          "L-14233-2"
+        ]
+      ],
+      "link_id": "X1",
+      "invariant": "I7"
+    },
+    {
+      "issue_id": "I-06",
+      "type": "period_cutoff",
+      "affected_ids": [
+        "D-37244"
+      ],
+      "expected_amount_minor": 21866,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-37244",
+          "L-14233-1"
         ]
       ],
       "link_id": "X1",

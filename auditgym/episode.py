@@ -17,6 +17,7 @@ from pathlib import Path
 from . import SCHEMA_VERSION, __version__
 from .canon import assert_no_floats, dumps, sha256
 from .inject import mutate, plan
+from .invariants import check as check_invariants
 from .money import EXPONENTS, ISO4217_LIST_DATE, ROUNDING
 from .rng import Rng
 from .timeutil import iso, local_instant
@@ -75,7 +76,7 @@ class Episode:
         return self.public["manifest"]["episode_id"]
 
 
-def generate(seed: int | str, config: dict | None = None, salt: str | None = None) -> Episode:
+def generate(seed: int | str, config: dict | None = None, salt: str | None = None, config_version: str | None = None) -> Episode:
     cfg = make_config(config)
     salt = current_salt() if salt is None else salt
     cfg_hash = sha256(cfg)[:16]
@@ -135,8 +136,9 @@ def generate(seed: int | str, config: dict | None = None, salt: str | None = Non
     truth = {"episode_id": episode_id, "issues": truth_issues}
     provenance = {
         "episode_id": episode_id, "generator_version": __version__, "schema_version": SCHEMA_VERSION,
-        "config": cfg, "config_hash": cfg_hash, "public_fingerprint": sha256(public), "events": prov_events,
-        "invariants_before_injection": "I1-I8 hold (asserted by tests/test_data.py and `auditgym check`)",
+        "config": cfg, "config_hash": cfg_hash, "config_version": config_version, "public_fingerprint": sha256(public), "events": prov_events,
+        "invariants_before_injection": {"checked": ["I1", "I2", "I3", "I4", "I5", "I6", "I7", "I8"], "violations": [str(v) for v in check_invariants(clean)]},
+        "inserted_documents": sorted(ids.doc[id(d)] for d in (set(w.invoices) | set(w.payments)) - set(correct_docs[0]) - set(correct_docs[1])),
     }
     assert_no_floats(public)
     assert_no_floats(truth)
@@ -318,7 +320,12 @@ def make_policy(w: World) -> dict:
                                "document amount (after credit notes); any excess is credited to 2300 refunds payable at the payment rate",
                        "no_refs": "a receipt with invoice_refs = null is an on-account receipt credited to 2150",
                        "fee": "fee_minor stated on the payment document is posted to 6500 bank charges"},
-        "billing": {"rule": "each delivery_ref is billed at most once (net of credit notes)"},
+        "billing": {"rule": "each delivery_ref is billed at most once (net of credit notes)",
+                    "duplicate": "when two invoices bill the same delivery_ref, the later-issued one (by issued_at instant) is the duplicate",
+                    "service_period": "informational only; revenue is recognised at delivered_at"},
+        "opening_balance": "the opening entry (account 3000, at period start) carries prior-period open invoices at their issue-date "
+                           "conversion; it is not an invoice posting for the recognition rule. No event of an opening invoice is dated before the period start.",
+        "revaluation": "no period-end revaluation of open foreign-currency items",
         "chart_of_accounts": CHART_OF_ACCOUNTS,
         "amount_tolerance_minor": TOLERANCE_MINOR,
         "findings": {
@@ -337,6 +344,14 @@ def make_policy(w: World) -> dict:
                 "period_cutoff": "doc_id of the document posted in the wrong period",
             },
             "evidence_ids": "row_id (ledger), doc_id (invoices/payments) or fx id FX-<date>-<SRC>-<TGT>; policy is context, not evidence",
+            "converted_row": "invoice: its AR debit (or revenue credit); credit note: its AR credit (or returns debit); payment: its bank row",
+            "minimal_evidence": {
+                "duplicate_invoice": "both invoice docs + the duplicate's AR (or revenue) row",
+                "payment_allocation": "payment doc + invoice doc + the payment's AR row for that invoice (or its 2150 row for a base-currency payment) "
+                                      "+ the invoice-date fx row if the invoice is in a foreign currency",
+                "fx_conversion": "the document + the fx row the policy prescribes + the converted ledger row",
+                "period_cutoff": "the document + the mis-dated ledger row (AR/revenue for an invoice, bank for a payment)",
+            },
         },
     }
 

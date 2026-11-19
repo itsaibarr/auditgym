@@ -97,71 +97,21 @@
     "max_errors": 12
   },
   "config_hash": "8368b4b3cee86862",
-  "public_fingerprint": "16380cc2345bfd90db0a6602b0cef64758af604bf6081c3a9ac952169101b74f",
-  "events": [
-    {
-      "issue_id": "I-01",
-      "injector": "E2.unallocated_missing",
-      "params": {
-        "mode": "missing"
-      },
-      "before": [
-        {
-          "je": 33540,
-          "timestamp": "2026-09-22T09:17:00+02:00",
-          "rows": [
-            {
-              "row_id": "L-33540-1",
-              "account": "1000",
-              "debit_minor": 410700216,
-              "credit_minor": 0,
-              "currency": "KZT",
-              "entity_id": "C-2613",
-              "invoice_id": null,
-              "payment_id": "PAY-1089"
-            },
-            {
-              "row_id": "L-33540-2",
-              "account": "1100",
-              "debit_minor": 0,
-              "credit_minor": 410700216,
-              "currency": "KZT",
-              "entity_id": "C-2613",
-              "invoice_id": "INV-4655",
-              "payment_id": "PAY-1089"
-            }
-          ]
-        }
-      ],
-      "after": [
-        {
-          "je": 33540,
-          "timestamp": "2026-09-22T09:17:00+02:00",
-          "rows": [
-            {
-              "row_id": "L-33540-1",
-              "account": "1000",
-              "debit_minor": 410700216,
-              "credit_minor": 0,
-              "currency": "KZT",
-              "entity_id": "C-2613",
-              "invoice_id": null,
-              "payment_id": "PAY-1089"
-            },
-            {
-              "row_id": "L-33540-2",
-              "account": "2150",
-              "debit_minor": 0,
-              "credit_minor": 410700216,
-              "currency": "KZT",
-              "entity_id": "C-2613",
-              "invoice_id": null,
-              "payment_id": "PAY-1089"
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "invariants_before_injection": "I1-I8 hold (asserted by tests/test_data.py and `auditgym check`)"
+  "config_version": "1.0.0",
+  "public_fingerprint": "978fbfc80eee0e06d03ccf630228595050808d9bf4a0286595a60e0e858be089",
+  "events": [],
+  "invariants_before_injection": {
+    "checked": [
+      "I1",
+      "I2",
+      "I3",
+      "I4",
+      "I5",
+      "I6",
+      "I7",
+      "I8"
+    ],
+    "violations": []
+  },
+  "inserted_documents": []
 }

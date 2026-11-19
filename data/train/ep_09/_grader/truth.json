@@ -6,21 +6,21 @@
       "type": "duplicate_invoice",
       "affected_ids": [
         "D-28380",
-        "D-59584"
+        "D-42071"
       ],
-      "expected_amount_minor": 163097,
+      "expected_amount_minor": 238775,
       "currency": "EUR",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
           "D-28380",
-          "D-59584",
-          "L-13804-1"
+          "D-42071",
+          "L-59051-1"
         ],
         [
           "D-28380",
-          "D-59584",
-          "L-13804-2"
+          "D-42071",
+          "L-59051-2"
         ]
       ],
       "link_id": "X2",
@@ -30,22 +30,22 @@
       "issue_id": "I-02",
       "type": "duplicate_invoice",
       "affected_ids": [
-        "D-43995",
-        "D-58011"
+        "D-56250",
+        "D-56251"
       ],
-      "expected_amount_minor": 91663,
+      "expected_amount_minor": 136400,
       "currency": "EUR",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-43995",
-          "D-58011",
-          "L-13926-1"
+          "D-56250",
+          "D-56251",
+          "L-59151-1"
         ],
         [
-          "D-43995",
-          "D-58011",
-          "L-13926-2"
+          "D-56250",
+          "D-56251",
+          "L-59151-2"
         ]
       ],
       "link_id": null,
@@ -55,21 +55,21 @@
       "issue_id": "I-03",
       "type": "fx_conversion",
       "affected_ids": [
-        "D-26172"
+        "D-58011"
       ],
-      "expected_amount_minor": 140,
+      "expected_amount_minor": 703,
       "currency": "EUR",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-26172",
-          "FX-2026-05-21-KWD-EUR",
-          "L-13846-1"
+          "D-58011",
+          "FX-2026-05-15-KWD-EUR",
+          "L-59080-1"
         ],
         [
-          "D-26172",
-          "FX-2026-05-21-KWD-EUR",
-          "L-13846-2"
+          "D-58011",
+          "FX-2026-05-15-KWD-EUR",
+          "L-59080-2"
         ]
       ],
       "link_id": "X2",
@@ -79,16 +79,16 @@
       "issue_id": "I-04",
       "type": "fx_conversion",
       "affected_ids": [
-        "D-76722"
+        "D-82871"
       ],
-      "expected_amount_minor": 9650,
+      "expected_amount_minor": 2270,
       "currency": "EUR",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-76722",
-          "FX-2026-05-29-USD-EUR",
-          "L-13920-1"
+          "D-82871",
+          "FX-2026-05-28-KWD-EUR",
+          "L-59183-1"
         ]
       ],
       "link_id": null,

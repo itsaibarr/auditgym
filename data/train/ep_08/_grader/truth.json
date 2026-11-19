@@ -5,22 +5,22 @@
       "issue_id": "I-01",
       "type": "duplicate_invoice",
       "affected_ids": [
-        "D-33064",
-        "D-55325"
+        "D-46728",
+        "D-96806"
       ],
-      "expected_amount_minor": 321727,
+      "expected_amount_minor": 99453,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-33064",
-          "D-55325",
-          "L-26874-1"
+          "D-46728",
+          "D-96806",
+          "L-56570-1"
         ],
         [
-          "D-33064",
-          "D-55325",
-          "L-26874-2"
+          "D-46728",
+          "D-96806",
+          "L-56570-2"
         ]
       ],
       "link_id": null,
@@ -30,16 +30,16 @@
       "issue_id": "I-02",
       "type": "fx_conversion",
       "affected_ids": [
-        "D-95418"
+        "D-97326"
       ],
-      "expected_amount_minor": 1350,
+      "expected_amount_minor": 146,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-95418",
+          "D-97326",
           "FX-2026-03-31-EUR-USD",
-          "L-27122-1"
+          "L-56816-1"
         ]
       ],
       "link_id": "X1",
@@ -49,18 +49,18 @@
       "issue_id": "I-03",
       "type": "payment_allocation",
       "affected_ids": [
-        "D-83639",
-        "D-95418"
+        "D-56784",
+        "D-97326"
       ],
-      "expected_amount_minor": 245662,
+      "expected_amount_minor": 23878,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-83639",
-          "D-95418",
-          "FX-2026-03-11-EUR-USD",
-          "L-27122-2"
+          "D-56784",
+          "D-97326",
+          "FX-2026-03-20-EUR-USD",
+          "L-56816-2"
         ]
       ],
       "link_id": "X1",
@@ -72,17 +72,17 @@
       "affected_ids": [
         "D-13662"
       ],
-      "expected_amount_minor": 122389,
+      "expected_amount_minor": 734156,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
           "D-13662",
-          "L-27135-1"
+          "L-56815-1"
         ],
         [
           "D-13662",
-          "L-27135-2"
+          "L-56815-2"
         ]
       ],
       "link_id": null,
@@ -92,15 +92,15 @@
       "issue_id": "I-05",
       "type": "period_cutoff",
       "affected_ids": [
-        "D-95418"
+        "D-97326"
       ],
-      "expected_amount_minor": 488445,
+      "expected_amount_minor": 30138,
       "currency": "USD",
       "tolerance_minor": 1,
       "evidence_sets": [
         [
-          "D-95418",
-          "L-27122-1"
+          "D-97326",
+          "L-56816-1"
         ]
       ],
       "link_id": "X1",

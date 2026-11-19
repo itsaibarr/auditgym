@@ -52,8 +52,15 @@
           "maximum": 1000000000000000000
         },
         "currency": {
-          "type": "string",
-          "pattern": "^[A-Z]{3}$"
+          "enum": [
+            "CNY",
+            "EUR",
+            "GBP",
+            "JPY",
+            "KWD",
+            "KZT",
+            "USD"
+          ]
         },
         "evidence_ids": {
           "type": "array",

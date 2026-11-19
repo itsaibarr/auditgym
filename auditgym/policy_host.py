@@ -1,28 +1,39 @@
-"""Child-process host for Python policies: `python -I -m auditgym.policy_host <spec> [k=v ...]`.
+"""Child-process host for policies.
 
-Speaks JSON lines: reads {"type": "reset"|"step"|"close", ...} from stdin, writes one action per line.
-Resource limits are applied before the policy module is imported.
+    python -I -m auditgym.policy_host <module:Class|builtin> [k=v ...] [--path=DIR] [--allow-forks]
+    python -I -m auditgym.policy_host --exec [--allow-forks] -- <program> [args...]
+
+Resource limits are applied *before* the policy is imported (or the program is exec'd): CPU time, no file
+writes, few file descriptors, address space, and RLIMIT_NPROC=1 so the policy cannot fork helper processes
+(e.g. `ps`, or a daemon that survives the process-group kill). Speaks JSON lines: reads
+{"type": "reset"|"step"|"close", ...} from stdin and writes one action per line. The "close" message carries the
+final transition (terminal reward in train mode); policies may implement end(observation, reward, terminated,
+truncated, info).
 """
 from __future__ import annotations
 
 import importlib
 import json
+import os
 import sys
 
 
-def _limits() -> None:
+def apply_limits(allow_forks: bool = False) -> None:
     try:
         import resource
-        for lim, val in ((resource.RLIMIT_CPU, 120), (resource.RLIMIT_FSIZE, 0), (resource.RLIMIT_NOFILE, 256)):
-            try:
-                resource.setrlimit(lim, (val, val))
-            except (ValueError, OSError):
-                pass
+    except ImportError:  # non-POSIX
+        return
+    limits = [(resource.RLIMIT_CPU, 120), (resource.RLIMIT_FSIZE, 0), (resource.RLIMIT_NOFILE, 64)]
+    if not allow_forks and hasattr(resource, "RLIMIT_NPROC"):
+        limits.append((resource.RLIMIT_NPROC, 1))
+    for lim, val in limits:
         try:
-            resource.setrlimit(resource.RLIMIT_AS, (3 * 1024**3, 3 * 1024**3))
+            resource.setrlimit(lim, (val, val))
         except (ValueError, OSError):
             pass
-    except ImportError:
+    try:
+        resource.setrlimit(resource.RLIMIT_AS, (3 * 1024**3, 3 * 1024**3))
+    except (ValueError, OSError, AttributeError):
         pass
 
 
@@ -44,16 +55,24 @@ def _coerce(v: str):
 
 
 def main(argv: list[str]) -> None:
+    allow = "--allow-forks" in argv
+    argv = [a for a in argv if a != "--allow-forks"]
+    if argv and argv[0] == "--exec":
+        prog = argv[argv.index("--") + 1:] if "--" in argv else argv[1:]
+        apply_limits(allow)
+        os.execvp(prog[0], prog)
     spec, rest = argv[0], argv[1:]
     paths = [a.split("=", 1)[1] for a in rest if a.startswith("--path=")]
     kwargs = {k: _coerce(v) for k, v in (a.split("=", 1) for a in rest if not a.startswith("--path="))}
     sys.path[:0] = paths
-    _limits()
+    apply_limits(allow)
     policy = load_policy(spec, kwargs)
     out = sys.stdout
     for line in sys.stdin:
         msg = json.loads(line)
         if msg["type"] == "close":
+            if "observation" in msg and hasattr(policy, "end"):
+                policy.end(msg["observation"], msg["reward"], msg["terminated"], msg["truncated"], msg["info"])
             break
         if msg["type"] == "reset":
             action = policy.reset(msg["observation"], msg["info"])

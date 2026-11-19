@@ -11,6 +11,7 @@ COPY tests ./tests
 COPY configs ./configs
 COPY data ./data
 COPY schema ./schema
+COPY examples ./examples
 RUN useradd --create-home auditor && mkdir -p /app/runs && chown -R auditor /app/runs
 USER auditor
 ENV PATH="/app/.venv/bin:$PATH"
