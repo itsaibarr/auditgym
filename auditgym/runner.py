@@ -478,7 +478,13 @@ def verify_run(d: Path) -> list[str]:
             probs.append(f"{p}: missing or not a regular file")
     if probs:
         return probs
-    meta = json.loads((d / "run.json").read_text())
+    try:
+        meta = loads_strict((d / "run.json").read_text())
+    except (ValueError, RecursionError, UnicodeDecodeError) as e:
+        return [f"{d}/run.json: unreadable ({e})"]
+    if not isinstance(meta, dict) or not isinstance(meta.get("files"), dict) \
+            or not isinstance(meta.get("files_hmac", {}), dict):
+        return [f"{d}/run.json: malformed"]
     if meta.get("dir") != d.resolve().name:
         probs.append(f"{d}: run.json belongs to run dir {meta.get('dir')!r}")
     for n, h in (meta.get("files") or {}).items():
