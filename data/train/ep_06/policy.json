@@ -1,0 +1,81 @@
+{
+  "functional_currency": "KZT",
+  "ledger_amounts": "All ledger amounts are in the functional (base) currency; document currency lives on invoices/payments.",
+  "fx": {
+    "rate_direction": "rate = units of base currency per 1 unit of source currency; never invert",
+    "rate_date": {
+      "invoice": "company-local date of issued_at",
+      "credit_note": "company-local date of issued_at",
+      "payment": "company-local date of timestamp",
+      "refund": "company-local date of timestamp"
+    },
+    "missing_date_rule": "use the last rate on or before that date (fx.csv has business days only)",
+    "conversion": "base_minor = round(doc_minor * rate * 10**(exp(base) - exp(doc))), once per document total",
+    "rounding_mode": "ROUND_HALF_EVEN",
+    "settlement": "AR is relieved at the invoice's carried rate; realized differences go to 7100 (gain) / 7200 (loss). A partial allocation relieves round(alloc * invoice rate); the allocation that clears the invoice relieves the remaining carried amount."
+  },
+  "period": {
+    "timezone": "Asia/Almaty",
+    "start_inclusive": "2026-06-01T00:00:00+05:00",
+    "end_exclusive": "2026-07-01T00:00:00+05:00",
+    "export_includes_post_period_window_until": "2026-07-06T00:00:00+05:00",
+    "rule": "compare company-local dates after converting each ISO-8601 instant to the company timezone"
+  },
+  "recognition": {
+    "revenue": "delivered_at (company-local date) must fall in the same period as the invoice posting",
+    "payment": "the payment posting must fall in the same period as the payment timestamp",
+    "credit_note": "posted at its issued_at"
+  },
+  "allocation": {
+    "rule": "a receipt allocates (amount_minor + fee_minor) to invoice_refs in listed order, up to each invoice's open document amount (after credit notes); any excess is credited to 2300 refunds payable at the payment rate",
+    "no_refs": "a receipt with invoice_refs = null is an on-account receipt credited to 2150",
+    "fee": "fee_minor stated on the payment document is posted to 6500 bank charges"
+  },
+  "billing": {
+    "rule": "each delivery_ref is billed at most once (net of credit notes)"
+  },
+  "chart_of_accounts": {
+    "1000": "Bank (base currency)",
+    "1010": "Bank USD (valued in base)",
+    "1020": "Bank EUR (valued in base)",
+    "1030": "Bank JPY (valued in base)",
+    "1040": "Bank KWD (valued in base)",
+    "1050": "Bank CNY (valued in base)",
+    "1060": "Bank GBP (valued in base)",
+    "1070": "Bank KZT (valued in base)",
+    "1100": "Accounts receivable (control)",
+    "2100": "Accrued liabilities",
+    "2150": "Unapplied cash / customer advances",
+    "2300": "Customer refunds payable",
+    "3000": "Equity / opening balance",
+    "4000": "Revenue",
+    "4100": "Sales returns and allowances",
+    "6000": "Operating expenses",
+    "6500": "Bank charges",
+    "7100": "Realized FX gain",
+    "7200": "Realized FX loss"
+  },
+  "amount_tolerance_minor": 1,
+  "findings": {
+    "types": [
+      "duplicate_invoice",
+      "payment_allocation",
+      "fx_conversion",
+      "period_cutoff"
+    ],
+    "currency": "always the base currency",
+    "amounts": {
+      "duplicate_invoice": "the duplicate's AR debit in base currency",
+      "payment_allocation": "AR under-credited for the referenced invoice, at the invoice's carried rate",
+      "fx_conversion": "absolute difference between the recorded and the correct base amount of the converted row",
+      "period_cutoff": "the base amount of the mis-dated posting as recorded in the ledger (the source row: AR for an invoice, bank for a payment)"
+    },
+    "affected_ids": {
+      "duplicate_invoice": "doc_ids of both the original and the duplicate invoice",
+      "payment_allocation": "doc_ids of the payment and the under-allocated invoice",
+      "fx_conversion": "doc_id of the document whose conversion is wrong",
+      "period_cutoff": "doc_id of the document posted in the wrong period"
+    },
+    "evidence_ids": "row_id (ledger), doc_id (invoices/payments) or fx id FX-<date>-<SRC>-<TGT>; policy is context, not evidence"
+  }
+}

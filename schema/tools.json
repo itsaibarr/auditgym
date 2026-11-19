@@ -1,0 +1,208 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "list_records",
+      "description": "List up to 50 rows of a table in its fixed order. Pass next_cursor to continue.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "table"
+        ],
+        "properties": {
+          "table": {
+            "enum": [
+              "ledger",
+              "invoices",
+              "payments",
+              "fx"
+            ]
+          },
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 50
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_record",
+      "description": "Fetch one row by primary key (ledger.row_id, invoices/payments.doc_id, fx id FX-<date>-<SRC>-<TGT>).",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "table",
+          "id"
+        ],
+        "properties": {
+          "table": {
+            "enum": [
+              "ledger",
+              "invoices",
+              "payments",
+              "fx"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "maxLength": 64
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_document",
+      "description": "Fetch a full invoice, credit note or payment document by doc_id.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "doc_id"
+        ],
+        "properties": {
+          "doc_id": {
+            "type": "string",
+            "maxLength": 64
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "calculator",
+      "description": "Evaluate + - * / ( ) over decimal numbers. No variables or functions.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expression"
+        ],
+        "properties": {
+          "expression": {
+            "type": "string",
+            "maxLength": 256
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "submit",
+      "description": "Submit findings.json and end the episode.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "findings"
+        ],
+        "properties": {
+          "findings": {
+            "$ref": "#/$defs/Findings",
+            "$defs": {
+              "Findings": {
+                "title": "Findings",
+                "type": "object",
+                "properties": {
+                  "episode_id": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 1
+                  },
+                  "findings": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/Finding"
+                    },
+                    "maxItems": 30
+                  }
+                },
+                "required": [
+                  "episode_id",
+                  "findings"
+                ],
+                "additionalProperties": false
+              },
+              "Finding": {
+                "title": "Finding",
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "duplicate_invoice",
+                      "fx_conversion",
+                      "payment_allocation",
+                      "period_cutoff"
+                    ]
+                  },
+                  "affected_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "minLength": 1
+                    },
+                    "maxItems": 10,
+                    "minItems": 1
+                  },
+                  "claimed_amount_minor": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000000000000000000
+                  },
+                  "currency": {
+                    "type": "string",
+                    "pattern": "^[A-Z]{3}$"
+                  },
+                  "evidence_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "minLength": 1
+                    },
+                    "maxItems": 10
+                  },
+                  "explanation": {
+                    "type": "string",
+                    "maxLength": 1000
+                  }
+                },
+                "required": [
+                  "type",
+                  "affected_ids",
+                  "claimed_amount_minor",
+                  "currency",
+                  "evidence_ids",
+                  "explanation"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]

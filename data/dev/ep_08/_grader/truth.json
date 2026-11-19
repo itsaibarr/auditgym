@@ -1,0 +1,112 @@
+{
+  "episode_id": "ep_01242cf9a0cc45ab",
+  "issues": [
+    {
+      "issue_id": "I-01",
+      "type": "duplicate_invoice",
+      "affected_ids": [
+        "D-76753",
+        "D-85711"
+      ],
+      "expected_amount_minor": 497149135,
+      "currency": "KZT",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-76753",
+          "D-85711",
+          "L-24350-1"
+        ],
+        [
+          "D-76753",
+          "D-85711",
+          "L-24350-2"
+        ]
+      ],
+      "link_id": "X2",
+      "invariant": "I8"
+    },
+    {
+      "issue_id": "I-02",
+      "type": "fx_conversion",
+      "affected_ids": [
+        "D-12054"
+      ],
+      "expected_amount_minor": 327404,
+      "currency": "KZT",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-12054",
+          "FX-2026-08-31-USD-KZT",
+          "L-24519-1"
+        ]
+      ],
+      "link_id": "X1",
+      "invariant": "I5"
+    },
+    {
+      "issue_id": "I-03",
+      "type": "fx_conversion",
+      "affected_ids": [
+        "D-95970"
+      ],
+      "expected_amount_minor": 789166,
+      "currency": "KZT",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-95970",
+          "FX-2026-08-14-EUR-KZT",
+          "L-24366-1"
+        ],
+        [
+          "D-95970",
+          "FX-2026-08-14-EUR-KZT",
+          "L-24366-2"
+        ]
+      ],
+      "link_id": "X2",
+      "invariant": "I5"
+    },
+    {
+      "issue_id": "I-04",
+      "type": "payment_allocation",
+      "affected_ids": [
+        "D-12054",
+        "D-56260"
+      ],
+      "expected_amount_minor": 40968165,
+      "currency": "KZT",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-12054",
+          "D-56260",
+          "FX-2026-08-17-USD-KZT",
+          "L-24519-2"
+        ]
+      ],
+      "link_id": "X1",
+      "invariant": "I7"
+    },
+    {
+      "issue_id": "I-05",
+      "type": "period_cutoff",
+      "affected_ids": [
+        "D-12054"
+      ],
+      "expected_amount_minor": 56892710,
+      "currency": "KZT",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-12054",
+          "L-24519-1"
+        ]
+      ],
+      "link_id": "X1",
+      "invariant": "I6"
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "episode_id": "ep_3c595268489d4706",
+  "issues": [
+    {
+      "issue_id": "I-01",
+      "type": "duplicate_invoice",
+      "affected_ids": [
+        "D-23427",
+        "D-25757"
+      ],
+      "expected_amount_minor": 499985,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-23427",
+          "D-25757",
+          "L-46197-1"
+        ],
+        [
+          "D-23427",
+          "D-25757",
+          "L-46197-2"
+        ]
+      ],
+      "link_id": "X2",
+      "invariant": "I8"
+    },
+    {
+      "issue_id": "I-02",
+      "type": "fx_conversion",
+      "affected_ids": [
+        "D-17868"
+      ],
+      "expected_amount_minor": 5277,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-17868",
+          "FX-2026-07-17-JPY-USD",
+          "L-46179-1"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I5"
+    },
+    {
+      "issue_id": "I-03",
+      "type": "fx_conversion",
+      "affected_ids": [
+        "D-83186"
+      ],
+      "expected_amount_minor": 476,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-83186",
+          "FX-2026-07-24-JPY-USD",
+          "L-46260-1"
+        ],
+        [
+          "D-83186",
+          "FX-2026-07-24-JPY-USD",
+          "L-46260-2"
+        ]
+      ],
+      "link_id": "X2",
+      "invariant": "I5"
+    }
+  ]
+}

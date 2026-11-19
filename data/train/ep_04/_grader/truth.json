@@ -1,0 +1,24 @@
+{
+  "episode_id": "ep_a8988b8d09f50ec2",
+  "issues": [
+    {
+      "issue_id": "I-01",
+      "type": "fx_conversion",
+      "affected_ids": [
+        "D-63982"
+      ],
+      "expected_amount_minor": 5904,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-63982",
+          "FX-2026-02-24-EUR-USD",
+          "L-39223-1"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I5"
+    }
+  ]
+}

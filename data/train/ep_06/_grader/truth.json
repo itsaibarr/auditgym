@@ -1,0 +1,72 @@
+{
+  "episode_id": "ep_0c16d5c8b9230f8c",
+  "issues": [
+    {
+      "issue_id": "I-01",
+      "type": "payment_allocation",
+      "affected_ids": [
+        "D-13748",
+        "D-95921"
+      ],
+      "expected_amount_minor": 225828000,
+      "currency": "KZT",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-13748",
+          "D-95921",
+          "L-56517-2"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I7"
+    },
+    {
+      "issue_id": "I-02",
+      "type": "payment_allocation",
+      "affected_ids": [
+        "D-24228",
+        "D-82049"
+      ],
+      "expected_amount_minor": 43890168,
+      "currency": "KZT",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-24228",
+          "D-82049",
+          "L-56570-2"
+        ],
+        [
+          "D-24228",
+          "D-82049",
+          "L-56570-3"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I7"
+    },
+    {
+      "issue_id": "I-03",
+      "type": "period_cutoff",
+      "affected_ids": [
+        "D-82546"
+      ],
+      "expected_amount_minor": 472832657,
+      "currency": "KZT",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-82546",
+          "L-56635-1"
+        ],
+        [
+          "D-82546",
+          "L-56635-2"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I6"
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "episode_id": "ep_cd70b69ceba71c9a",
+  "issues": [
+    {
+      "issue_id": "I-01",
+      "type": "duplicate_invoice",
+      "affected_ids": [
+        "D-33815",
+        "D-84366"
+      ],
+      "expected_amount_minor": 514460401,
+      "currency": "KZT",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-33815",
+          "D-84366",
+          "L-46354-1"
+        ],
+        [
+          "D-33815",
+          "D-84366",
+          "L-46354-2"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I8"
+    },
+    {
+      "issue_id": "I-02",
+      "type": "duplicate_invoice",
+      "affected_ids": [
+        "D-57537",
+        "D-64083"
+      ],
+      "expected_amount_minor": 687470737,
+      "currency": "KZT",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-57537",
+          "D-64083",
+          "L-46324-1"
+        ],
+        [
+          "D-57537",
+          "D-64083",
+          "L-46324-2"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I8"
+    }
+  ]
+}

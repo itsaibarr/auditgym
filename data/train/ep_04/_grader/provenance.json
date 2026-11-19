@@ -1,0 +1,188 @@
+{
+  "episode_id": "ep_a8988b8d09f50ec2",
+  "generator_version": "1.0.0",
+  "schema_version": "1.0",
+  "config": {
+    "base_currencies": [
+      "KZT",
+      "USD",
+      "EUR"
+    ],
+    "foreign_currencies": [
+      "USD",
+      "EUR",
+      "KZT",
+      "JPY",
+      "KWD",
+      "CNY",
+      "GBP"
+    ],
+    "timezones": [
+      "Asia/Almaty",
+      "Asia/Tashkent",
+      "Europe/Berlin",
+      "Asia/Dubai",
+      "UTC"
+    ],
+    "year": 2026,
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "cutoff_window_days": 5,
+    "customers": [
+      6,
+      16
+    ],
+    "opening_invoices": [
+      2,
+      6
+    ],
+    "invoices": [
+      20,
+      70
+    ],
+    "on_account": [
+      1,
+      3
+    ],
+    "expenses": [
+      60,
+      260
+    ],
+    "errors": {
+      "duplicate_invoice": {
+        "on": false,
+        "count": [
+          0,
+          2
+        ]
+      },
+      "payment_allocation": {
+        "on": false,
+        "count": [
+          0,
+          2
+        ]
+      },
+      "fx_conversion": {
+        "on": true,
+        "count": [
+          1,
+          2
+        ]
+      },
+      "period_cutoff": {
+        "on": false,
+        "count": [
+          0,
+          2
+        ]
+      }
+    },
+    "interacting": {
+      "X1": 0.0,
+      "X2": 0.0
+    },
+    "max_errors": 12
+  },
+  "config_hash": "dc5c8fd9ce2bde22",
+  "public_fingerprint": "e8e97fdf69f9863d614146a6482c5cbcc8e960e6e3d2d8c909b07e5079e81778",
+  "events": [
+    {
+      "issue_id": "I-01",
+      "injector": "E3.wrong_rate_date",
+      "params": {
+        "used_rate_date": "2026-02-26",
+        "correct_rate_date": "2026-02-24"
+      },
+      "before": [
+        {
+          "je": 39223,
+          "timestamp": "2026-02-24T18:09:00+00:00",
+          "rows": [
+            {
+              "row_id": "L-39223-1",
+              "account": "1020",
+              "debit_minor": 836161,
+              "credit_minor": 0,
+              "currency": "USD",
+              "entity_id": "C-1010",
+              "invoice_id": null,
+              "payment_id": "PAY-6155"
+            },
+            {
+              "row_id": "L-39223-2",
+              "account": "1100",
+              "debit_minor": 0,
+              "credit_minor": 850595,
+              "currency": "USD",
+              "entity_id": "C-1010",
+              "invoice_id": "SF-4297",
+              "payment_id": "PAY-6155"
+            },
+            {
+              "row_id": "L-39223-3",
+              "account": "7200",
+              "debit_minor": 14434,
+              "credit_minor": 0,
+              "currency": "USD",
+              "entity_id": "C-1010",
+              "invoice_id": null,
+              "payment_id": "PAY-6155"
+            }
+          ]
+        }
+      ],
+      "after": [
+        {
+          "je": 39223,
+          "timestamp": "2026-02-24T18:09:00+00:00",
+          "rows": [
+            {
+              "row_id": "L-39223-1",
+              "account": "1020",
+              "debit_minor": 830257,
+              "credit_minor": 0,
+              "currency": "USD",
+              "entity_id": "C-1010",
+              "invoice_id": null,
+              "payment_id": "PAY-6155"
+            },
+            {
+              "row_id": "L-39223-2",
+              "account": "1100",
+              "debit_minor": 0,
+              "credit_minor": 850595,
+              "currency": "USD",
+              "entity_id": "C-1010",
+              "invoice_id": "SF-4297",
+              "payment_id": "PAY-6155"
+            },
+            {
+              "row_id": "L-39223-3",
+              "account": "7200",
+              "debit_minor": 20338,
+              "credit_minor": 0,
+              "currency": "USD",
+              "entity_id": "C-1010",
+              "invoice_id": null,
+              "payment_id": "PAY-6155"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "invariants_before_injection": "I1-I8 hold (asserted by tests/test_data.py and `auditgym check`)"
+}

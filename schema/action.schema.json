@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "arguments"
+  ],
+  "properties": {
+    "name": {
+      "enum": [
+        "list_records",
+        "get_record",
+        "get_document",
+        "calculator",
+        "submit"
+      ]
+    },
+    "arguments": {
+      "type": "object"
+    }
+  }
+}

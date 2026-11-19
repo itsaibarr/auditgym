@@ -1,0 +1,49 @@
+{
+  "episode_id": "ep_fa1853f2910f02c3",
+  "issues": [
+    {
+      "issue_id": "I-01",
+      "type": "duplicate_invoice",
+      "affected_ids": [
+        "D-58233",
+        "D-85135"
+      ],
+      "expected_amount_minor": 969683,
+      "currency": "EUR",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-58233",
+          "D-85135",
+          "L-47860-1"
+        ],
+        [
+          "D-58233",
+          "D-85135",
+          "L-47860-2"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I8"
+    },
+    {
+      "issue_id": "I-02",
+      "type": "fx_conversion",
+      "affected_ids": [
+        "D-77496"
+      ],
+      "expected_amount_minor": 1546,
+      "currency": "EUR",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-77496",
+          "FX-2026-08-27-USD-EUR",
+          "L-48029-1"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I5"
+    }
+  ]
+}

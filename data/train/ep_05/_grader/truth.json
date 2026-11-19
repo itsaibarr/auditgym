@@ -1,0 +1,27 @@
+{
+  "episode_id": "ep_134dd07d40fe9afd",
+  "issues": [
+    {
+      "issue_id": "I-01",
+      "type": "period_cutoff",
+      "affected_ids": [
+        "D-23640"
+      ],
+      "expected_amount_minor": 1176893,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-23640",
+          "L-56022-1"
+        ],
+        [
+          "D-23640",
+          "L-56022-2"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I6"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "auditgym_version": "1.0.0",
+  "policy": "reconcile",
+  "policy_args": [],
+  "mode": "train",
+  "python": "3.11.15",
+  "platform": "macOS-26.5-arm64-arm-64bit",
+  "episodes": [
+    "ep_edd472bc9633ceaa",
+    "ep_a9e4829832a4ea26",
+    "ep_cd70b69ceba71c9a",
+    "ep_4324ea98a1aad6b2",
+    "ep_a8988b8d09f50ec2",
+    "ep_134dd07d40fe9afd",
+    "ep_0c16d5c8b9230f8c",
+    "ep_8641da3fcf7e60e4",
+    "ep_84cb4fb7ee5a4463",
+    "ep_c163bb75cef6cb26"
+  ],
+  "config_hashes": [
+    "4e0681fec9220c1e",
+    "7c94e16120a30e63",
+    "8368b4b3cee86862",
+    "8c2fcea955bcc0c0",
+    "b74e622211a5d0e3",
+    "c345a1740811bd21",
+    "dc5c8fd9ce2bde22",
+    "fbad4e6bcbe2b508"
+  ],
+  "salt": "default-open",
+  "sources": "train"
+}

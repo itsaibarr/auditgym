@@ -1,0 +1,101 @@
+{
+  "episode_id": "ep_f34790be6b4b7539",
+  "issues": [
+    {
+      "issue_id": "I-01",
+      "type": "duplicate_invoice",
+      "affected_ids": [
+        "D-13452",
+        "D-88332"
+      ],
+      "expected_amount_minor": 576601,
+      "currency": "EUR",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-13452",
+          "D-88332",
+          "L-33682-1"
+        ],
+        [
+          "D-13452",
+          "D-88332",
+          "L-33682-2"
+        ]
+      ],
+      "link_id": "X2",
+      "invariant": "I8"
+    },
+    {
+      "issue_id": "I-02",
+      "type": "duplicate_invoice",
+      "affected_ids": [
+        "D-21122",
+        "D-25755"
+      ],
+      "expected_amount_minor": 646579,
+      "currency": "EUR",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-21122",
+          "D-25755",
+          "L-33735-1"
+        ],
+        [
+          "D-21122",
+          "D-25755",
+          "L-33735-2"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I8"
+    },
+    {
+      "issue_id": "I-03",
+      "type": "fx_conversion",
+      "affected_ids": [
+        "D-48301"
+      ],
+      "expected_amount_minor": 207,
+      "currency": "EUR",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-48301",
+          "FX-2026-06-05-USD-EUR",
+          "L-33708-1"
+        ],
+        [
+          "D-48301",
+          "FX-2026-06-05-USD-EUR",
+          "L-33708-2"
+        ]
+      ],
+      "link_id": "X2",
+      "invariant": "I5"
+    },
+    {
+      "issue_id": "I-04",
+      "type": "period_cutoff",
+      "affected_ids": [
+        "D-40044"
+      ],
+      "expected_amount_minor": 118000,
+      "currency": "EUR",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-40044",
+          "L-33901-1"
+        ],
+        [
+          "D-40044",
+          "L-33901-2"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I6"
+    }
+  ]
+}

@@ -1,0 +1,137 @@
+{
+  "episode_id": "ep_5f6f2fec004594c4",
+  "issues": [
+    {
+      "issue_id": "I-01",
+      "type": "duplicate_invoice",
+      "affected_ids": [
+        "D-18004",
+        "D-53135"
+      ],
+      "expected_amount_minor": 123164,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-18004",
+          "D-53135",
+          "L-42649-1"
+        ],
+        [
+          "D-18004",
+          "D-53135",
+          "L-42649-2"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I8"
+    },
+    {
+      "issue_id": "I-02",
+      "type": "fx_conversion",
+      "affected_ids": [
+        "D-13234"
+      ],
+      "expected_amount_minor": 1203,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-13234",
+          "FX-2026-06-12-KZT-USD",
+          "L-42586-1"
+        ],
+        [
+          "D-13234",
+          "FX-2026-06-12-KZT-USD",
+          "L-42586-2"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I5"
+    },
+    {
+      "issue_id": "I-03",
+      "type": "fx_conversion",
+      "affected_ids": [
+        "D-53655"
+      ],
+      "expected_amount_minor": 195,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-53655",
+          "FX-2026-06-30-KZT-USD",
+          "L-42766-1"
+        ]
+      ],
+      "link_id": "X1",
+      "invariant": "I5"
+    },
+    {
+      "issue_id": "I-04",
+      "type": "payment_allocation",
+      "affected_ids": [
+        "D-24502",
+        "D-53655"
+      ],
+      "expected_amount_minor": 19944,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-24502",
+          "D-53655",
+          "FX-2026-06-03-KZT-USD",
+          "L-42766-2"
+        ]
+      ],
+      "link_id": "X1",
+      "invariant": "I7"
+    },
+    {
+      "issue_id": "I-05",
+      "type": "payment_allocation",
+      "affected_ids": [
+        "D-54928",
+        "D-89726"
+      ],
+      "expected_amount_minor": 143541,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-54928",
+          "D-89726",
+          "L-42643-2"
+        ],
+        [
+          "D-54928",
+          "D-89726",
+          "L-42643-3"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I7"
+    },
+    {
+      "issue_id": "I-06",
+      "type": "period_cutoff",
+      "affected_ids": [
+        "D-53655"
+      ],
+      "expected_amount_minor": 32800,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-53655",
+          "L-42766-1"
+        ]
+      ],
+      "link_id": "X1",
+      "invariant": "I6"
+    }
+  ]
+}

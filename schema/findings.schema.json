@@ -1,0 +1,83 @@
+{
+  "$ref": "#/$defs/Findings",
+  "$defs": {
+    "Findings": {
+      "title": "Findings",
+      "type": "object",
+      "properties": {
+        "episode_id": {
+          "type": "string",
+          "maxLength": 64,
+          "minLength": 1
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "maxItems": 30
+        }
+      },
+      "required": [
+        "episode_id",
+        "findings"
+      ],
+      "additionalProperties": false
+    },
+    "Finding": {
+      "title": "Finding",
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "duplicate_invoice",
+            "fx_conversion",
+            "payment_allocation",
+            "period_cutoff"
+          ]
+        },
+        "affected_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1
+          },
+          "maxItems": 10,
+          "minItems": 1
+        },
+        "claimed_amount_minor": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000000000000
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1
+          },
+          "maxItems": 10
+        },
+        "explanation": {
+          "type": "string",
+          "maxLength": 1000
+        }
+      },
+      "required": [
+        "type",
+        "affected_ids",
+        "claimed_amount_minor",
+        "currency",
+        "evidence_ids",
+        "explanation"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,167 @@
+{
+  "episode_id": "ep_4324ea98a1aad6b2",
+  "generator_version": "1.0.0",
+  "schema_version": "1.0",
+  "config": {
+    "base_currencies": [
+      "KZT",
+      "USD",
+      "EUR"
+    ],
+    "foreign_currencies": [
+      "USD",
+      "EUR",
+      "KZT",
+      "JPY",
+      "KWD",
+      "CNY",
+      "GBP"
+    ],
+    "timezones": [
+      "Asia/Almaty",
+      "Asia/Tashkent",
+      "Europe/Berlin",
+      "Asia/Dubai",
+      "UTC"
+    ],
+    "year": 2026,
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "cutoff_window_days": 5,
+    "customers": [
+      6,
+      16
+    ],
+    "opening_invoices": [
+      2,
+      6
+    ],
+    "invoices": [
+      20,
+      70
+    ],
+    "on_account": [
+      1,
+      3
+    ],
+    "expenses": [
+      60,
+      260
+    ],
+    "errors": {
+      "duplicate_invoice": {
+        "on": false,
+        "count": [
+          0,
+          2
+        ]
+      },
+      "payment_allocation": {
+        "on": true,
+        "count": [
+          1,
+          2
+        ]
+      },
+      "fx_conversion": {
+        "on": false,
+        "count": [
+          0,
+          2
+        ]
+      },
+      "period_cutoff": {
+        "on": false,
+        "count": [
+          0,
+          2
+        ]
+      }
+    },
+    "interacting": {
+      "X1": 0.0,
+      "X2": 0.0
+    },
+    "max_errors": 12
+  },
+  "config_hash": "8368b4b3cee86862",
+  "public_fingerprint": "16380cc2345bfd90db0a6602b0cef64758af604bf6081c3a9ac952169101b74f",
+  "events": [
+    {
+      "issue_id": "I-01",
+      "injector": "E2.unallocated_missing",
+      "params": {
+        "mode": "missing"
+      },
+      "before": [
+        {
+          "je": 33540,
+          "timestamp": "2026-09-22T09:17:00+02:00",
+          "rows": [
+            {
+              "row_id": "L-33540-1",
+              "account": "1000",
+              "debit_minor": 410700216,
+              "credit_minor": 0,
+              "currency": "KZT",
+              "entity_id": "C-2613",
+              "invoice_id": null,
+              "payment_id": "PAY-1089"
+            },
+            {
+              "row_id": "L-33540-2",
+              "account": "1100",
+              "debit_minor": 0,
+              "credit_minor": 410700216,
+              "currency": "KZT",
+              "entity_id": "C-2613",
+              "invoice_id": "INV-4655",
+              "payment_id": "PAY-1089"
+            }
+          ]
+        }
+      ],
+      "after": [
+        {
+          "je": 33540,
+          "timestamp": "2026-09-22T09:17:00+02:00",
+          "rows": [
+            {
+              "row_id": "L-33540-1",
+              "account": "1000",
+              "debit_minor": 410700216,
+              "credit_minor": 0,
+              "currency": "KZT",
+              "entity_id": "C-2613",
+              "invoice_id": null,
+              "payment_id": "PAY-1089"
+            },
+            {
+              "row_id": "L-33540-2",
+              "account": "2150",
+              "debit_minor": 0,
+              "credit_minor": 410700216,
+              "currency": "KZT",
+              "entity_id": "C-2613",
+              "invoice_id": null,
+              "payment_id": "PAY-1089"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "invariants_before_injection": "I1-I8 hold (asserted by tests/test_data.py and `auditgym check`)"
+}

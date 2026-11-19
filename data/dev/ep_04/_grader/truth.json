@@ -1,0 +1,110 @@
+{
+  "episode_id": "ep_c049de76f00bb95d",
+  "issues": [
+    {
+      "issue_id": "I-01",
+      "type": "fx_conversion",
+      "affected_ids": [
+        "D-58301"
+      ],
+      "expected_amount_minor": 577,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-58301",
+          "FX-2026-08-31-EUR-USD",
+          "L-56997-1"
+        ]
+      ],
+      "link_id": "X1",
+      "invariant": "I5"
+    },
+    {
+      "issue_id": "I-02",
+      "type": "payment_allocation",
+      "affected_ids": [
+        "D-23648",
+        "D-58301"
+      ],
+      "expected_amount_minor": 176832,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-23648",
+          "D-58301",
+          "FX-2026-08-06-EUR-USD",
+          "L-56997-2"
+        ]
+      ],
+      "link_id": "X1",
+      "invariant": "I7"
+    },
+    {
+      "issue_id": "I-03",
+      "type": "payment_allocation",
+      "affected_ids": [
+        "D-42865",
+        "D-67539"
+      ],
+      "expected_amount_minor": 203579,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-42865",
+          "D-67539",
+          "L-56864-2"
+        ],
+        [
+          "D-42865",
+          "D-67539",
+          "L-56864-3"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I7"
+    },
+    {
+      "issue_id": "I-04",
+      "type": "period_cutoff",
+      "affected_ids": [
+        "D-58301"
+      ],
+      "expected_amount_minor": 217723,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-58301",
+          "L-56997-1"
+        ]
+      ],
+      "link_id": "X1",
+      "invariant": "I6"
+    },
+    {
+      "issue_id": "I-05",
+      "type": "period_cutoff",
+      "affected_ids": [
+        "D-74642"
+      ],
+      "expected_amount_minor": 287768,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-74642",
+          "L-56990-1"
+        ],
+        [
+          "D-74642",
+          "L-56990-2"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I6"
+    }
+  ]
+}

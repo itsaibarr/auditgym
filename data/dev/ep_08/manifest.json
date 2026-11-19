@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "episode_id": "ep_01242cf9a0cc45ab",
+  "base_currency": "KZT",
+  "period_start": "2026-08-01T00:00:00+05:00",
+  "period_end": "2026-09-01T00:00:00+05:00",
+  "period_end_exclusive": true,
+  "export_end": "2026-09-06T00:00:00+05:00",
+  "timezone": "Asia/Almaty",
+  "counts": {
+    "ledger": 651,
+    "invoices": 94,
+    "payments": 60,
+    "fx": 183,
+    "documents": 154
+  },
+  "rounding": {
+    "mode": "ROUND_HALF_EVEN",
+    "unit": "minor",
+    "convert_once_per": "document_total"
+  },
+  "currency_exponents": {
+    "CNY": 2,
+    "EUR": 2,
+    "KZT": 2,
+    "USD": 2
+  },
+  "amount_tolerance_minor": 1
+}

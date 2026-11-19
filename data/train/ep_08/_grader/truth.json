@@ -1,0 +1,110 @@
+{
+  "episode_id": "ep_84cb4fb7ee5a4463",
+  "issues": [
+    {
+      "issue_id": "I-01",
+      "type": "duplicate_invoice",
+      "affected_ids": [
+        "D-33064",
+        "D-55325"
+      ],
+      "expected_amount_minor": 321727,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-33064",
+          "D-55325",
+          "L-26874-1"
+        ],
+        [
+          "D-33064",
+          "D-55325",
+          "L-26874-2"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I8"
+    },
+    {
+      "issue_id": "I-02",
+      "type": "fx_conversion",
+      "affected_ids": [
+        "D-95418"
+      ],
+      "expected_amount_minor": 1350,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-95418",
+          "FX-2026-03-31-EUR-USD",
+          "L-27122-1"
+        ]
+      ],
+      "link_id": "X1",
+      "invariant": "I5"
+    },
+    {
+      "issue_id": "I-03",
+      "type": "payment_allocation",
+      "affected_ids": [
+        "D-83639",
+        "D-95418"
+      ],
+      "expected_amount_minor": 245662,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-83639",
+          "D-95418",
+          "FX-2026-03-11-EUR-USD",
+          "L-27122-2"
+        ]
+      ],
+      "link_id": "X1",
+      "invariant": "I7"
+    },
+    {
+      "issue_id": "I-04",
+      "type": "period_cutoff",
+      "affected_ids": [
+        "D-13662"
+      ],
+      "expected_amount_minor": 122389,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-13662",
+          "L-27135-1"
+        ],
+        [
+          "D-13662",
+          "L-27135-2"
+        ]
+      ],
+      "link_id": null,
+      "invariant": "I6"
+    },
+    {
+      "issue_id": "I-05",
+      "type": "period_cutoff",
+      "affected_ids": [
+        "D-95418"
+      ],
+      "expected_amount_minor": 488445,
+      "currency": "USD",
+      "tolerance_minor": 1,
+      "evidence_sets": [
+        [
+          "D-95418",
+          "L-27122-1"
+        ]
+      ],
+      "link_id": "X1",
+      "invariant": "I6"
+    }
+  ]
+}

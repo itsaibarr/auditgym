@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "episode_id": "ep_3c595268489d4706",
+  "base_currency": "USD",
+  "period_start": "2026-07-01T00:00:00+00:00",
+  "period_end": "2026-08-01T00:00:00+00:00",
+  "period_end_exclusive": true,
+  "export_end": "2026-08-06T00:00:00+00:00",
+  "timezone": "UTC",
+  "counts": {
+    "ledger": 799,
+    "invoices": 98,
+    "payments": 61,
+    "fx": 126,
+    "documents": 159
+  },
+  "rounding": {
+    "mode": "ROUND_HALF_EVEN",
+    "unit": "minor",
+    "convert_once_per": "document_total"
+  },
+  "currency_exponents": {
+    "JPY": 0,
+    "KWD": 3,
+    "USD": 2
+  },
+  "amount_tolerance_minor": 1
+}
