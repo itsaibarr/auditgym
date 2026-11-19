@@ -23,7 +23,9 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
+from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -190,8 +192,21 @@ class ChildPolicy:
                 argv.append(f"--path={os.path.abspath(policy_path)}")
         self.proc = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                      cwd=self.tmp.name, env=env, start_new_session=True)
-        os.set_blocking(self.proc.stderr.fileno(), False)  # never read during the episode; drained (<=64 KB) at close
         self.stderr_tail = ""
+        self._err: deque = deque(maxlen=16)  # drained continuously: a chatty policy must never block on a full pipe
+        err_fd = os.dup(self.proc.stderr.fileno())  # the drain thread owns this fd and closes it at EOF
+        self.proc.stderr.close()
+
+        def _drain(fd=err_fd, buf=self._err):
+            try:
+                for chunk in iter(lambda: os.read(fd, 4096), b""):
+                    buf.append(chunk)
+            except OSError:
+                pass
+            finally:
+                os.close(fd)
+        self._drainer = threading.Thread(target=_drain, daemon=True)
+        self._drainer.start()
         os.set_blocking(self.proc.stdin.fileno(), False)
         self.sel = selectors.DefaultSelector()
         self.sel.register(self.proc.stdout, selectors.EVENT_READ)
@@ -256,10 +271,8 @@ class ChildPolicy:
         except (ProcessLookupError, PermissionError):
             pass
         self.proc.wait()
-        try:
-            self.stderr_tail = (os.read(self.proc.stderr.fileno(), 65536) or b"").decode("utf-8", "replace")[-2000:]
-        except OSError:
-            pass
+        self._drainer.join(timeout=1)
+        self.stderr_tail = b"".join(self._err).decode("utf-8", "replace")[-2000:]
         self.sel.close()
         for f in (self.proc.stdin, self.proc.stdout, self.proc.stderr):
             try:
@@ -374,6 +387,7 @@ def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root
         crashed = next((er for er in runs if er.stderr_tail.strip()), None)
         if crashed:
             tail = "\n".join(crashed.stderr_tail.strip().splitlines()[-20:])
+            tail = "".join(c if c == "\n" or c.isprintable() else f"\\x{ord(c):02x}" for c in tail)  # no terminal escapes
             print(f"policy {spec} ({crashed.result['termination']} on {crashed.result['episode_id']}), last stderr lines:\n{tail}", file=sys.stderr)
     # Every child is dead now. A child could still have planted symlinks/dirs under out_root (it may know the
     # path from our argv), so never write through existing paths: build each run dir fresh, then swap it in.
@@ -457,11 +471,15 @@ def verify_run(d: Path) -> list[str]:
     if set(meta.get("files") or {}) != set(RUN_FILES):
         probs.append(f"{d}: run.json does not list the run files")
     key = _integrity_key()
-    if meta.get("files_hmac") and key:
+    if key:  # with the salt set, a closed run must carry a valid signature over all of run.json and every file
+        body = {k: v for k, v in meta.items() if k != "run_hmac"}
+        sig = hmac.new(key, dumps(body).encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, str(meta.get("run_hmac", ""))):
+            probs.append(f"{d}/run.json: keyed signature missing or invalid (wrong AUDITGYM_SALT, not a closed run, or run.json was edited)")
         for n in RUN_FILES:
             mac = hmac.new(key, (d / n).read_bytes(), hashlib.sha256).hexdigest()
-            if not hmac.compare_digest(mac, str(meta["files_hmac"].get(n, ""))):
-                probs.append(f"{d / n}: keyed hash (HMAC) does not match: the file was changed after the run")
+            if not hmac.compare_digest(mac, str((meta.get("files_hmac") or {}).get(n, ""))):
+                probs.append(f"{d / n}: keyed hash (HMAC) does not match (wrong AUDITGYM_SALT, or the file was changed after the run)")
     elif meta.get("files_hmac"):
         print(f"note: {d}: keyed integrity not verified (set AUDITGYM_SALT to the run's salt to check it)", file=sys.stderr)
     return probs
@@ -500,6 +518,7 @@ def _write_run(spec, runs, episodes, out: Path, mode, args, meta, dir_label: str
     key = _integrity_key()
     if key:
         run_meta["files_hmac"] = {n: hmac.new(key, data, hashlib.sha256).hexdigest() for n, data in blobs.items()}
+        run_meta["run_hmac"] = hmac.new(key, dumps(run_meta).encode(), hashlib.sha256).hexdigest()  # covers dir, policy, all
     (out / "run.json").write_text(json.dumps(run_meta, indent=2) + "\n")
 
 

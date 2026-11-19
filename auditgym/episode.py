@@ -48,6 +48,15 @@ DEFAULT_CONFIG: dict = {
 
 
 def make_config(overrides: dict | None = None) -> dict:
+    try:
+        return _make_config(overrides)
+    except (TypeError, AttributeError, KeyError) as e:  # wrong shapes -> one clean error, never a traceback
+        raise ValueError(f"bad config: {type(e).__name__}: {e}") from None
+
+
+def _make_config(overrides: dict | None = None) -> dict:
+    if overrides is not None and not isinstance(overrides, dict):
+        raise ValueError("config must be an object")
     cfg = json.loads(json.dumps(DEFAULT_CONFIG))
     for k, v in (overrides or {}).items():
         if k not in DEFAULT_CONFIG:
@@ -75,6 +84,8 @@ def _validate_config(cfg: dict) -> None:
         rng(k, cfg[k])
     for t, spec in cfg["errors"].items():
         rng(f"errors.{t}.count", spec.get("count", [1, 1]))
+        if not isinstance(spec.get("on", False), bool):
+            raise ValueError(f"errors.{t}.on must be true/false")
     if cfg["customers"][0] < 2:
         raise ValueError("customers min must be >= 2 (one base-currency and one foreign-currency customer)")
     if not cfg["base_currencies"] or not all(c in EXPONENTS for c in cfg["base_currencies"] + cfg["foreign_currencies"]):

@@ -1,6 +1,6 @@
 {
   "auditgym_version": "1.0.0",
-  "code_hash": "fb70bfa5749e6b96",
+  "code_hash": "94adcfc4f56a2d55",
   "policy": "expert",
   "policy_args": [],
   "mode": "train",
@@ -39,7 +39,7 @@
   "dir": "expert",
   "files": {
     "trajectories.jsonl": "7d1d6123ead54f577772c3c144dc2697c2832905c6ca2f6a7316c9fb567b5590",
-    "results.jsonl": "9c3dc5b2f777fface135e68820e2751aac1505c316b89b4e793718761eb1ab0f",
-    "summary.json": "fcccefb649a4cccea56f44146580b4892317ef3a37a097bd86f790c5af03a859"
+    "results.jsonl": "15c6eb48f950a65c4a4eac78ea80ac37b7de5023fbead86bf902278850e6f2e5",
+    "summary.json": "13ff1f1fe10f215fcbd2d6451713bb5c24f927369d1e68318f635f3f2677ed90"
   }
 }

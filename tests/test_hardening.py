@@ -156,6 +156,19 @@ class CwdSymlink:
         os.rename(cwd, cwd + "x")
         os.symlink(cwd + "x", cwd)
         return {"name": "submit", "arguments": {"findings": {"episode_id": o["manifest"]["episode_id"], "findings": []}}}
+class Chatty:
+    """Logs 4 KB to stderr and prints to stdout on every step, then submits: must still be graded normally."""
+    def __init__(self):
+        self.n = 0
+    def reset(self, o, i):
+        self.ep = o["manifest"]["episode_id"]
+        return self.step()
+    def step(self, *a):
+        self.n += 1
+        sys.stderr.write("x" * 4096 + "\\n"); print("debug", self.n)
+        if self.n < 30:
+            return {"name": "calculator", "arguments": {"expression": "1"}}
+        return {"name": "submit", "arguments": {"findings": {"episode_id": self.ep, "findings": []}}}
 class ReadRuns:
     def __init__(self, root=""):
         self.root = root
@@ -171,7 +184,27 @@ class ReadRuns:
 def evil(tmp_path_factory):
     d = tmp_path_factory.mktemp("evil")
     (d / "evil.py").write_text(EVIL)
+    (d / "stdio_evil.py").write_text(RAW_SHIM)
     return str(d)
+
+
+RAW_SHIM = """
+import json, sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import evil
+pol = getattr(evil, sys.argv[1])()
+for line in sys.stdin:
+    msg = json.loads(line)
+    if msg["type"] == "close":
+        break
+    a = pol.reset(msg["observation"], msg["info"]) if msg["type"] == "reset" else pol.step(msg["observation"], msg["reward"], msg["terminated"], msg["truncated"], msg["info"])
+    sys.stdout.write(json.dumps(a) + "\\n"); sys.stdout.flush()
+"""
+
+
+def raw(evil, cls):
+    """Hostile *protocol* lines need a `cmd:` program: the policy host keeps stdout private (prints go to stderr)."""
+    return f"cmd:{sys.executable} {evil}/stdio_evil.py {cls}"
 
 
 def _ask_reset(evil, cls, env=None):
@@ -196,8 +229,9 @@ def test_child_cannot_fork_or_read_parent_environment(evil, monkeypatch):
 
 @pytest.mark.parametrize("cls", ["DeepNest", "Surrogate", "DupKeys"])
 def test_hostile_output_lines_are_invalid_actions_not_crashes(evil, dirty, cls, tmp_path):
-    out = run_policies([f"evil:{cls}"], [("dev", dirty)], tmp_path, mode="eval", policy_path=evil, dir_name=lambda s: "r")
-    r = out[f"evil:{cls}"][0]
+    spec = raw(evil, cls)
+    out = run_policies([spec], [("dev", dirty)], tmp_path, mode="eval", dir_name=lambda s: "r")
+    r = out[spec][0]
     assert r["termination"] in ("submitted", "schema_error") and r["steps"] == 3
     traj = [json.loads(l) for l in (tmp_path / "r" / "trajectories.jsonl").read_text().splitlines()]
     assert traj[1]["observation"]["error"]["code"] in ("invalid_action", "not_found")
@@ -205,7 +239,7 @@ def test_hostile_output_lines_are_invalid_actions_not_crashes(evil, dirty, cls, 
 
 def test_flooding_child_cannot_hang_the_runner(evil, dirty):
     t = time.monotonic()
-    r = run_episode("evil:Flood", dirty, "eval", policy_path=evil, episode_timeout=6, step_timeout=6).result
+    r = run_episode(raw(evil, "Flood"), dirty, "eval", episode_timeout=6, step_timeout=6).result
     assert time.monotonic() - t < 20
     assert r["reward"] == -1.0 or r["termination"] in ("timeout", "step_limit", "time_limit")
 
@@ -440,10 +474,11 @@ def test_runner_refuses_when_salt_is_exposed_by_another_process(dirty, tmp_path,
 
 # ---------------------------------------------------------------------------------------- council round 3
 def test_nan_and_overflow_actions_are_invalid_not_crashes(evil, dirty, tmp_path):
-    out = run_policies(["evil:NaNAct", "oracle"], [("dev", dirty)], tmp_path, mode="eval", policy_path=evil)
-    traj = [json.loads(l) for l in (tmp_path / "evil:NaNAct" / "trajectories.jsonl").read_text().splitlines()]
+    spec = raw(evil, "NaNAct")
+    out = run_policies([spec, "oracle"], [("dev", dirty)], tmp_path, mode="eval", dir_name=lambda s: "o" if s == "oracle" else "r")
+    traj = [json.loads(l) for l in (tmp_path / "r" / "trajectories.jsonl").read_text().splitlines()]
     assert [t["info"]["error_code"] for t in traj[1:4]] == ["invalid_action", None, "invalid_action"]  # NaN, ok, 1e400
-    assert out["evil:NaNAct"][0]["termination"] == "submitted" and out["oracle"][0]["reward"] == 1.0
+    assert out[spec][0]["termination"] == "submitted" and out["oracle"][0]["reward"] == 1.0
 
 
 def _split_json(n=2):
@@ -745,3 +780,33 @@ def test_malformed_splits_are_rejected(split):
     from auditgym.splits import split_episodes
     with pytest.raises(ValueError):
         split_episodes("-", split)
+
+
+# ---------------------------------------------------------------------------------------- council round 5
+def test_chatty_policy_is_graded_normally(evil, dirty):
+    r = run_episode("evil:Chatty", dirty, "eval", policy_path=evil, step_timeout=10).result
+    assert r["termination"] == "submitted" and r["steps"] == 30
+
+
+def test_keyed_integrity_is_fail_closed(monkeypatch, tmp_path, dirty):
+    import shutil
+    from auditgym.runner import verify_run
+    monkeypatch.setenv("AUDITGYM_SALT", "k" * 40)
+    run_policies(["reconcile", "oracle"], [("dev", dirty)], tmp_path, mode="eval")
+    assert verify_run(tmp_path / "reconcile") == [] and verify_run(tmp_path / "oracle") == []
+    # 1) delete the keyed fields and rehash: refused when the salt is set
+    d = tmp_path / "reconcile"
+    meta = json.loads((d / "run.json").read_text())
+    meta.pop("files_hmac"), meta.pop("run_hmac")
+    (d / "run.json").write_text(json.dumps(meta))
+    assert verify_run(d)
+    # 2) copy the oracle dir and relabel dir/policy: the run.json signature breaks
+    c = tmp_path / "copy"
+    shutil.copytree(tmp_path / "oracle", c)
+    meta = json.loads((c / "run.json").read_text())
+    meta["dir"], meta["policy"] = "copy", "reconcile"
+    (c / "run.json").write_text(json.dumps(meta))
+    assert any("signature" in p for p in verify_run(c))
+    # 3) a wrong salt is reported as such, not only as tampering
+    monkeypatch.setenv("AUDITGYM_SALT", "w" * 40)
+    assert any("wrong AUDITGYM_SALT" in p for p in verify_run(tmp_path / "oracle"))

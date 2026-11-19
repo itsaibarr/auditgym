@@ -72,8 +72,10 @@ def main(argv: list[str]) -> None:
     apply_limits(allow)                   # limits first, while sys.path holds only the stdlib and auditgym
     import auditgym.policies  # noqa: F401  (pre-imports the stdlib modules builtins use)
     sys.path.extend(paths)                # appended, never prepended: policy files cannot shadow stdlib/auditgym
+    out = os.fdopen(os.dup(1), "w", encoding="utf-8")  # private protocol channel
+    os.dup2(2, 1)                         # the policy's own prints (Python or C level) go to stderr, never into the protocol
+    sys.stdout = sys.stderr
     policy = load_policy(spec, kwargs)
-    out = sys.stdout
     for line in sys.stdin:
         msg = json.loads(line)
         if msg["type"] == "close":
