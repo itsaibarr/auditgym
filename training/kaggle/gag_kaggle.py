@@ -16,7 +16,8 @@ W = "/kaggle/working"
 MODE = os.environ.get("GAG_MODE", "smoke")
 MODEL_REPO, MODEL_REV = "unsloth/Qwen3-14B-bnb-4bit", "b455922269e4678c84f854fe38a6993d73614a1e"
 MAX_NEW_TOKENS = 1024
-GEN_BATCH = int(os.environ.get("GAG_GEN_BATCH", "3"))
+GEN_BATCH = int(os.environ.get("GAG_GEN_BATCH", "2"))
+ATTN_CHUNK = int(os.environ.get("GAG_ATTN_CHUNK", "512"))
 LORA = dict(r=16, lora_alpha=32, lora_dropout=0.0,
             target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"])
 LR, GRAD_ACCUM, WARMUP = 1e-4, 8, 3
@@ -50,7 +51,7 @@ def peak():
 
 
 def child(args, gpus):
-    env = dict(os.environ, CUDA_VISIBLE_DEVICES=gpus)
+    env = dict(os.environ, CUDA_VISIBLE_DEVICES=gpus, PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True")
     return subprocess.Popen([sys.executable, os.path.abspath(__file__)] + args, env=env)
 
 
@@ -66,13 +67,48 @@ def setup():
     return p
 
 
+def install_chunked_attention():
+    """Exact causal attention computed in query chunks. On Kaggle's T4 stack (torch 2.11) the stock SDPA path
+    materialises the full heads x L x L score matrix (5.6 GiB at 6k tokens); chunking caps it at heads x chunk x L."""
+    import torch
+    import torch.nn.functional as F
+    from transformers import AttentionInterface
+
+    def attn(module, query, key, value, attention_mask, dropout=0.0, scaling=None, is_causal=None, **kw):
+        L, S = query.shape[2], key.shape[2]
+        rep = query.shape[1] // key.shape[1]
+        if rep > 1:
+            key, value = key.repeat_interleave(rep, dim=1), value.repeat_interleave(rep, dim=1)
+        mask = attention_mask[:, :, :, :S] if attention_mask is not None and attention_mask.dim() == 4 else None
+        outs = []
+        for i in range(0, L, ATTN_CHUNK):
+            q = query[:, :, i:i + ATTN_CHUNK]
+            if mask is not None:
+                m = mask[:, :, i:i + ATTN_CHUNK] if mask.shape[2] > 1 else mask
+            elif L > 1:
+                qpos = torch.arange(i, i + q.shape[2], device=q.device) + (S - L)
+                m = torch.arange(S, device=q.device)[None, :] <= qpos[:, None]
+            else:
+                m = None
+            outs.append(F.scaled_dot_product_attention(q, key, value, attn_mask=m, scale=scaling))
+        out = torch.cat(outs, dim=2) if len(outs) > 1 else outs[0]
+        return out.transpose(1, 2).contiguous(), None
+
+    AttentionInterface.register("sdpa", attn)
+
+
+def two_gpu_map(n_layers=40, split=20):
+    m = {"model.embed_tokens": 0, "model.rotary_emb": 0, "model.norm": 1, "lm_head": 1}
+    m.update({f"model.layers.{i}": int(i >= split) for i in range(n_layers)})
+    return m
+
+
 def load(path, device_map, adapter=None, trainable=False):
     import bitsandbytes as bnb
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
-    kw = dict(device_map=device_map, attn_implementation="sdpa")
-    if device_map == "balanced":
-        kw["max_memory"] = {0: "12GiB", 1: "12GiB"}
+    install_chunked_attention()
+    kw = dict(device_map=two_gpu_map() if device_map == "balanced" else device_map, attn_implementation="sdpa")
     try:
         m = AutoModelForCausalLM.from_pretrained(path, dtype=torch.float16, **kw)
     except TypeError:
@@ -233,7 +269,7 @@ def main():
     log(event="start", mode=MODE, n_held=len(held), n_sft=len(sft))
     if MODE == "smoke":
         longest = sorted(sft, key=lambda r: -(r["prompt_tokens"] + r["target_tokens"]))[:3]
-        for devices in ("single", "balanced"):
+        for devices in ("balanced", "single"):
             run_train(path, longest, devices, f"smoke_{devices}", samples=3, accum=1, seconds=1e9, out=f"/tmp/adapter_{devices}")
         generate_sharded(path, sorted(held, key=lambda r: -r["prompt_tokens"])[:2 * GEN_BATCH], "smoke")
     elif MODE == "base":

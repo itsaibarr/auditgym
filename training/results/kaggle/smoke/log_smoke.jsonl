@@ -1,0 +1,14 @@
+{"event": "downloaded", "s": 49, "t": 1795114203.7}
+{"event": "start", "mode": "smoke", "n_held": 60, "n_sft": 400, "t": 1795114204.0}
+{"event": "sft_data", "n": 3, "max_len": 6152, "devices": "balanced", "t": 1795114247.5}
+{"event": "sft_step", "step": 1, "samples": 1, "loss": 0.4458, "grad_norm": 0.955, "lr": 5e-05, "s": 49, "peak_gb": {"0": 8.05, "1": 8.37}, "scale": 65536.0, "t": 1795114296.2}
+{"event": "sft_step", "step": 2, "samples": 2, "loss": 0.4275, "grad_norm": NaN, "lr": 2.500000000000001e-05, "s": 97, "peak_gb": {"0": 8.29, "1": 8.61}, "scale": 32768.0, "t": 1795114344.6}
+{"event": "sft_step", "step": 3, "samples": 3, "loss": 0.3211, "grad_norm": 0.86, "lr": 0.0, "s": 145, "peak_gb": {"0": 8.29, "1": 8.61}, "scale": 32768.0, "t": 1795114392.4}
+{"event": "sft_saved", "samples": 3, "steps": 3, "s": 146, "t": 1795114393.5}
+{"event": "train_exit", "tag": "smoke_balanced", "devices": "balanced", "code": 0, "t": 1795114397.9}
+{"event": "sft_data", "n": 3, "max_len": 6152, "devices": "single", "t": 1795114414.8}
+{"event": "train_exit", "tag": "smoke_single", "devices": "single", "code": 1, "t": 1795114431.3}
+{"event": "gen_batch", "tag": "smoke", "n": 2, "s": 133.1, "peak_gb": {"0": 12.54}, "in_tokens": 5588, "done": 2, "total": 2, "t": 1795114584.3}
+{"event": "gen_batch", "tag": "smoke", "n": 2, "s": 293.3, "peak_gb": {"0": 12.54}, "in_tokens": 5587, "done": 2, "total": 2, "t": 1795114744.4}
+{"event": "gen_done", "tag": "smoke", "codes": [0, 0], "t": 1795114746.1}
+{"event": "end", "mode": "smoke", "t": 1795114746.1}

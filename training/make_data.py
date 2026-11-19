@@ -2,7 +2,7 @@
 
     uv run --with tokenizers python training/make_data.py
 
-Writes training/data/{heldout.jsonl,sft.jsonl,manifest.json}. Prompt length is measured with the Qwen3 tokenizer;
+Writes training/data/{heldout.jsonl,sft.jsonl} (git-ignored, deterministic) and training/data_manifest.json. Prompt length is measured with the Qwen3 tokenizer;
 episodes whose prompt exceeds MAX_PROMPT_TOKENS are skipped by a rule that looks only at the public workbook.
 """
 from __future__ import annotations
@@ -109,7 +109,7 @@ def main():
         "sft_seq_tokens_mean": round(sum(e["prompt_tokens"] + e["target_tokens"] for e in sft) / len(sft)),
         "stats": {k: (dict(v) if isinstance(v, Counter) else v) for k, v in stats.items()},
     }
-    (out / "manifest.json").write_text(json.dumps(manifest, indent=1) + "\n")
+    (HERE / "data_manifest.json").write_text(json.dumps(manifest, indent=1) + "\n")
     print(json.dumps({k: v for k, v in manifest.items() if k != "heldout_seeds"}, indent=1))
 
 

@@ -1,0 +1,102 @@
+[{"stream_name":"stdout","time":1.280155938,"data":"running /kaggle/input/datasets/itsaibarr/gag-train-pkg/gag_kaggle.py {'GAG_MODE': 'smoke'}\n"}
+,{"stream_name":"stdout","time":1.430357929,"data":"+ nvidia-smi; python -V\n"}
+,{"stream_name":"stdout","time":1.462697255,"data":"Thu Nov 19 18:49:04 2026       \n"}
+,{"stream_name":"stdout","time":1.462730993,"data":"+-----------------------------------------------------------------------------------------+\n"}
+,{"stream_name":"stdout","time":1.462735439,"data":"| NVIDIA-SMI 580.178.04             Driver Version: 580.178.04     CUDA Version: 13.0     |\n"}
+,{"stream_name":"stdout","time":1.462738147,"data":"+-----------------------------------------+------------------------+----------------------+\n"}
+,{"stream_name":"stdout","time":1.462740752,"data":"| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |\n"}
+,{"stream_name":"stdout","time":1.462743159,"data":"| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |\n"}
+,{"stream_name":"stdout","time":1.462745777,"data":"|                                         |                        |               MIG M. |\n"}
+,{"stream_name":"stdout","time":1.462748258,"data":"|=========================================+========================+======================|\n"}
+,{"stream_name":"stdout","time":1.5137547260000002,"data":"|   0  Tesla T4                       Off |   00000000:00:04.0 Off |                    0 |\n"}
+,{"stream_name":"stdout","time":1.513791124,"data":"| N/A   48C    P8             10W /   70W |       0MiB /  15360MiB |      0%      Default |\n"}
+,{"stream_name":"stdout","time":1.513795067,"data":"|                                         |                        |                  N/A |\n"}
+,{"stream_name":"stdout","time":1.513797783,"data":"+-----------------------------------------+------------------------+----------------------+\n"}
+,{"stream_name":"stdout","time":1.513800721,"data":"|   1  Tesla T4                       Off |   00000000:00:05.0 Off |                    0 |\n"}
+,{"stream_name":"stdout","time":1.513803274,"data":"| N/A   46C    P8              9W /   70W |       0MiB /  15360MiB |      0%      Default |\n"}
+,{"stream_name":"stdout","time":1.5138057,"data":"|                                         |                        |                  N/A |\n"}
+,{"stream_name":"stdout","time":1.513808169,"data":"+-----------------------------------------+------------------------+----------------------+\n"}
+,{"stream_name":"stdout","time":1.514358569,"data":"\n"}
+,{"stream_name":"stdout","time":1.514367405,"data":"+-----------------------------------------------------------------------------------------+\n"}
+,{"stream_name":"stdout","time":1.5143718069999998,"data":"| Processes:                                                                              |\n"}
+,{"stream_name":"stdout","time":1.514375772,"data":"|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |\n"}
+,{"stream_name":"stdout","time":1.5143799599999999,"data":"|        ID   ID                                                               Usage      |\n"}
+,{"stream_name":"stdout","time":1.5143839030000001,"data":"|=========================================================================================|\n"}
+,{"stream_name":"stdout","time":1.515999722,"data":"|  No running processes found                                                             |\n"}
+,{"stream_name":"stdout","time":1.516114744,"data":"+-----------------------------------------------------------------------------------------+\n"}
+,{"stream_name":"stdout","time":1.852169121,"data":"Python 3.13.16\n"}
+,{"stream_name":"stdout","time":1.852647582,"data":"+ pip install -q -U bitsandbytes peft 2\u003e\u00261 | tail -3\n"}
+,{"stream_name":"stdout","time":8.677099861,"data":"+ pip freeze | grep -iE '^(torch|transformers|peft|bitsandbytes|accelerate|safetensors)==' || true\n"}
+,{"stream_name":"stdout","time":9.739102286,"data":"accelerate==1.15.0\n"}
+,{"stream_name":"stdout","time":9.7391381,"data":"bitsandbytes==0.50.2\n"}
+,{"stream_name":"stdout","time":9.739141948,"data":"peft==0.22.0\n"}
+,{"stream_name":"stdout","time":9.739144427,"data":"safetensors==0.8.0\n"}
+,{"stream_name":"stdout","time":9.739146696,"data":"torch==2.11.0+cu130\n"}
+,{"stream_name":"stdout","time":9.739149074,"data":"transformers==5.20.2\n"}
+,{"stream_name":"stdout","time":9.740454283,"data":"+ pip freeze \u003e /kaggle/working/freeze_smoke.txt\n"}
+,{"stream_name":"stderr","time":11.750777843,"data":"\rFetching 14 files:   0%|          | 0/14 [00:00\u003c?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":60.308965634,"data":"\rFetching 14 files:   7%|▋         | 1/14 [00:00\u003c00:01,  9.97it/s]\rFetching 14 files:  71%|███████▏  | 10/14 [00:00\u003c00:00, 54.17it/s]\rFetching 14 files:  86%|████████▌ | 12/14 [00:20\u003c00:00, 54.17it/s]\rFetching 14 files:  93%|█████████▎| 13/14 [00:40\u003c00:04,  4.12s/it]\rFetching 14 files: 100%|██████████| 14/14 [00:48\u003c00:00,  4.64s/it]\rFetching 14 files: 100%|██████████| 14/14 [00:48\u003c00:00,  3.47s/it]\n"}
+,{"stream_name":"stdout","time":60.309174072,"data":"{\"event\": \"downloaded\", \"s\": 49, \"t\": 1795114203.7}\n"}
+,{"stream_name":"stdout","time":60.628561083,"data":"{\"event\": \"start\", \"mode\": \"smoke\", \"n_held\": 60, \"n_sft\": 400, \"t\": 1795114204.0}\n"}
+,{"stream_name":"stderr","time":101.380902136,"data":"\rLoading weights:   0%|          | 0/443 [00:00\u003c?, ?it/s]\rLoading weights:   0%|          | 1/443 [00:01\u003c09:41,  1.32s/it]\rLoading weights:   6%|▋         | 28/443 [00:01\u003c00:15, 26.85it/s]\rLoading weights:  13%|█▎        | 57/443 [00:01\u003c00:06, 58.67it/s]\rLoading weights:  51%|█████     | 224/443 [00:01\u003c00:00, 292.01it/s]\rLoading weights:  67%|██████▋   | 297/443 [00:01\u003c00:00, 262.66it/s]\rLoading weights:  79%|███████▉  | 352/443 [00:02\u003c00:00, 238.56it/s]\rLoading weights:  89%|████████▉ | 395/443 [00:02\u003c00:00, 222.11it/s]\rLoading weights:  97%|█████████▋| 430/443 [00:02\u003c00:00, 212.49it/s]\rLoading weights: 100%|██████████| 443/443 [00:02\u003c00:00, 161.00it/s]\n"}
+,{"stream_name":"stdout","time":104.170422488,"data":"trainable params: 64,225,280 || all params: 14,832,532,480 || trainable%: 0.4330\n"}
+,{"stream_name":"stdout","time":104.170457884,"data":"{\"event\": \"sft_data\", \"n\": 3, \"max_len\": 6152, \"devices\": \"balanced\", \"t\": 1795114247.5}\n"}
+,{"stream_name":"stdout","time":152.869850516,"data":"{\"event\": \"sft_step\", \"step\": 1, \"samples\": 1, \"loss\": 0.4458, \"grad_norm\": 0.955, \"lr\": 5e-05, \"s\": 49, \"peak_gb\": {\"0\": 8.05, \"1\": 8.37}, \"scale\": 65536.0, \"t\": 1795114296.2}\n"}
+,{"stream_name":"stdout","time":201.280445192,"data":"{\"event\": \"sft_step\", \"step\": 2, \"samples\": 2, \"loss\": 0.4275, \"grad_norm\": NaN, \"lr\": 2.500000000000001e-05, \"s\": 97, \"peak_gb\": {\"0\": 8.29, \"1\": 8.61}, \"scale\": 32768.0, \"t\": 1795114344.6}\n"}
+,{"stream_name":"stdout","time":249.090243327,"data":"{\"event\": \"sft_step\", \"step\": 3, \"samples\": 3, \"loss\": 0.3211, \"grad_norm\": 0.86, \"lr\": 0.0, \"s\": 145, \"peak_gb\": {\"0\": 8.29, \"1\": 8.61}, \"scale\": 32768.0, \"t\": 1795114392.4}\n"}
+,{"stream_name":"stdout","time":250.109643427,"data":"{\"event\": \"sft_saved\", \"samples\": 3, \"steps\": 3, \"s\": 146, \"t\": 1795114393.5}\n"}
+,{"stream_name":"stdout","time":254.498683527,"data":"{\"event\": \"train_exit\", \"tag\": \"smoke_balanced\", \"devices\": \"balanced\", \"code\": 0, \"t\": 1795114397.9}\n"}
+,{"stream_name":"stderr","time":269.120118584,"data":"\rLoading weights:   0%|          | 0/443 [00:00\u003c?, ?it/s]\rLoading weights:   0%|          | 1/443 [00:01\u003c08:17,  1.12s/it]\rLoading weights:   0%|          | 2/443 [00:01\u003c04:50,  1.52it/s]\rLoading weights:   6%|▌         | 27/443 [00:01\u003c00:14, 29.39it/s]\rLoading weights:  14%|█▎        | 60/443 [00:01\u003c00:05, 70.23it/s]\rLoading weights:  20%|█▉        | 87/443 [00:01\u003c00:03, 102.09it/s]\rLoading weights:  26%|██▌       | 115/443 [00:01\u003c00:02, 135.46it/s]\rLoading weights:  31%|███▏      | 139/443 [00:01\u003c00:01, 156.31it/s]\rLoading weights:  38%|███▊      | 169/443 [00:02\u003c00:01, 187.59it/s]\rLoading weights:  46%|████▌     | 202/443 [00:02\u003c00:01, 218.64it/s]\rLoading weights:  52%|█████▏    | 229/443 [00:02\u003c00:00, 228.99it/s]\rLoading weights:  58%|█████▊    | 256/443 [00:02\u003c00:00, 229.10it/s]\rLoading weights:  64%|██████▎   | 282/443 [00:02\u003c00:00, 231.78it/s]\rLoading weights:  69%|██████▉   | 307/443 [00:02\u003c00:00, 228.76it/s]\rLoading weights:  76%|███████▌  | 336/443 [00:02\u003c00:00, 241.96it/s]\rLoading weights:  82%|████████▏ | 362/443 [00:02\u003c00:00, 238.08it/s]\rLoading weights:  88%|████████▊ | 390/443 [00:02\u003c00:00, 246.70it/s]\rLoading weights:  94%|█████████▍| 417/443 [00:03\u003c00:00, 251.69it/s]\rLoading weights: 100%|██████████| 443/443 [00:03\u003c00:00, 144.16it/s]\n"}
+,{"stream_name":"stdout","time":271.474204136,"data":"trainable params: 64,225,280 || all params: 14,832,532,480 || trainable%: 0.4330\n"}
+,{"stream_name":"stdout","time":271.474230849,"data":"{\"event\": \"sft_data\", \"n\": 3, \"max_len\": 6152, \"devices\": \"single\", \"t\": 1795114414.8}\n"}
+,{"stream_name":"stderr","time":286.047153662,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":286.04834769,"data":"  File \"/kaggle/input/datasets/itsaibarr/gag-train-pkg/gag_kaggle.py\", line 284, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":286.048364025,"data":"    main()\n"}
+,{"stream_name":"stderr","time":286.04836997,"data":"    ~~~~^^\n"}
+,{"stream_name":"stderr","time":286.048375375,"data":"  File \"/kaggle/input/datasets/itsaibarr/gag-train-pkg/gag_kaggle.py\", line 264, in main\n"}
+,{"stream_name":"stderr","time":286.048380304,"data":"    {\"--gen\": generate, \"--train\": train}[sys.argv[1]](spec)\n"}
+,{"stream_name":"stderr","time":286.048385722,"data":"    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n"}
+,{"stream_name":"stderr","time":286.048391194,"data":"  File \"/kaggle/input/datasets/itsaibarr/gag-train-pkg/gag_kaggle.py\", line 224, in train\n"}
+,{"stream_name":"stderr","time":286.048396681,"data":"    scaler.scale(loss / accum).backward()\n"}
+,{"stream_name":"stderr","time":286.048402076,"data":"    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n"}
+,{"stream_name":"stderr","time":286.048406781,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/_tensor.py\", line 631, in backward\n"}
+,{"stream_name":"stderr","time":286.048411448,"data":"    torch.autograd.backward(\n"}
+,{"stream_name":"stderr","time":286.048417574,"data":"    ~~~~~~~~~~~~~~~~~~~~~~~^\n"}
+,{"stream_name":"stderr","time":286.048426098,"data":"        self, gradient, retain_graph, create_graph, inputs=inputs\n"}
+,{"stream_name":"stderr","time":286.0484394,"data":"        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":286.048442116,"data":"    )\n"}
+,{"stream_name":"stderr","time":286.048444405,"data":"    ^\n"}
+,{"stream_name":"stderr","time":286.048446637,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/autograd/__init__.py\", line 381, in backward\n"}
+,{"stream_name":"stderr","time":286.048452752,"data":"    _engine_run_backward(\n"}
+,{"stream_name":"stderr","time":286.048455048,"data":"    ~~~~~~~~~~~~~~~~~~~~^\n"}
+,{"stream_name":"stderr","time":286.048457319,"data":"        tensors,\n"}
+,{"stream_name":"stderr","time":286.048459567,"data":"        ^^^^^^^^\n"}
+,{"stream_name":"stderr","time":286.048461858,"data":"    ...\u003c5 lines\u003e...\n"}
+,{"stream_name":"stderr","time":286.048464225,"data":"        accumulate_grad=True,\n"}
+,{"stream_name":"stderr","time":286.048466502,"data":"        ^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":286.048468839,"data":"    )\n"}
+,{"stream_name":"stderr","time":286.048471036,"data":"    ^\n"}
+,{"stream_name":"stderr","time":286.048473258,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/autograd/graph.py\", line 869, in _engine_run_backward\n"}
+,{"stream_name":"stderr","time":286.048475865,"data":"    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass\n"}
+,{"stream_name":"stderr","time":286.048478294,"data":"           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":286.048480764,"data":"        t_outputs, *args, **kwargs\n"}
+,{"stream_name":"stderr","time":286.048483074,"data":"        ^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":286.048485429,"data":"    )  # Calls into the C++ engine to run the backward pass\n"}
+,{"stream_name":"stderr","time":286.048487766,"data":"    ^\n"}
+,{"stream_name":"stderr","time":286.048500104,"data":"torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 206.00 MiB. GPU 0 has a total capacity of 14.56 GiB of which 162.81 MiB is free. Including non-PyTorch memory, this process has 14.40 GiB memory in use. Of the allocated memory 14.15 GiB is allocated by PyTorch, and 119.02 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\n"}
+,{"stream_name":"stdout","time":287.945757997,"data":"{\"event\": \"train_exit\", \"tag\": \"smoke_single\", \"devices\": \"single\", \"code\": 1, \"t\": 1795114431.3}\n"}
+,{"stream_name":"stderr","time":306.717468789,"data":"\rLoading weights:   0%|          | 0/443 [00:00\u003c?, ?it/s]\rLoading weights:   0%|          | 0/443 [00:00\u003c?, ?it/s]\rLoading weights:   0%|          | 1/443 [00:03\u003c24:27,  3.32s/it]\rLoading weights:   8%|▊         | 34/443 [00:03\u003c00:29, 13.88it/s]\rLoading weights:   0%|          | 1/443 [00:03\u003c23:28,  3.19s/it]\rLoading weights:  12%|█▏        | 53/443 [00:03\u003c00:16, 23.49it/s]\rLoading weights:   5%|▍         | 20/443 [00:03\u003c00:50,  8.43it/s]\rLoading weights:   9%|▊         | 38/443 [00:03\u003c00:22, 18.30it/s]\rLoading weights:  17%|█▋        | 76/443 [00:03\u003c00:09, 38.34it/s]\rLoading weights:  22%|██▏       | 96/443 [00:03\u003c00:06, 53.15it/s]\rLoading weights:  13%|█▎        | 59/443 [00:03\u003c00:11, 32.11it/s]\rLoading weights:  26%|██▌       | 115/443 [00:03\u003c00:04, 69.12it/s]\rLoading weights:  19%|█▉        | 86/443 [00:03\u003c00:06, 54.66it/s]\rLoading weights:  30%|███       | 134/443 [00:03\u003c00:03, 85.28it/s]\rLoading weights:  24%|██▎       | 105/443 [00:03\u003c00:04, 69.72it/s]\rLoading weights:  36%|███▌      | 160/443 [00:04\u003c00:02, 110.83it/s]\rLoading weights:  28%|██▊       | 126/443 [00:03\u003c00:03, 88.29it/s]\rLoading weights:  42%|████▏     | 185/443 [00:04\u003c00:01, 135.55it/s]\rLoading weights:  33%|███▎      | 148/443 [00:03\u003c00:02, 110.29it/s]\rLoading weights:  47%|████▋     | 206/443 [00:04\u003c00:01, 147.70it/s]\rLoading weights:  67%|██████▋   | 298/443 [00:04\u003c00:00, 379.07it/s]\rLoading weights: 100%|██████████| 443/443 [00:04\u003c00:00, 108.15it/s]\n"}
+,{"stream_name":"stderr","time":306.862889901,"data":"\rLoading weights:  52%|█████▏    | 232/443 [00:04\u003c00:01, 169.82it/s]\rLoading weights: 100%|██████████| 443/443 [00:04\u003c00:00, 98.73it/s] \n"}
+,{"stream_name":"stderr","time":307.856429359,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stderr","time":307.95716119,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stdout","time":440.922046569,"data":"{\"event\": \"gen_batch\", \"tag\": \"smoke\", \"n\": 2, \"s\": 133.1, \"peak_gb\": {\"0\": 12.54}, \"in_tokens\": 5588, \"done\": 2, \"total\": 2, \"t\": 1795114584.3}\n"}
+,{"stream_name":"stdout","time":601.027600367,"data":"{\"event\": \"gen_batch\", \"tag\": \"smoke\", \"n\": 2, \"s\": 293.3, \"peak_gb\": {\"0\": 12.54}, \"in_tokens\": 5587, \"done\": 2, \"total\": 2, \"t\": 1795114744.4}\n"}
+,{"stream_name":"stdout","time":602.719256178,"data":"{\"event\": \"gen_done\", \"tag\": \"smoke\", \"codes\": [0, 0], \"t\": 1795114746.1}\n"}
+,{"stream_name":"stdout","time":602.719393874,"data":"{\"event\": \"end\", \"mode\": \"smoke\", \"t\": 1795114746.1}\n"}
+,{"stream_name":"stderr","time":605.605602628,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":605.605632242,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":605.860037541,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":605.860067178,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":606.694456514,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":607.717031662,"data":"[NbConvertApp] Writing 274369 bytes to __results__.html\n"}
+]

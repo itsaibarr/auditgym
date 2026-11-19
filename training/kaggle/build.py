@@ -13,7 +13,8 @@ HERE = Path(__file__).resolve().parent
 B = HERE / "build"
 KERNELS = {  # slug: (env, kernel_sources)
     "gag-smoke": ({"GAG_MODE": "smoke"}, []),
-    "gag-base-sft": ({"GAG_MODE": "base", "GAG_TRAIN_DEVICES": "balanced"}, []),
+    "gag-base-sft": ({"GAG_MODE": "base", "GAG_TRAIN_DEVICES": "balanced", "GAG_TRAIN_SAMPLES": "400",
+                      "GAG_TRAIN_SECONDS": "15000"}, []),
     "gag-after": ({"GAG_MODE": "after"}, [f"{USER}/gag-base-sft"]),
 }
 STUB = '''import glob, os, subprocess, sys
