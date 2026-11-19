@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Language-agnostic protocol demo: any program that reads JSON lines on stdin and writes one action per
-line can be a policy. Run with:  auditgym run --policy "cmd:python3 /abs/path/examples/stdio_policy.py" --split dev
+line can be a policy. Run with:  auditgym run --policy "cmd:python3 /abs/path/examples/stdio_policy.py" --split dev --trust-policies
 
 Runner -> policy: {"type": "reset", "observation": ..., "info": ...}
                   {"type": "step", "observation": ..., "reward": ..., "terminated": ..., "truncated": ..., "info": ...}

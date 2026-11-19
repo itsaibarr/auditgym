@@ -91,6 +91,9 @@ def _validate_config(cfg: dict) -> None:
             raise ValueError(f"errors.{t}.on must be true/false")
     if cfg["customers"][0] < 2:
         raise ValueError("customers min must be >= 2 (one base-currency and one foreign-currency customer)")
+    for k in ("base_currencies", "foreign_currencies", "timezones", "months"):
+        if not isinstance(cfg[k], list):
+            raise ValueError(f"{k} must be a list, got {cfg[k]!r}")
     if not cfg["base_currencies"] or not all(c in EXPONENTS for c in cfg["base_currencies"] + cfg["foreign_currencies"]):
         raise ValueError(f"currencies must be non-empty and among {sorted(EXPONENTS)}")
     for b in cfg["base_currencies"]:
@@ -109,8 +112,8 @@ def _validate_config(cfg: dict) -> None:
     if not (isinstance(y, int) and not isinstance(y, bool) and 1971 <= y <= 2200):
         raise ValueError(f"year must be an integer in [1971, 2200], got {y!r}")
     me = cfg["max_errors"]
-    if not (isinstance(me, int) and not isinstance(me, bool) and me >= 0):
-        raise ValueError(f"max_errors must be an integer >= 0, got {me!r}")
+    if not (isinstance(me, int) and not isinstance(me, bool) and 0 <= me <= 25):
+        raise ValueError(f"max_errors must be an integer in [0, 25] (findings are capped at 30), got {me!r}")
     tzs = cfg["timezones"]
     if not (isinstance(tzs, list) and tzs):
         raise ValueError("timezones must be a non-empty list")
@@ -196,10 +199,23 @@ def generate(seed: int | str, config: dict | None = None, salt: str | None = Non
     keys = [(t["type"], tuple(t["affected_ids"])) for t in truth_issues]
     assert len(keys) == len(set(keys)), "truth (type, affected_ids) keys must be unique"
     truth = {"episode_id": episode_id, "issues": truth_issues}
+    pre = check_invariants(clean)
+    if pre:  # e.g. a historic zone/year whose local time skips a day: refuse instead of shipping unprovable truth
+        raise ValueError(f"this config produces inconsistent correct books ({pre[0]}); pick another year/timezone")
+    from .recheck import EvidenceError, recompute
+    for t in truth_issues:
+        for ev in t["evidence_sets"]:
+            try:
+                ok = abs(recompute(public, t["type"], t["affected_ids"], ev) - t["expected_amount_minor"]) <= t["tolerance_minor"]
+            except EvidenceError:
+                ok = False
+            if not ok:
+                raise ValueError(f"this config produces a finding that its evidence cannot prove ({t['type']}); "
+                                 "pick another year/timezone")
     provenance = {
         "episode_id": episode_id, "generator_version": __version__, "schema_version": SCHEMA_VERSION,
         "config": cfg, "config_hash": cfg_hash, "config_version": config_version, "public_fingerprint": sha256(public), "events": prov_events,
-        "invariants_before_injection": {"checked": ["I1", "I2", "I3", "I4", "I5", "I6", "I7", "I8"], "violations": [str(v) for v in check_invariants(clean)]},
+        "invariants_before_injection": {"checked": ["I1", "I2", "I3", "I4", "I5", "I6", "I7", "I8"], "violations": [str(v) for v in pre]},
         "skipped_injectors": ctx.skipped,
         "inserted_documents": sorted(ids.doc[id(d)] for d in (set(w.invoices) | set(w.payments)) - set(correct_docs[0]) - set(correct_docs[1])),
     }

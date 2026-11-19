@@ -710,7 +710,7 @@ def test_closed_eval_refuses_episode_dirs_with_truth(monkeypatch, tmp_path):
 @pytest.mark.parametrize("cfg", [{"timezone": ["UTC"]}, {"foreign_currencies": []}, {"base_currencies": ["USD"], "foreign_currencies": ["USD"]},
                                  {"errors": {"duplicate_invoices": {"on": True}}}, {"errors": {"fx_conversion": {"count": [3, 1]}}},
                                  {"cutoff_window_days": 3}, {"cutoff_window_days": -3}, {"months": [13]}, {"timezones": ["Mars/Base"]},
-                                 {"max_errors": -1}, {"interacting": {"X1": "yes"}}])
+                                 {"max_errors": -1}, {"max_errors": 60}, {"interacting": {"X1": "yes"}}, {"base_currencies": "USD"}])
 def test_bad_configs_are_rejected(cfg):
     with pytest.raises(ValueError):
         generate(1, cfg)
@@ -893,3 +893,19 @@ def test_replay_regrades_results(tmp_path, dirty):
     meta["files"]["results.jsonl"] = hashlib.sha256(text.encode()).hexdigest()
     (d / "run.json").write_text(json.dumps(meta))
     assert main(["replay", str(d), "--episodes", str(eps)]) == 1
+
+
+def test_no_isolate_does_not_skip_the_salt_guard(evil, dirty, tmp_path, monkeypatch):
+    import auditgym.runner as R
+    monkeypatch.setenv("AUDITGYM_SALT", "k" * 40)
+    monkeypatch.setattr(R, "salt_exposures", lambda: [1])
+    with pytest.raises(RuntimeError, match="AUDITGYM_SALT"):
+        run_policies(["evil:Learner"], [("dev", dirty)], tmp_path, mode="eval", policy_path=evil, isolate=False)
+
+
+@pytest.mark.parametrize("seed,extra", [(630010, {"errors": {t: {"on": False} for t in ("duplicate_invoice", "payment_allocation",
+                                                                                      "fx_conversion", "period_cutoff")}}),
+                                        (630000, {"interacting": {"X1": 1, "X2": 1}})])
+def test_historic_time_discontinuities_fail_closed(seed, extra):
+    with pytest.raises(ValueError, match="pick another year/timezone"):
+        generate(seed, {"year": 1994, "months": [12], "timezones": ["Pacific/Kiritimati"], **extra})

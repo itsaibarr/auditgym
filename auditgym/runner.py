@@ -375,7 +375,7 @@ def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root
     if isolate and sys.platform.startswith("linux") and os.getpid() != 1 and (allow_forks or closed) and custom:
         print("warning: the runner is not PID 1, so leftover policy processes are reaped by a /proc walk instead of "
               "kill(-1); for closed or --allow-forks evaluation use `docker run ... auditgym:1.0.0 run ...`", file=sys.stderr)
-    exposed = salt_exposures() if isolate else []
+    exposed = salt_exposures() if (isolate or custom) else []
     if exposed:
         raise RuntimeError(f"AUDITGYM_SALT is readable in the environment or command line of other process(es) {exposed[:5]} (e.g. docker --init, "
                            "an sh -c / uv run wrapper); a policy could read it. Start the runner directly: "
@@ -502,7 +502,7 @@ def verify_run(d: Path) -> list[str]:
             mac = hmac.new(key, (d / n).read_bytes(), hashlib.sha256).hexdigest()
             if not hmac.compare_digest(mac, str((meta.get("files_hmac") or {}).get(n, ""))):
                 probs.append(f"{d / n}: keyed hash (HMAC) does not match (wrong AUDITGYM_SALT, or the file was changed after the run)")
-    elif meta.get("files_hmac"):
+    elif meta.get("files_hmac") or meta.get("run_hmac") or meta.get("salt") == "custom":
         print(f"note: {d}: keyed integrity not verified (set AUDITGYM_SALT to the run's salt to check it)", file=sys.stderr)
     return probs
 

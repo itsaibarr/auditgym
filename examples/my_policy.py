@@ -1,6 +1,6 @@
 """Minimal Python policy for AuditGym. Run it isolated in a child process:
 
-    auditgym run --policy my_policy:LookAround --policy-path examples --split dev
+    auditgym run --policy my_policy:LookAround --policy-path examples --split dev --trust-policies
 
 Interface: reset(observation, info) -> action; step(observation, reward, terminated, truncated, info) -> action.
 Actions are {"name": ..., "arguments": {...}}.
