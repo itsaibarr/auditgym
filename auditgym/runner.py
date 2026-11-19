@@ -261,7 +261,7 @@ def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root
               "Run as an unprivileged user (the Docker image does).", file=sys.stderr)
     exposed = salt_exposures() if isolate else []
     if exposed:
-        raise RuntimeError(f"AUDITGYM_SALT is readable in the environment of other process(es) {exposed[:5]} (e.g. docker --init, "
+        raise RuntimeError(f"AUDITGYM_SALT is readable in the environment or command line of other process(es) {exposed[:5]} (e.g. docker --init, "
                            "an sh -c / uv run wrapper); a policy could read it. Start the runner directly: "
                            "docker run --rm -e AUDITGYM_SALT=... auditgym:1.0.0 run ...")
     done: dict[str, list[EpisodeRun]] = {}
