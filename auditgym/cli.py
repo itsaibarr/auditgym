@@ -150,10 +150,11 @@ def cmd_run(a) -> int:
     from .policies import BUILTIN
     from .runner import install_writable
     custom = [s for s in specs if s != "oracle" and s not in BUILTIN]
-    if custom and not a.no_isolate and not a.trust_policies and install_writable():
-        raise ValueError("this auditgym installation is writable by your user, and the grader runs in this process: an "
-                         "untrusted policy could modify it persistently (e.g. through __pycache__). Evaluate third-party "
-                         "policies in the Docker image (package owned by root), or pass --trust-policies for your own code.")
+    if custom and not a.trust_policies and install_writable():
+        raise ValueError("this Python environment is writable by your user (the auditgym package, an import root on "
+                         "sys.path, or the user site-packages), and the grader runs in this process: an untrusted policy "
+                         "could modify it persistently (e.g. through __pycache__ or a .pth file). Evaluate third-party "
+                         "policies in the Docker image (root-owned, user site disabled), or pass --trust-policies for your own code.")
     def name(spec: str) -> str:
         n = "".join(c if c.isalnum() or c in "._-" else "_" for c in spec).lstrip(".")
         if not n:
@@ -240,6 +241,7 @@ def cmd_replay(a) -> int:
     by_ep: dict[str, list] = {}
     for r in recs:
         by_ep.setdefault(r["episode_id"], []).append(r)
+    results = {r["episode_id"]: r for r in (json.loads(l) for l in (run / "results.jsonl").read_text().splitlines() if l)}
     replayed = mismatches = 0
     for eid, steps in by_ep.items():
         if eid not in eps:
@@ -254,13 +256,22 @@ def cmd_replay(a) -> int:
                 act = OraclePolicy(eps[eid].truth).reset(steps[0]["observation"], None)  # closed run: rebuild from regenerated truth
             got = env.abort(r["info"].get("error_code") or "timeout") if act is None else env.step(act)
             ok &= dumps(list(got[:4])) == dumps([r["observation"], r["reward"], r["terminated"], r["truncated"]])
+        g, res = env.result(), results.get(eid, {})
+        if any(g[k] != res.get(k) for k in ("valid", "tp", "fp", "fn", "f1", "reward")):  # re-graded here, not trusted
+            print(f"DIFF {eid}: re-graded {[g[k] for k in ('tp', 'fp', 'fn', 'reward')]} != results.jsonl "
+                  f"{[res.get(k) for k in ('tp', 'fp', 'fn', 'reward')]}")
+            ok = False
         replayed += 1
         mismatches += not ok
         print(f"{'OK  ' if ok else 'DIFF'} {eid} ({len(steps) - 1} steps)")
     if not replayed:
         print("FAIL nothing replayed: pass the episode source (--split/--episodes/--seeds) used for the run")
         return 1
-    print(f"{replayed - mismatches}/{replayed} episodes replay byte-identically")
+    from .runner import summarize
+    if replayed == len(results) and summarize(list(results.values())) != json.loads((run / "summary.json").read_text()):
+        print("DIFF summary.json does not match results.jsonl")
+        mismatches += 1
+    print(f"{replayed - mismatches}/{replayed} episodes replay byte-identically and re-grade to results.jsonl")
     return 1 if mismatches else 0
 
 

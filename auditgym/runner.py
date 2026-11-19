@@ -447,10 +447,14 @@ def _integrity_key() -> bytes | None:
 
 
 def install_writable() -> bool:
-    """True if this user could modify the installed package (source files or bytecode caches)."""
-    if os.access(_PKG, os.W_OK):
+    """True if this user could change what the runner imports: any dir of the package, any import root on
+    sys.path (site-packages, .pth targets), or an enabled user site-packages (a .pth there runs at startup)."""
+    import site
+    if site.ENABLE_USER_SITE:
         return True
-    return any(os.access(p, os.W_OK) for p in _PKG.rglob("__pycache__"))
+    dirs = [_PKG, *(p for p in _PKG.rglob("*") if p.is_dir())]
+    roots = [Path(p) for p in sys.path if p and Path(p).is_dir()]
+    return any(os.access(d, os.W_OK) for d in dirs + roots)
 
 
 def _file_sha(p: Path) -> str:

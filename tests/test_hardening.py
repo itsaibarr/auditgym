@@ -845,3 +845,51 @@ def test_reaper_sees_processes_with_non_utf8_comm():
     reap_leftovers(keep)
     with pytest.raises(ProcessLookupError):
         os.kill(p.pid, 0)
+
+
+
+# ---------------------------------------------------------------------------------------- council round 6
+def test_install_guard_covers_import_roots_and_no_isolate(tmp_path, monkeypatch):
+    import site
+    import auditgym.runner as R
+    from auditgym.cli import main
+    monkeypatch.setattr(site, "ENABLE_USER_SITE", False)
+    monkeypatch.setattr(R, "_PKG", tmp_path / "pkg")
+    (tmp_path / "pkg" / "sub").mkdir(parents=True)
+    (tmp_path / "pkg").chmod(0o555)
+    try:
+        monkeypatch.setattr(sys, "path", [str(tmp_path / "pkg")])
+        assert R.install_writable()                       # a writable subpackage dir
+        (tmp_path / "pkg" / "sub").chmod(0o555)
+        assert not R.install_writable()
+        monkeypatch.setattr(sys, "path", [str(tmp_path / "pkg"), str(tmp_path)])
+        assert R.install_writable()                       # a writable import root
+        monkeypatch.setattr(sys, "path", [str(tmp_path / "pkg")])
+        monkeypatch.setattr(site, "ENABLE_USER_SITE", True)
+        assert R.install_writable()                       # user site-packages enabled
+    finally:
+        (tmp_path / "pkg" / "sub").chmod(0o755)
+        (tmp_path / "pkg").chmod(0o755)
+    monkeypatch.setattr(R, "install_writable", lambda: True)
+    args = ["run", "--policy", "my_policy:LookAround", "--policy-path", "examples", "--split", "dev", "--out", str(tmp_path / "o")]
+    assert main(args + ["--no-isolate"]) == 2             # --no-isolate is not an exemption
+
+
+def test_replay_regrades_results(tmp_path, dirty):
+    from auditgym.cli import main
+    run_policies(["reconcile"], [("dev", dirty)], tmp_path, mode="eval")
+    d = tmp_path / "reconcile"
+    eps = tmp_path / "eps"
+    from auditgym.episode import write_episode
+    write_episode(dirty, eps / "ep")
+    assert main(["replay", str(d), "--episodes", str(eps)]) == 0
+    # a runner that wrote a wrong grade (and consistent hashes) is caught by re-grading
+    import hashlib
+    res = json.loads((d / "results.jsonl").read_text())
+    res["tp"], res["reward"] = res["tp"] + 1, 1.0
+    text = json.dumps(res) + "\n"
+    (d / "results.jsonl").write_text(text)
+    meta = json.loads((d / "run.json").read_text())
+    meta["files"]["results.jsonl"] = hashlib.sha256(text.encode()).hexdigest()
+    (d / "run.json").write_text(json.dumps(meta))
+    assert main(["replay", str(d), "--episodes", str(eps)]) == 1
