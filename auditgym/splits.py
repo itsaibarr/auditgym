@@ -19,11 +19,14 @@ def load_split_config(split_or_path: str) -> dict:
 OPEN_SPLITS = ("train", "dev")
 
 
-def split_episodes(split_or_path: str) -> list[tuple[str, Episode]]:
+def split_episodes(split_or_path: str, cfg: dict | None = None) -> list[tuple[str, Episode]]:
     """Open splits (configs/train.json, configs/dev.json) always use the published salt so they match data/;
-    any other split file (e.g. a jury's closed split) uses AUDITGYM_SALT when set."""
-    cfg = load_split_config(split_or_path)
-    name = cfg.get("split", Path(split_or_path).stem)
+    any other split (a jury's closed split file, or a split dict read from stdin) uses AUDITGYM_SALT when set."""
+    if cfg is None:
+        cfg = load_split_config(split_or_path)
+    if not isinstance(cfg.get("episodes"), list) or not all(isinstance(e, dict) and "seed" in e for e in cfg["episodes"]):
+        raise ValueError(f"split {split_or_path!r} must have an 'episodes' list of objects with a 'seed'")
+    name = cfg.get("split", Path(split_or_path).stem if split_or_path != "-" else "closed")
     salt = DEFAULT_SALT if split_or_path in OPEN_SPLITS else None
     return [(name, generate(e["seed"], {**cfg.get("base_config", {}), **e.get("config", {})}, salt=salt,
                             config_version=cfg.get("config_version"))) for e in cfg["episodes"]]

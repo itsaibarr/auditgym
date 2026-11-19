@@ -34,6 +34,18 @@ def _no_dup_keys(pairs):
     return d
 
 
+def _reject_constant(name):
+    raise ValueError(f"non-finite number {name} is not allowed")
+
+
+def _finite_float(text):
+    f = float(text)
+    if f != f or f in (float("inf"), float("-inf")):
+        raise ValueError(f"non-finite number {text} is not allowed")
+    return f
+
+
 def loads_strict(s):
-    """json.loads that rejects duplicate object keys (last-key-wins is a grading ambiguity)."""
-    return json.loads(s, object_pairs_hook=_no_dup_keys)
+    """json.loads that rejects duplicate object keys (last-key-wins is a grading ambiguity) and NaN/Infinity/1e400
+    (they could not be logged as canonical JSON)."""
+    return json.loads(s, object_pairs_hook=_no_dup_keys, parse_constant=_reject_constant, parse_float=_finite_float)

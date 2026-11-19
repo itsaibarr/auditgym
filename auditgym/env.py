@@ -17,6 +17,7 @@ from pathlib import Path
 
 from . import __version__
 from .calc import CalcError, evaluate
+from .canon import dumps
 from .episode import Episode, fx_id, generate, load_grader, load_public
 from .matcher import grade
 from .schemas import MAX_EVIDENCE, MAX_EXPLANATION, MAX_FINDINGS, TABLES, parse_findings
@@ -88,7 +89,7 @@ class AuditEnv:
             "manifest": _copy(m),
             "policy": _copy(pub["policy"]),
             "tables": {t: {"primary_key": PRIMARY_KEYS[t], "count": len(self._rows[t]),
-                           "columns": list(self._rows[t][0].keys()) if self._rows[t] else []} for t in TABLES},
+                           "columns": sorted(self._rows[t][0]) if self._rows[t] else []} for t in TABLES},
             "available_actions": {name: {"required": sorted(req), "optional": sorted(opt)} for name, (req, opt) in ARGS.items()},
             "action_format": {"name": "<action>", "arguments": {"...": "..."}},
             "finding_types": ["duplicate_invoice", "payment_allocation", "fx_conversion", "period_cutoff"],
@@ -104,7 +105,9 @@ class AuditEnv:
         self.__result = None
         self._episode_id = pub["manifest"]["episode_id"]
         fx_rows = [{"fx_id": fx_id(r["date"], r["source_currency"], r["target_currency"]), **r} for r in pub["fx"]]
-        self._rows = {"ledger": pub["ledger"], "invoices": pub["invoices"], "payments": pub["payments"], "fx": fx_rows}
+        # canonical key order, so observations are byte-identical whether the episode was generated or loaded from disk
+        self._rows = {t: json.loads(dumps(rows)) for t, rows in  # recursive sorted keys
+                      (("ledger", pub["ledger"]), ("invoices", pub["invoices"]), ("payments", pub["payments"]), ("fx", fx_rows))}
         self._index = {t: {r[PRIMARY_KEYS[t]]: r for r in rows} for t, rows in self._rows.items()}
         self._known = {k for idx in self._index.values() for k in idx}
         self._steps = 0

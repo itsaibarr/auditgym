@@ -112,6 +112,9 @@ def run_check(quick: bool = False, as_json: bool = False, out: Path | None = Non
         t0 = time.time()
         leaks = [p for spec in POLICIES for p in scan_run(out / spec)]
         rep.add("isolation.leakscan", not leaks, f"{len(leaks)} problems" + (f": {leaks[:3]}" if leaks else ""), time.time() - t0)
+        from .runner import verify_run
+        bad_runs = [p for spec in POLICIES for p in verify_run(out / spec)]
+        rep.add("isolation.run_integrity", not bad_runs, "every run dir matches the hashes in its run.json" + (f": {bad_runs[:2]}" if bad_runs else ""))
 
         t0 = time.time()
         bad = []

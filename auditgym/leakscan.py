@@ -33,10 +33,15 @@ def scan_records(records: list[dict], mode: str) -> list[str]:
     problems = []
     for rec in records:
         where = f"{rec.get('episode_id')}#{rec.get('step')}"
-        blob = json.dumps({"observation": rec.get("observation"), "info": rec.get("info")}, ensure_ascii=False)
-        # the env echoes (at most 64 chars of) the policy's own input in error messages; that is not a leak
-        for s in sorted({t[:64] for t in _strings(rec.get("action")) if len(t) >= 3}, key=len, reverse=True):
-            blob = blob.replace(json.dumps(s, ensure_ascii=False)[1:-1], "")
+        obs = rec.get("observation")
+        err = obs.get("error") if isinstance(obs, dict) else None
+        if isinstance(err, dict) and isinstance(err.get("message"), str):
+            # the env echoes (at most 64 chars of) the policy's own input inside error messages; only there is it not a leak
+            msg = err["message"]
+            for s in sorted({t[:64] for t in _strings(rec.get("action")) if len(t) >= 3}, key=len, reverse=True):
+                msg = msg.replace(s, "")
+            obs = {**obs, "error": {**err, "message": msg}}
+        blob = json.dumps({"observation": obs, "info": rec.get("info")}, ensure_ascii=False)
         for pat, what in PATTERNS:
             mm = pat.search(blob)
             if mm:

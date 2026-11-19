@@ -79,6 +79,20 @@ class Forger:
             except OSError:
                 pass
         return {"name": "submit", "arguments": {"findings": {"episode_id": o["manifest"]["episode_id"], "findings": []}}}
+class NaNAct:
+    def __init__(self):
+        self.n = 0
+    def reset(self, o, i):
+        self.ep = o["manifest"]["episode_id"]
+        sys.stdout.write('{"name": "calculator", "arguments": {"expression": NaN}}\\n'); sys.stdout.flush()
+        return {"name": "calculator", "arguments": {"expression": "1"}}
+    def step(self, *a):
+        self.n += 1
+        if self.n == 1:
+            sys.stdout.write('{"name": "submit", "arguments": {"findings": {"episode_id": "%s", "findings": [{"type": "fx_conversion", '
+                             '"affected_ids": ["x"], "claimed_amount_minor": 1e400, "currency": "KZT", "evidence_ids": [], "explanation": ""}]}}}\\n' % self.ep)
+            sys.stdout.flush()
+        return {"name": "submit", "arguments": {"findings": {"episode_id": self.ep, "findings": []}}}
 class ReadRuns:
     def __init__(self, root=""):
         self.root = root
@@ -352,6 +366,121 @@ def test_runner_refuses_when_salt_is_exposed_by_another_process(dirty, tmp_path,
     import subprocess
     monkeypatch.setenv("AUDITGYM_SALT", "closed-secret")
     holder = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])  # stands in for tini / sh -c
+    try:
+        time.sleep(0.2)
+        with pytest.raises(RuntimeError, match="AUDITGYM_SALT"):
+            run_policies(["reconcile"], [("dev", dirty)], tmp_path, mode="eval")
+    finally:
+        holder.kill()
+        holder.wait()
+
+
+# ---------------------------------------------------------------------------------------- council round 3
+def test_nan_and_overflow_actions_are_invalid_not_crashes(evil, dirty, tmp_path):
+    out = run_policies(["evil:NaNAct", "oracle"], [("dev", dirty)], tmp_path, mode="eval", policy_path=evil)
+    traj = [json.loads(l) for l in (tmp_path / "evil:NaNAct" / "trajectories.jsonl").read_text().splitlines()]
+    assert [t["info"]["error_code"] for t in traj[1:4]] == ["invalid_action", None, "invalid_action"]  # NaN, ok, 1e400
+    assert out["evil:NaNAct"][0]["termination"] == "submitted" and out["oracle"][0]["reward"] == 1.0
+
+
+def _split_json(n=2):
+    return json.dumps({"split": "jury", "episodes": [{"seed": f"jury-{k}"} for k in range(n)]})
+
+
+def test_closed_eval_takes_the_split_from_stdin_only(monkeypatch, tmp_path):
+    import io
+    from auditgym.cli import main
+    strong = "s" * 40
+    monkeypatch.setenv("AUDITGYM_SALT", strong)
+    f = tmp_path / "split.json"
+    f.write_text(_split_json())
+    assert main(["run", "--policy", "reconcile", "--split", str(f), "--out", str(tmp_path / "a")]) == 2      # readable path
+    assert main(["run", "--policy", "reconcile", "--seeds", "1-2", "--out", str(tmp_path / "a")]) == 2       # seeds in argv
+    monkeypatch.setattr(sys, "stdin", io.StringIO(_split_json()))
+    assert main(["run", "--policy", "oracle", "--split", "-", "--out", str(tmp_path / "b")]) == 0
+    acts = [json.loads(l)["action"] for l in (tmp_path / "b" / "oracle" / "trajectories.jsonl").read_text().splitlines()]
+    subs = [a for a in acts if a and a["name"] == "submit"]
+    assert len(subs) == 2 and all(a["arguments"] == "<withheld: closed run>" for a in subs)               # truth not persisted
+    monkeypatch.setenv("AUDITGYM_SALT", "short")
+    monkeypatch.setattr(sys, "stdin", io.StringIO(_split_json()))
+    assert main(["run", "--policy", "oracle", "--split", "-", "--out", str(tmp_path / "c")]) == 2           # weak salt
+
+
+@pytest.mark.parametrize("spec", ["oracle,", ".", ".."])
+def test_bad_policy_specs_cannot_delete_outputs(spec, tmp_path, monkeypatch):
+    from auditgym.cli import main
+    keep = tmp_path / "keep.txt"
+    keep.write_text("x")
+    assert main(["run", "--policy", spec, "--split", "dev", "--out", str(tmp_path / "out")]) == 2
+    assert keep.exists()
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="needs mkfifo")
+def test_planted_fifo_or_locked_dir_does_not_break_the_swap(dirty, tmp_path):
+    os.mkfifo(tmp_path / "reconcile")
+    (tmp_path / "flag_all").mkdir()
+    (tmp_path / "flag_all" / "x").mkdir()
+    (tmp_path / "flag_all").chmod(0)
+    try:
+        run_policies(["reconcile", "flag_all"], [("dev", dirty)], tmp_path, mode="eval")
+    finally:
+        for p in tmp_path.glob(".old-*"):
+            p.chmod(0o755)
+    from auditgym.runner import verify_run
+    assert verify_run(tmp_path / "reconcile") == [] and verify_run(tmp_path / "flag_all") == []
+
+
+def test_compare_detects_swapped_or_linked_run_files(dirty, tmp_path):
+    from auditgym.cli import main
+    run_policies(["reconcile", "oracle"], [("dev", dirty)], tmp_path, mode="eval")
+    assert main(["compare", str(tmp_path / "reconcile"), str(tmp_path / "oracle")]) == 0
+    for n in ("summary.json", "results.jsonl"):           # what a byte-less attacker can do: unlink + hard link
+        (tmp_path / "reconcile" / n).unlink()
+        os.link(tmp_path / "oracle" / n, tmp_path / "reconcile" / n)
+    assert main(["compare", str(tmp_path / "reconcile"), str(tmp_path / "oracle")]) == 1
+    os.rename(tmp_path / "oracle", tmp_path / "moved")    # renamed dir: run.json names its own dir
+    assert main(["compare", str(tmp_path / "moved")]) == 1
+
+
+def test_observations_identical_from_memory_and_disk():
+    from auditgym.canon import dumps
+    from auditgym.env import AuditEnv
+    from auditgym.splits import ROOT, split_episodes
+    _, ep = split_episodes("dev")[0]
+    a, b = AuditEnv("eval"), AuditEnv("eval")
+    oa, _ = a.reset(options={"episode": ep})
+    ob, _ = b.reset(options={"episode_dir": ROOT / "data" / "dev" / "ep_00"})
+    assert dumps(oa) == dumps(ob) and json.dumps(oa) == json.dumps(ob)
+    for t in ("ledger", "invoices", "payments", "fx"):
+        act = {"name": "list_records", "arguments": {"table": t}}
+        assert json.dumps(a.step(act)[0]) == json.dumps(b.step(act)[0])
+
+
+def test_grade_cli_rejects_duplicate_keys(tmp_path, capsys):
+    from auditgym.cli import main
+    from auditgym.splits import ROOT
+    d = ROOT / "data" / "dev" / "ep_00"
+    eid = json.loads((d / "manifest.json").read_text())["episode_id"]
+    f = tmp_path / "f.json"
+    f.write_text('{"episode_id": "bogus", "episode_id": "%s", "findings": []}' % eid)
+    assert main(["grade", "--episode", str(d), "--findings", str(f)]) == 0
+    assert json.loads(capsys.readouterr().out)["valid"] is False
+
+
+def test_leakscan_still_flags_leaks_outside_the_echo():
+    from auditgym.leakscan import scan_records
+    rec = {"episode_id": "e", "step": 1, "action": {"name": "get_document", "arguments": {"doc_id": "truth"}},
+           "observation": {"result": {"note": "truth"}, "error": None}, "reward": 0.0, "info": {"steps_remaining": 1, "error_code": None}}
+    assert scan_records([rec], "eval")
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="/proc cmdline exposure is Linux-specific")
+def test_runner_refuses_when_salt_value_is_in_another_cmdline(dirty, tmp_path, monkeypatch):
+    import subprocess
+    salt = "v" * 40
+    monkeypatch.setenv("AUDITGYM_SALT", salt)
+    env = {k: v for k, v in os.environ.items() if k != "AUDITGYM_SALT"}
+    holder = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)", salt], env=env)
     try:
         time.sleep(0.2)
         with pytest.raises(RuntimeError, match="AUDITGYM_SALT"):

@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from . import __version__
+from .canon import loads_strict
 from .episode import generate, load_public, write_episode
 from .splits import ROOT, dir_episode, load_split_config, parse_seeds, split_episodes
 
@@ -69,30 +70,47 @@ def _episodes(a) -> list:
     if cfg is not None and "episodes" in cfg:
         if getattr(a, "seeds", None):
             raise ValueError("--config is a split file with its own episodes/seeds; use --split <file> (without --seeds)")
-        _warn_salt(a)
+        _closed_guard(a, "config")
         return split_episodes(a.config)
     if getattr(a, "seeds", None):
-        _warn_salt(a)
+        _closed_guard(a, "seeds")
         base = (cfg or {}).get("base_config", cfg or {})
         return [("seeds", generate(s, base)) for s in parse_seeds(a.seeds)]
     out = []
     for s in a.split.split(","):
-        if s not in ("train", "dev"):
-            _warn_salt(a)
-        out += split_episodes(s)
+        if s == "-":  # closed split on stdin: never in argv or on a path the policy could read
+            _closed_guard(a, "stdin")
+            cfg_in = loads_strict(sys.stdin.read())
+            sys.stdin.close()
+            out += sorted(split_episodes("-", cfg_in), key=lambda x: x[1].episode_id)  # order reveals nothing
+        elif s in ("train", "dev"):
+            out += split_episodes(s)
+        else:
+            _closed_guard(a, "file")
+            out += split_episodes(s)
     return out
 
 
-def _warn_salt(a) -> None:
+def _closed_guard(a, how: str) -> None:
+    """Non-open episodes. For a closed *evaluation* (run, eval mode) the salt must be secret and strong, and the
+    seeds must not be readable by the policy (argv and mounted files are readable via /proc/<runner>/cmdline)."""
     import os
-    if os.environ.get("AUDITGYM_SALT"):
-        return
-    if getattr(a, "fn", None) is cmd_run and a.mode == "eval" and not a.public_salt:
-        raise ValueError("closed evaluation needs a secret salt: docker run -e AUDITGYM_SALT=<secret> ... "
+    salt = os.environ.get("AUDITGYM_SALT")
+    closed_eval = getattr(a, "fn", None) is cmd_run and a.mode == "eval"
+    if closed_eval and not salt and not a.public_salt:
+        raise ValueError("closed evaluation needs a secret salt: docker run -i -e AUDITGYM_SALT=<secret> ... run --split - < split.json "
                          "(without it a policy can regenerate the truth from the open generator). "
                          "Pass --public-salt to run these episodes with the public default salt anyway.")
-    print("warning: AUDITGYM_SALT is not set; non-open episodes use the PUBLIC default salt, so a policy that imports the "
-          "open generator could regenerate their truth. For closed evaluation: docker run -e AUDITGYM_SALT=<secret> ...", file=sys.stderr)
+    if closed_eval and salt:
+        if len(salt) < 32:
+            raise ValueError("AUDITGYM_SALT must be at least 32 characters (e.g. `openssl rand -hex 32`); a short salt can be "
+                             "guessed offline from an episode_id")
+        if how != "stdin":
+            raise ValueError("closed evaluation reads the split from stdin so the policy cannot see seeds in argv or a mounted "
+                             "file: docker run -i ... run --policy ... --split - < closed_split.json")
+    if not salt:
+        print("warning: AUDITGYM_SALT is not set; non-open episodes use the PUBLIC default salt, so a policy that imports the "
+              "open generator could regenerate their truth.", file=sys.stderr)
 
 
 def cmd_generate(a) -> int:
@@ -117,7 +135,9 @@ def cmd_run(a) -> int:
     episodes = _episodes(a)
     specs = a.policy.split(",")
     def name(spec: str) -> str:
-        n = "".join(c if c.isalnum() or c in "._-" else "_" for c in spec)
+        n = "".join(c if c.isalnum() or c in "._-" else "_" for c in spec).lstrip(".")
+        if not n:
+            raise ValueError(f"invalid policy spec {spec!r}")
         return n if len(n) <= 60 else n[:51] + "_" + hashlib.sha256(spec.encode()).hexdigest()[:8]
     if len({name(s) for s in specs}) < len(specs):
         raise ValueError(f"policy specs must be distinct (run dirs: {[name(s) for s in specs]})")
@@ -138,7 +158,17 @@ def cmd_run(a) -> int:
     return 0
 
 
+def _verified(runs) -> bool:
+    from .runner import verify_run
+    probs = [p for d in runs for p in verify_run(Path(d))]
+    for p in probs:
+        print(f"FAIL integrity: {p}", file=sys.stderr)
+    return not probs
+
+
 def cmd_compare(a) -> int:
+    if not _verified(a.runs):
+        return 1
     rows = []
     for d in a.runs:
         s = json.loads((Path(d) / "summary.json").read_text())
@@ -155,7 +185,7 @@ def cmd_compare(a) -> int:
 def cmd_grade(a) -> int:
     from .env import AuditEnv
     d = Path(a.episode)
-    findings = json.loads(Path(a.findings).read_text())
+    findings = Path(a.findings).read_text()  # raw text: the env parses it strictly (duplicate keys, NaN -> invalid)
     env = AuditEnv("train")
     env.reset(options={"episode_dir": d})
     for _ in range(a.steps):
@@ -169,6 +199,8 @@ def cmd_replay(a) -> int:
     from .canon import dumps
     from .env import AuditEnv
     run = Path(a.run)
+    if not _verified([run]):
+        return 1
     meta = json.loads((run / "run.json").read_text())
     if meta.get("auditgym_version") != __version__:
         print(f"FAIL version mismatch: run made with {meta.get('auditgym_version')}, this is {__version__}")
@@ -284,11 +316,11 @@ class PlayShell(cmd.Cmd):
 
     def do_submit(self, arg):
         arg = arg.strip()
-        data = json.loads(Path(arg).read_text()) if arg and Path(arg).exists() else json.loads(arg or "null")
+        data = loads_strict(Path(arg).read_text()) if arg and Path(arg).exists() else loads_strict(arg or "null")
         return self._do({"name": "submit", "arguments": {"findings": data}})
 
     def do_raw(self, arg):
-        return self._do(json.loads(arg))
+        return self._do(loads_strict(arg))
 
     def do_quit(self, arg):
         return True
@@ -396,7 +428,7 @@ def main(argv: list[str] | None = None) -> int:
         return a.fn(a)
     except KeyboardInterrupt:
         return 130
-    except (OSError, RuntimeError, json.JSONDecodeError, ValueError) as e:
+    except (OSError, RuntimeError, KeyError, json.JSONDecodeError, ValueError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
 

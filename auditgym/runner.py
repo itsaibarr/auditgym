@@ -49,19 +49,25 @@ def harden_runner() -> None:
 
 
 def salt_exposures() -> list[int]:
-    """Linux: pids of *other* processes whose environment we (and so a same-user policy) can read and that hold
-    AUDITGYM_SALT, e.g. `docker run --init` (tini as PID 1), an `sh -c` wrapper or `uv run` as the parent."""
-    if not sys.platform.startswith("linux") or not os.environ.get("AUDITGYM_SALT"):
+    """Linux: pids of *other* processes whose environment or command line we (and so a same-user policy) can read
+    and that contain AUDITGYM_SALT or its value, e.g. `docker run --init` (tini as PID 1), an `sh -c 'AUDITGYM_SALT=..'`
+    wrapper or `uv run` as the parent."""
+    salt = os.environ.get("AUDITGYM_SALT")
+    if not sys.platform.startswith("linux") or not salt:
         return []
+    needles = (b"AUDITGYM_SALT=", salt.encode())
     hits = []
     for d in Path("/proc").iterdir():
         if not d.name.isdigit() or int(d.name) == os.getpid():
             continue
-        try:
-            if b"AUDITGYM_SALT=" in (d / "environ").read_bytes():
+        for f in ("environ", "cmdline"):
+            try:
+                data = (d / f).read_bytes()
+            except OSError:
+                continue
+            if any(n in data for n in needles):
                 hits.append(int(d.name))
-        except OSError:
-            continue
+                break
     return hits
 
 
@@ -132,7 +138,7 @@ class ChildPolicy:
     def ask(self, msg: dict, deadline: float):
         """Send a message and read one action line. Returns (action, status) with status ok|timeout|crash|invalid."""
         try:
-            if not self._write((json.dumps(msg, separators=(",", ":")) + "\n").encode(), deadline):
+            if not self._write((json.dumps(msg, separators=(",", ":"), sort_keys=True) + "\n").encode(), deadline):
                 return None, "timeout"
         except (BrokenPipeError, OSError):
             return None, "crash"
@@ -273,13 +279,18 @@ def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root
     out = {}
     for spec in specs:
         d = out_root / (dir_name(spec) if dir_name else spec)
+        if d.parent != out_root or d.name in ("", ".", "..") or d.name.startswith("."):
+            raise ValueError(f"invalid run dir name {d.name!r}")
         tmp = Path(tempfile.mkdtemp(prefix=".tmp-", dir=out_root))
         tmp.chmod(0o755)
-        _write_run(spec, done[spec], episodes, tmp, mode, args, meta)
-        if d.is_symlink() or d.is_file():
-            d.unlink()
-        elif d.exists():
-            shutil.rmtree(d)
+        _write_run(spec, done[spec], episodes, tmp, mode, args, meta, dir_label=d.name)
+        if os.path.lexists(d):  # whatever is there (dir, file, symlink, fifo, unreadable dir): move aside, never follow
+            aside = Path(tempfile.mktemp(prefix=".old-", dir=out_root))
+            os.replace(d, aside)
+            if aside.is_dir() and not aside.is_symlink():
+                shutil.rmtree(aside, ignore_errors=True)
+            else:
+                aside.unlink(missing_ok=True)
         os.replace(tmp, d)
         out[spec] = [er.result for er in done[spec]]
     return out
@@ -290,24 +301,63 @@ def run_policy(spec: str, episodes, out: Path, mode: str = "eval", args=None, po
     return run_policies([spec], episodes, out.parent, mode, args, policy_path, isolate, allow_forks, meta, dir_name=lambda s: out.name)[spec]
 
 
-def _write_run(spec, runs, episodes, out: Path, mode, args, meta) -> None:
+RUN_FILES = ("trajectories.jsonl", "results.jsonl", "summary.json")
+
+
+def _file_sha(p: Path) -> str:
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+
+
+def verify_run(d: Path) -> list[str]:
+    """Integrity of a run dir written by run_policies: regular single-link files whose hashes, dir name and policy
+    match run.json. A policy cannot write bytes, so it cannot forge a matching run.json."""
+    d = Path(d)
+    if d.is_symlink() or not d.is_dir():
+        return [f"{d}: not a regular directory"]
+    probs = []
+    for n in ("run.json", *RUN_FILES):
+        p = d / n
+        if p.is_symlink() or not p.is_file():
+            probs.append(f"{p}: missing or not a regular file")
+        elif p.stat().st_nlink != 1:
+            probs.append(f"{p}: has extra hard links")
+    if probs:
+        return probs
+    meta = json.loads((d / "run.json").read_text())
+    if meta.get("dir") != d.name:
+        probs.append(f"{d}: run.json belongs to run dir {meta.get('dir')!r}")
+    for n, h in (meta.get("files") or {}).items():
+        if n not in RUN_FILES or _file_sha(d / n) != h:
+            probs.append(f"{d / n}: hash does not match run.json")
+    if set(meta.get("files") or {}) != set(RUN_FILES):
+        probs.append(f"{d}: run.json does not list the run files")
+    return probs
+
+
+def _write_run(spec, runs, episodes, out: Path, mode, args, meta, dir_label: str | None = None) -> None:
+    closed_oracle = spec == "oracle" and bool(os.environ.get("AUDITGYM_SALT"))
     with open(out / "trajectories.jsonl", "w", encoding="utf-8", errors="backslashreplace") as f:
         for er in runs:
             for t in er.trajectory:
+                if closed_oracle:  # the oracle's submit IS the closed truth: never persist it
+                    t = {**t, "action": None if t["action"] is None else {"name": t["action"]["name"], "arguments": "<withheld: closed run>"}}
                 f.write(dumps(t) + "\n")
     results = [er.result for er in runs]
     with open(out / "results.jsonl", "w", encoding="utf-8", errors="backslashreplace") as f:
         for r in results:
             f.write(dumps(r) + "\n")
-    (out / "run.json").write_text(json.dumps({
+    (out / "summary.json").write_text(json.dumps(summarize(results), indent=2) + "\n")
+    run_meta = {
         "auditgym_version": __version__, "code_hash": code_hash(), "policy": spec, "policy_args": args or [], "mode": mode,
         "python": platform.python_version(), "platform": platform.platform(),
         "episodes": [ep.episode_id for _, ep in episodes], "splits": sorted({s for s, _ in episodes}),
         "config_hashes": sorted({ep.provenance["config_hash"] for _, ep in episodes}),
         "config_versions": sorted({str(ep.provenance.get("config_version")) for _, ep in episodes}),
         "salt": "custom" if os.environ.get("AUDITGYM_SALT") else "default-open", **(meta or {}),
-    }, indent=2) + "\n")
-    (out / "summary.json").write_text(json.dumps(summarize(results), indent=2) + "\n")
+    }
+    run_meta["dir"] = dir_label or out.name
+    run_meta["files"] = {n: _file_sha(out / n) for n in RUN_FILES}
+    (out / "run.json").write_text(json.dumps(run_meta, indent=2) + "\n")
 
 
 def summarize(results: list[dict]) -> dict:
