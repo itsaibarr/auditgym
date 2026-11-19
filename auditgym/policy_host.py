@@ -17,11 +17,14 @@ import json
 import os
 import sys
 
+try:  # imported before any policy path is added, so a policy file cannot shadow it
+    import resource
+except ImportError:  # non-POSIX
+    resource = None
+
 
 def apply_limits(allow_forks: bool = False) -> None:
-    try:
-        import resource
-    except ImportError:  # non-POSIX
+    if resource is None:
         return
     limits = [(resource.RLIMIT_CPU, 120), (resource.RLIMIT_FSIZE, 0), (resource.RLIMIT_NOFILE, 64)]
     if not allow_forks and hasattr(resource, "RLIMIT_NPROC"):
@@ -66,8 +69,9 @@ def main(argv: list[str]) -> None:
     spec, rest = argv[0], argv[1:]
     paths = [a.split("=", 1)[1] for a in rest if a.startswith("--path=")]
     kwargs = {k: _coerce(v) for k, v in (a.split("=", 1) for a in rest if not a.startswith("--path="))}
-    sys.path[:0] = paths
-    apply_limits(allow)
+    apply_limits(allow)                   # limits first, while sys.path holds only the stdlib and auditgym
+    import auditgym.policies  # noqa: F401  (pre-imports the stdlib modules builtins use)
+    sys.path.extend(paths)                # appended, never prepended: policy files cannot shadow stdlib/auditgym
     policy = load_policy(spec, kwargs)
     out = sys.stdout
     for line in sys.stdin:

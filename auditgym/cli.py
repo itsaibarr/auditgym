@@ -219,6 +219,9 @@ def cmd_replay(a) -> int:
         print(f"FAIL version mismatch: run made with {meta.get('auditgym_version')}, this is {__version__}")
         return 1
     if not (a.episodes or a.seeds or a.config) and a.split == "dev" and isinstance(meta.get("sources"), str):
+        if meta["sources"] == "-" and sys.stdin.isatty():
+            print("this is a closed run: pass the same split on stdin (replay RUN --split - < split.json) and AUDITGYM_SALT")
+            return 1
         a.split = meta["sources"]
     recs = [json.loads(l) for l in (run / "trajectories.jsonl").read_text().splitlines() if l]
     eps = {ep.episode_id: ep for _, ep in _episodes(a)}

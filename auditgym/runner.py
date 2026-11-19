@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import errno
 import hashlib
+import hmac
 import json
 import os
 import platform
@@ -177,7 +178,7 @@ class ChildPolicy:
 
     def __init__(self, spec: str, args: list[str] | None = None, policy_path: str | None = None, allow_forks: bool = False):
         harden_runner()
-        self.tmp = tempfile.TemporaryDirectory(prefix="auditgym-policy-")
+        self.tmp = tempfile.TemporaryDirectory(prefix="auditgym-policy-", ignore_cleanup_errors=True)
         env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "PYTHONHASHSEED": "0", "HOME": self.tmp.name, "LANG": "C.UTF-8",
                "OMP_NUM_THREADS": "1", "OPENBLAS_NUM_THREADS": "1", "MKL_NUM_THREADS": "1"}
         host = [sys.executable, "-I", "-m", "auditgym.policy_host"] + (["--allow-forks"] if allow_forks else [])
@@ -185,7 +186,7 @@ class ChildPolicy:
             argv = host + ["--exec", "--"] + shlex.split(spec[4:])
         else:
             argv = host + [spec, *(args or [])]
-            if policy_path:
+            if policy_path and spec not in BUILTIN:  # builtins never see the policy dir
                 argv.append(f"--path={os.path.abspath(policy_path)}")
         self.proc = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                      cwd=self.tmp.name, env=env, start_new_session=True)
@@ -265,7 +266,10 @@ class ChildPolicy:
                 f.close()
             except OSError:
                 pass
-        self.tmp.cleanup()
+        try:
+            self.tmp.cleanup()
+        except OSError:
+            pass
 
 
 class InProcess:
@@ -377,7 +381,11 @@ def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root
     st = os.stat(out_root) if out_root.is_dir() else None
     if st is None or (st.st_dev, st.st_ino) != (root_st.st_dev, root_st.st_ino):
         raise RuntimeError(f"output root {out_root} was replaced during the run; refusing to write")
-    os.chmod(out_root, root_st.st_mode & 0o7777)  # a same-user policy may have chmod-ed it
+    if (os.stat(out_root).st_mode & 0o7777) != (root_st.st_mode & 0o7777):  # a same-user policy may have chmod-ed it
+        try:
+            os.chmod(out_root, root_st.st_mode & 0o7777)
+        except PermissionError:  # not our dir (e.g. a 777 mount): mkdtemp below fails loudly if it is unusable
+            pass
     out = {}
     for spec in specs:
         d = out_root / (dir_name(spec) if dir_name else spec)
@@ -414,13 +422,20 @@ RUN_FILES = ("trajectories.jsonl", "results.jsonl", "summary.json")
 WITHHELD = "<withheld: closed run>"
 
 
+def _integrity_key() -> bytes | None:
+    salt = os.environ.get("AUDITGYM_SALT")
+    return hmac.new(salt.encode(), b"auditgym-run-integrity-v1", hashlib.sha256).digest() if salt else None
+
+
 def _file_sha(p: Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
 def verify_run(d: Path) -> list[str]:
-    """Integrity of a run dir written by run_policies: regular single-link files whose hashes, dir name and policy
-    match run.json. A policy cannot write bytes, so it cannot forge a matching run.json."""
+    """Integrity of a run dir written by run_policies: regular files whose hashes and dir name match run.json.
+    Plain SHA-256 catches swaps and accidents. Closed runs also store HMACs keyed from the secret salt
+    (`files_hmac`): a same-user process can rewrite bytes in place (mmap), but cannot recompute those without the
+    salt, so with AUDITGYM_SALT set they are verified too."""
     d = Path(d)
     if not os.path.lexists(d):
         return [f"{d}: no such run dir"]
@@ -441,17 +456,26 @@ def verify_run(d: Path) -> list[str]:
             probs.append(f"{d / n}: hash does not match run.json")
     if set(meta.get("files") or {}) != set(RUN_FILES):
         probs.append(f"{d}: run.json does not list the run files")
+    key = _integrity_key()
+    if meta.get("files_hmac") and key:
+        for n in RUN_FILES:
+            mac = hmac.new(key, (d / n).read_bytes(), hashlib.sha256).hexdigest()
+            if not hmac.compare_digest(mac, str(meta["files_hmac"].get(n, ""))):
+                probs.append(f"{d / n}: keyed hash (HMAC) does not match: the file was changed after the run")
+    elif meta.get("files_hmac"):
+        print(f"note: {d}: keyed integrity not verified (set AUDITGYM_SALT to the run's salt to check it)", file=sys.stderr)
     return probs
 
 
 def _write_run(spec, runs, episodes, out: Path, mode, args, meta, dir_label: str | None = None) -> None:
     closed_oracle = spec == "oracle" and bool(os.environ.get("AUDITGYM_SALT"))
-    hashes = {}
+    hashes, blobs = {}, {}
 
     def put(name: str, text: str) -> None:  # hash the bytes we write, never re-read them: a swapped file can't inherit a hash
         data = text.encode("utf-8", "backslashreplace")
         (out / name).write_bytes(data)
         hashes[name] = hashlib.sha256(data).hexdigest()
+        blobs[name] = data
 
     lines = []
     for er in runs:
@@ -473,6 +497,9 @@ def _write_run(spec, runs, episodes, out: Path, mode, args, meta, dir_label: str
     }
     run_meta["dir"] = dir_label or out.name
     run_meta["files"] = hashes
+    key = _integrity_key()
+    if key:
+        run_meta["files_hmac"] = {n: hmac.new(key, data, hashlib.sha256).hexdigest() for n, data in blobs.items()}
     (out / "run.json").write_text(json.dumps(run_meta, indent=2) + "\n")
 
 

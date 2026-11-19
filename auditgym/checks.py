@@ -72,6 +72,8 @@ def _pytest(rep: Report, quick: bool) -> None:
 
 def run_check(quick: bool = False, as_json: bool = False, out: Path | None = None) -> int:
     out = out or ROOT / "runs" / "check"
+    from .runner import harden_runner
+    harden_runner()  # non-dumpable: tests that scan /proc for the salt must not find it in this process
     rep = Report(as_json)
     t_all = time.time()
     try:

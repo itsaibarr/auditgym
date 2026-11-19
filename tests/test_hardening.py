@@ -149,6 +149,13 @@ class Hydra:
                 time.sleep(0.0005)
             os._exit(0)
         return {"name": "submit", "arguments": {"findings": {"episode_id": o["manifest"]["episode_id"], "findings": []}}}
+class CwdSymlink:
+    def reset(self, o, i):
+        cwd = os.getcwd()
+        os.chdir("/")
+        os.rename(cwd, cwd + "x")
+        os.symlink(cwd + "x", cwd)
+        return {"name": "submit", "arguments": {"findings": {"episode_id": o["manifest"]["episode_id"], "findings": []}}}
 class ReadRuns:
     def __init__(self, root=""):
         self.root = root
@@ -676,3 +683,58 @@ def test_reconcile_is_order_invariant():
         a = run_episode("reconcile", ep, "eval", isolate=False).result
         b = run_episode("reconcile", Episode(pub2, truth2, ep.provenance, {}), "eval", isolate=False).result
         assert (a["tp"], a["fp"], a["fn"], a["reward"]) == (b["tp"], b["fp"], b["fn"], b["reward"])
+
+
+def test_policy_dir_cannot_shadow_stdlib_or_reach_builtins(dirty, tmp_path):
+    pol = tmp_path / "pol"
+    pol.mkdir()
+    (pol / "resource.py").write_text("raise ImportError('shadowed')\n")
+    (pol / "random.py").write_text("raise RuntimeError('shadowed random imported')\n")
+    (pol / "evil.py").write_text(EVIL)
+    base = run_policies(["reconcile"], [("dev", dirty)], tmp_path / "a", mode="eval")["reconcile"][0]
+    out = run_policies(["reconcile", "evil:Fork"], [("dev", dirty)], tmp_path / "b", mode="eval", policy_path=str(pol))
+    r = out["reconcile"][0]
+    assert (r["tp"], r["fp"], r["fn"], r["reward"]) == (base["tp"], base["fp"], base["fn"], base["reward"])
+    traj = [json.loads(l) for l in (tmp_path / "b" / "evil:Fork" / "trajectories.jsonl").read_text().splitlines()]
+    assert traj[1]["action"]["forked"] is False or (hasattr(os, "geteuid") and os.geteuid() == 0)
+
+
+def test_closed_outputs_carry_keyed_hashes(monkeypatch, tmp_path, dirty):
+    from auditgym.runner import verify_run
+    monkeypatch.setenv("AUDITGYM_SALT", "k" * 40)
+    run_policies(["reconcile"], [("dev", dirty)], tmp_path, mode="eval")
+    d = tmp_path / "reconcile"
+    meta = json.loads((d / "run.json").read_text())
+    assert set(meta["files_hmac"]) == {"trajectories.jsonl", "results.jsonl", "summary.json"} and verify_run(d) == []
+    # an in-place rewrite that also fixes the plain SHA-256 (what a same-uid process can do) is still caught
+    import hashlib
+    forged = (d / "summary.json").read_text().replace('"mean_return": -', '"mean_return":  ')
+    (d / "summary.json").write_text(forged)
+    meta["files"]["summary.json"] = hashlib.sha256(forged.encode()).hexdigest()
+    (d / "run.json").write_text(json.dumps(meta))
+    assert any("HMAC" in p for p in verify_run(d))
+
+
+def test_policy_replacing_its_cwd_with_a_symlink_does_not_abort(evil, dirty, tmp_path):
+    out = run_policies(["evil:CwdSymlink", "oracle"], [("dev", dirty)], tmp_path, mode="eval", policy_path=evil)
+    assert out["oracle"][0]["reward"] == 1.0 and (tmp_path / "oracle" / "run.json").exists()
+
+
+def test_unowned_out_root_permission_restore_is_best_effort(evil, dirty, tmp_path, monkeypatch):
+    import auditgym.runner as R
+    real = os.chmod
+    def chmod(p, mode, *a, **k):
+        if os.path.abspath(p) == str(tmp_path):
+            raise PermissionError("not owner")
+        return real(p, mode, *a, **k)
+    monkeypatch.setattr(R.os, "chmod", chmod)
+    out = run_policies(["reconcile"], [("dev", dirty)], tmp_path, mode="eval")
+    assert (tmp_path / "reconcile" / "run.json").exists() and out["reconcile"]
+
+
+@pytest.mark.parametrize("split", [[], {"episodes": []}, {"episodes": [{"seed": 1.5}]}, {"episodes": [{"seed": 1}, {"seed": 1}]},
+                                   {"episodes": [{"seed": 1, "config": []}]}])
+def test_malformed_splits_are_rejected(split):
+    from auditgym.splits import split_episodes
+    with pytest.raises(ValueError):
+        split_episodes("-", split)
