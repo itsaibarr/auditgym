@@ -175,7 +175,8 @@ class ReconcilePolicy(ScanPolicy):
             post_in = p0 <= row["timestamp"][:10] < p1
             if ev_in != post_in and d["delivered_at"][:10] >= p0:
                 out.append(finding("period_cutoff", [d["doc_id"]], row["debit_minor"], base, [d["doc_id"], row["row_id"]], "period mismatch"))
-        out.sort(key=lambda f: (f["type"], f["affected_ids"], f["claimed_amount_minor"]))  # order-invariant truncation
+        when = {d["doc_id"]: d.get("issued_at") or d.get("timestamp") or "" for d in invs + pub["payments"]}
+        out.sort(key=lambda f: (f["type"], f["claimed_amount_minor"], sorted(when.get(i, "") for i in f["affected_ids"])))
         return out[:30]
 
 

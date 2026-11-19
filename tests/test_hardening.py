@@ -810,3 +810,37 @@ def test_keyed_integrity_is_fail_closed(monkeypatch, tmp_path, dirty):
     # 3) a wrong salt is reported as such, not only as tampering
     monkeypatch.setenv("AUDITGYM_SALT", "w" * 40)
     assert any("wrong AUDITGYM_SALT" in p for p in verify_run(tmp_path / "oracle"))
+
+
+def test_closed_eval_refuses_untrusted_policy_on_writable_install(evil, dirty, tmp_path, monkeypatch):
+    import auditgym.runner as R
+    monkeypatch.setenv("AUDITGYM_SALT", "k" * 40)
+    monkeypatch.setattr(R, "_install_writable", lambda: True)
+    with pytest.raises(RuntimeError, match="writable"):
+        run_policies(["evil:Learner"], [("dev", dirty)], tmp_path, mode="eval", policy_path=evil)
+    run_policies(["reconcile"], [("dev", dirty)], tmp_path, mode="eval")   # builtins are fine
+
+
+def test_policy_args_cannot_smuggle_a_path_into_builtins(tmp_path):
+    from auditgym.cli import main
+    assert main(["run", "--policy", "expert", "--policy-arg=--path=/tmp", "--split", "dev", "--out", str(tmp_path)]) == 2
+
+
+def test_huge_or_semantically_duplicate_splits_are_rejected():
+    from auditgym.splits import split_episodes
+    with pytest.raises(ValueError):
+        generate(1, {"customers": [2, 100000]})
+    with pytest.raises(ValueError):
+        split_episodes("-", {"episodes": [{"seed": 1}, {"seed": "1"}]})
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="/proc is Linux-only")
+def test_reaper_sees_processes_with_non_utf8_comm():
+    import subprocess
+    from auditgym.runner import _children, reap_leftovers
+    keep = _children()
+    p = subprocess.Popen([sys.executable, "-c", "open('/proc/self/comm','wb').write(b'\\xff\\xfeaudit'); import time; time.sleep(60)"])
+    time.sleep(0.3)
+    reap_leftovers(keep)
+    with pytest.raises(ProcessLookupError):
+        os.kill(p.pid, 0)

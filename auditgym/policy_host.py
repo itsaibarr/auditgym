@@ -49,7 +49,11 @@ def load_policy(spec: str, kwargs: dict):
     mod, _, cls = spec.partition(":")
     if not cls:
         raise SystemExit(f"policy spec must be a builtin name or module:Class, got {spec!r}")
-    return getattr(importlib.import_module(mod), cls)(**kwargs)
+    m = importlib.import_module(mod)
+    if not hasattr(m, cls):
+        raise SystemExit(f"{mod!r} resolved to {getattr(m, '__file__', m)!r}, which has no {cls!r}: if your module shares a "
+                         "name with a standard-library module, rename it")
+    return getattr(m, cls)(**kwargs)
 
 
 def _coerce(v: str):
@@ -67,8 +71,10 @@ def main(argv: list[str]) -> None:
         apply_limits(allow)
         os.execvp(prog[0], prog)
     spec, rest = argv[0], argv[1:]
-    paths = [a.split("=", 1)[1] for a in rest if a.startswith("--path=")]
-    kwargs = {k: _coerce(v) for k, v in (a.split("=", 1) for a in rest if not a.startswith("--path="))}
+    paths = [rest.pop()[len("--path="):]] if rest and rest[-1].startswith("--path=") else []  # runner appends it last
+    if any(a.startswith("--") or "=" not in a for a in rest):
+        raise SystemExit(f"policy args must be key=value, got {rest!r}")
+    kwargs = {k: _coerce(v) for k, v in (a.split("=", 1) for a in rest)}
     apply_limits(allow)                   # limits first, while sys.path holds only the stdlib and auditgym
     import auditgym.policies  # noqa: F401  (pre-imports the stdlib modules builtins use)
     sys.path.extend(paths)                # appended, never prepended: policy files cannot shadow stdlib/auditgym

@@ -145,6 +145,8 @@ def cmd_run(a) -> int:
     from .runner import run_policies, summarize
     episodes = _episodes(a)
     specs = a.policy.split(",")
+    if any(x.startswith("-") or "=" not in x for x in (a.policy_arg or [])):
+        raise ValueError(f"--policy-arg takes key=value pairs, got {a.policy_arg!r}")
     def name(spec: str) -> str:
         n = "".join(c if c.isalnum() or c in "._-" else "_" for c in spec).lstrip(".")
         if not n:
@@ -184,7 +186,10 @@ def cmd_compare(a) -> int:
     for d in a.runs:
         s = json.loads((Path(d) / "summary.json").read_text())
         meta = json.loads((Path(d) / "run.json").read_text())
-        rows.append({"policy": meta["policy"], **(s.get(f"split:{a.split}") if a.split else s["all"])})
+        part = s.get(f"split:{a.split}") if a.split else s["all"]
+        if part is None:
+            raise ValueError(f"{d}: no split {a.split!r} in this run (has: {sorted(k[6:] for k in s if k.startswith('split:'))})")
+        rows.append({"policy": meta["policy"], **part})
     print_table(rows, "comparison", a.format)
     if a.per_type:
         for d in a.runs:

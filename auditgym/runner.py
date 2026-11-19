@@ -81,7 +81,7 @@ def _ppids() -> dict[int, int]:
     for d in Path("/proc").iterdir():
         if d.name.isdigit():
             try:
-                out[int(d.name)] = int((d / "stat").read_text().rsplit(")", 1)[1].split()[1])
+                out[int(d.name)] = int((d / "stat").read_bytes().rsplit(b")", 1)[1].split()[1])  # comm may be any bytes
             except (OSError, ValueError, IndexError):
                 pass
     return out
@@ -370,6 +370,17 @@ def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root
     if isolate and not allow_forks and hasattr(os, "geteuid") and os.geteuid() == 0:
         print("warning: running as root: RLIMIT_NPROC is not enforced for root, so policies can fork. "
               "Run as an unprivileged user (the Docker image does).", file=sys.stderr)
+    custom = [s for s in specs if s != "oracle" and s not in BUILTIN]
+    closed = bool(os.environ.get("AUDITGYM_SALT"))
+    if isolate and custom and _install_writable():
+        msg = (f"the auditgym installation ({_PKG}) is writable by this user, so an untrusted policy could persistently "
+               "modify the grader (e.g. via __pycache__ symlinks). Evaluate third-party policies in the Docker image.")
+        if closed:
+            raise RuntimeError(msg)
+        print(f"warning: {msg}", file=sys.stderr)
+    if isolate and sys.platform.startswith("linux") and os.getpid() != 1 and (allow_forks or closed) and custom:
+        print("warning: the runner is not PID 1, so leftover policy processes are reaped by a /proc walk instead of "
+              "kill(-1); for closed or --allow-forks evaluation use `docker run ... auditgym:1.0.0 run ...`", file=sys.stderr)
     exposed = salt_exposures() if isolate else []
     if exposed:
         raise RuntimeError(f"AUDITGYM_SALT is readable in the environment or command line of other process(es) {exposed[:5]} (e.g. docker --init, "
@@ -439,6 +450,13 @@ WITHHELD = "<withheld: closed run>"
 def _integrity_key() -> bytes | None:
     salt = os.environ.get("AUDITGYM_SALT")
     return hmac.new(salt.encode(), b"auditgym-run-integrity-v1", hashlib.sha256).digest() if salt else None
+
+
+def _install_writable() -> bool:
+    """True if this user could modify the installed package (source files or bytecode caches)."""
+    if os.access(_PKG, os.W_OK):
+        return True
+    return any(os.access(p, os.W_OK) for p in _PKG.rglob("__pycache__"))
 
 
 def _file_sha(p: Path) -> str:

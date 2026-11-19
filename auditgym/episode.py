@@ -80,8 +80,11 @@ def _validate_config(cfg: dict) -> None:
     def rng(name, v):
         if not (isinstance(v, list) and len(v) == 2 and all(isinstance(x, int) and not isinstance(x, bool) for x in v) and 0 <= v[0] <= v[1]):
             raise ValueError(f"{name} must be [min, max] integers with 0 <= min <= max, got {v!r}")
-    for k in ("customers", "opening_invoices", "invoices", "on_account", "expenses"):
+    caps = {"customers": 200, "opening_invoices": 200, "invoices": 2000, "on_account": 200, "expenses": 5000}
+    for k, cap in caps.items():
         rng(k, cfg[k])
+        if cfg[k][1] > cap:
+            raise ValueError(f"{k} max must be <= {cap}, got {cfg[k][1]}")
     for t, spec in cfg["errors"].items():
         rng(f"errors.{t}.count", spec.get("count", [1, 1]))
         if not isinstance(spec.get("on", False), bool):
