@@ -228,14 +228,18 @@ def run_tour(out: str | None = None, quick: bool = False) -> int:
     _write_report(outdir, report, rows)
 
     ag = os.environ.get("AUDITGYM_LAUNCHER", "auditgym")  # how the user started us (npx / run.sh / docker / auditgym)
+    out_arg = "out"
+    if ag.startswith("docker run"):  # results must land on the host: mount a folder
+        ag = ag.replace("docker run --rm -i", 'docker run --rm -i -v "$PWD/out:/out"')
+        out_arg = "/out"
     ex = ROOT / "examples"
     con.print(Panel(
         f"[bold]Подключить свою политику[/] (класс Python с reset/step или любая программа, JSON-строки через stdin/stdout):\n"
         f"  {ag} run --policy my_policy:LookAround --policy-path {ex} --split dev --trust-policies\n"
         f"  {ag} run --policy \"cmd:python3 {ex / 'stdio_policy.py'}\" --split dev --trust-policies\n"
         f"[bold]Свои сиды и параметры[/] (формат: {ROOT / 'configs' / 'closed_example.json'}; split через stdin):\n"
-        f"  {ag} run --policy reconcile,flag_all,random,oracle --split - --public-salt --out out < split.json\n"
-        f"[bold]Сравнить[/]:  {ag} compare out/reconcile out/flag_all   ·   [bold]вручную[/]:  {ag} play   ·   "
+        f"  {ag} run --policy reconcile,flag_all,random,oracle --split - --public-salt --out {out_arg} < split.json\n"
+        f"[bold]Сравнить[/]:  {ag} compare {out_arg}/reconcile {out_arg}/flag_all   ·   [bold]вручную[/]:  {ag} play   ·   "
         f"[bold]схемы для LLM[/]:  {ag} schema\n"
         f"Строгая закрытая проверка — в Docker (README, раздел «Закрытая проверка»). Документация: {ROOT / 'README.md'}",
         title="Что дальше", border_style="cyan"))

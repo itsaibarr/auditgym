@@ -14,7 +14,7 @@
 |---|---|
 | Node.js (`npx`) | `npx -y github:itsaibarr/auditgym` |
 | macOS / Linux (только `curl`) | `curl -fsSL https://raw.githubusercontent.com/itsaibarr/auditgym/master/run.sh \| sh` |
-| Docker (в т.ч. Windows) | `docker build -t auditgym:1.0.0 https://github.com/itsaibarr/auditgym.git && docker run --rm --network none auditgym:1.0.0 tour` |
+| Docker (в т.ч. Windows) | `docker build -t auditgym:1.0.0 https://github.com/itsaibarr/auditgym.git && docker run --rm --network none auditgym:1.0.0 tour` (отчёт на диск: добавьте `-v "$PWD/auditgym-report:/report"` и `--out /report`) |
 
 Команда сама скачивает `uv` (один статичный файл, закреплённая версия) в `~/.cache/auditgym`, а он — Python 3.11 и зависимости из `uv.lock`; систему она не меняет. Первый запуск — 1–2 минуты (загрузка), дальше старт около секунды. Проверено на «чистых» контейнерах `node:22-slim` (нет curl, git, Python) и `debian:bookworm-slim` (только curl).
 
