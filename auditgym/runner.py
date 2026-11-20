@@ -55,7 +55,7 @@ def harden_runner() -> None:
 
 def salt_exposures() -> list[int]:
     """Linux: pids of *other* processes whose environment or command line we (and so a same-user policy) can read
-    and that contain AUDITGYM_SALT or its value, e.g. `docker run --init` (tini as PID 1), an `sh -c 'AUDITGYM_SALT=..'`
+    and that contain the value of AUDITGYM_SALT (the salt in use, not merely the variable name), e.g. `docker run --init` (tini as PID 1), an `sh -c 'AUDITGYM_SALT=..'`
     wrapper or `uv run` as the parent."""
     salt = os.environ.get("AUDITGYM_SALT")
     if not sys.platform.startswith("linux") or not salt:

@@ -15,9 +15,10 @@ fetch() {  # fetch URL to stdout, with timeouts and retries (a stalled download 
   elif command -v wget >/dev/null 2>&1; then wget -q -T 30 -t 3 -O- "$1"
   else say "need curl or wget"; exit 2; fi
 }
-fetch_to() {  # fetch URL $1 to file $2: 3 attempts, resuming, a progress bar on a terminal
+fetch_to() {  # fetch URL $1 to file $2: 3 attempts, a progress bar on a terminal; $3=resume only if the server honours Range
   for k in 1 2 3; do
-    [ "$k" -gt 1 ] && say "download interrupted, attempt $k/3 (resuming) ..."
+    [ "$k" -gt 1 ] && say "download interrupted, attempt $k/3 ..."
+    [ "${3:-}" = resume ] || rm -f "$2"   # codeload (the source tarball) ignores Range: restart instead of failing with curl (33)
     if command -v curl >/dev/null 2>&1; then
       if [ -t 2 ]; then B="-#"; else B="-sS"; fi
       curl -fL "$B" -C - --connect-timeout 20 --speed-limit 1000 --speed-time 60 -o "$2" "$1" && return 0
@@ -72,7 +73,7 @@ if [ -z "$UV" ]; then
   esac
   say "downloading uv 0.12.17 ($T, static binary, ~20 MB) into $HOME_DIR/bin (one time) ..."
   TMP="$HOME_DIR/bin/.dl.$$"; rm -rf "$TMP"; mkdir -p "$TMP"
-  fetch_to "https://github.com/astral-sh/uv/releases/download/0.12.17/uv-$T.tar.gz" "$TMP/uv.tgz" || true
+  fetch_to "https://github.com/astral-sh/uv/releases/download/0.12.17/uv-$T.tar.gz" "$TMP/uv.tgz" resume || true
   GOT=$( (sha256sum "$TMP/uv.tgz" 2>/dev/null || shasum -a 256 "$TMP/uv.tgz") | cut -d' ' -f1)
   if [ "$GOT" != "$S" ] || ! tar -xzf "$TMP/uv.tgz" --strip-components=1 -C "$TMP" 2>/dev/null; then
     rm -rf "$TMP"; say "could not download uv (network drop?); nothing was installed - run the same command again, or use Docker (see README)"; exit 2

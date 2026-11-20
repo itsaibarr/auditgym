@@ -161,7 +161,7 @@ def run_check(quick: bool = False, as_json: bool = False, out: Path | None = Non
         rows = []
         for spec in POLICIES:
             s = {k: v for k, v in summaries[spec].items() if k != "_results"}
-            rows.append({"policy": spec, **s})
+            rows.append({"policy": spec, **s, "failed": sum(s.get("termination", {}).get(t, 0) for t in ("timeout", "policy_crash"))})
         summary = {"ok": rep.ok, "seconds": round(time.time() - t_all, 1), "checks": rep.items, "baselines": rows}
         out.mkdir(parents=True, exist_ok=True)
         (out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")

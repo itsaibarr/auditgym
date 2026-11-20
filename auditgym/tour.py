@@ -293,7 +293,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     integ = [p for v in integ_by.values() for p in v]
     leaks = [p for spec in POLICIES for p in scan_run(outdir / "closed" / spec)]
     tail_ok = rep_ok == rep_n and not integ and not leaks
-    con.print(f"{'[green]✓[/]' if rep_ok == rep_n else '[red]✗[/]'} replay: {rep_ok}/{rep_n} эпизодов побайтно, оценка совпадает")
+    con.print(f"{'[green]✓[/]' if rep_ok == rep_n else '[red]✗[/]'} replay: {rep_ok}/{rep_n} эпизодов совпали побайтно и по оценке")
     con.print(f"{'[green]✓[/]' if not integ else '[red]✗[/]'} целостность: {sum(not v for v in integ_by.values())}/{len(POLICIES)} папок прогона сходятся с run.json (подпись HMAC)")
     con.print(f"{'[green]✓[/]' if not leaks else '[red]✗[/]'} leakscan: {len(leaks)} проблем в наблюдениях закрытых прогонов · {time.time() - t0:.0f} с")
     report["steps"]["replay_integrity_leaks"] = {"ok": tail_ok, "replay": [rep_ok, rep_n], "integrity_problems": integ[:5], "leaks": leaks[:5]}
