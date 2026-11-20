@@ -1,4 +1,4 @@
-"""auditgym command line. Plain text/markdown when piped; Rich tables in a terminal."""
+"""auditgym command line. Tables are drawn with Rich (also when piped); --format md|csv|json for machine-readable output."""
 from __future__ import annotations
 
 import argparse
@@ -13,9 +13,31 @@ from .canon import loads_strict
 from .episode import generate, load_public, write_episode
 from .splits import ROOT, dir_episode, load_split_config, parse_seeds, split_episodes
 
-COLUMNS = [("policy", "policy"), ("episodes", "episodes"), ("micro_precision", "P(micro)"), ("micro_recall", "R(micro)"), ("mean_f1", "F1(avg)"),
-           ("mean_return", "return"), ("mean_return_experimental", "return_exp"), ("mean_steps", "steps"),
-           ("clean_fp_rate", "clean-FP"), ("mean_wall_s", "s/ep"), ("failed", "crash/timeout")]
+COLUMNS = [("policy", "Policy"), ("episodes", "Episodes"), ("micro_precision", "Precision"), ("micro_recall", "Recall"), ("mean_f1", "F1"),
+           ("mean_return", "Reward"), ("mean_return_experimental", "Reward (exp.)"), ("mean_steps", "Steps"),
+           ("clean_fp_rate", "Clean books flagged"), ("mean_wall_s", "Sec/episode"), ("failed", "Crashed/timed out")]
+LEGEND = ("Precision and recall: pooled over all findings · F1: mean per episode · Reward: the case's terminal reward, "
+          "-1 to 1 (2·F1 - 1 minus a small cost per step) · Reward (exp.): reported separately, gives half credit for the right "
+          "error with a wrong amount · Clean books flagged: share of clean episodes where the policy reported any error")
+
+
+def _console():
+    from rich.console import Console
+    import os
+    return Console(highlight=False, width=None if _tty() or os.environ.get("COLUMNS") else 200)  # piped/Docker: no 80-column squeeze
+
+
+def rich_table(title: str, headers: list[str], rows: list[list[str]], legend: str = "", left: int = 1) -> None:
+    from rich.table import Table
+    t = Table(title=title or None, title_justify="left", title_style="bold")
+    for i, h in enumerate(headers):
+        t.add_column(h, justify="left" if i < left else "right")
+    for r in rows:
+        t.add_row(*r)
+    con = _console()
+    con.print(t)
+    if legend:
+        con.print(legend, style="dim", markup=False)
 
 
 def _tty() -> bool:
@@ -31,15 +53,8 @@ def print_table(rows: list[dict], title: str = "", fmt: str = "auto") -> None:
         for r in rows:
             print(",".join(str(r.get(k, "")) for k, _ in COLUMNS))
         return
-    if fmt == "auto" and _tty():
-        from rich.console import Console
-        from rich.table import Table
-        t = Table(title=title or None)
-        for _, h in COLUMNS:
-            t.add_column(h, justify="left" if h == "policy" else "right")
-        for r in rows:
-            t.add_row(*[_fmt(r.get(k), k) for k, _ in COLUMNS])
-        Console().print(t)
+    if fmt == "auto":
+        rich_table(title, [h for _, h in COLUMNS], [[_fmt(r.get(k), k) for k, _ in COLUMNS] for r in rows], LEGEND)
         return
     if title:
         print(f"### {title}\n")
@@ -122,8 +137,9 @@ def _closed_guard(a, how: str) -> None:
             raise ValueError("closed evaluation reads the split from stdin so the policy cannot see seeds in argv or a mounted "
                              "file: docker run -i ... run --policy ... --split - < closed_split.json")
     if not salt:
-        print("warning: AUDITGYM_SALT is not set; non-open episodes use the PUBLIC default salt, so a policy that imports the "
-              "open generator could regenerate their truth.", file=sys.stderr)
+        print("note: AUDITGYM_SALT is not set, so these episodes use the public default salt. That is fine for trying things "
+              "out, but an agent that imports the open generator could rebuild their answer key. For a closed evaluation, "
+              "set a secret salt (see the README).", file=sys.stderr)
 
 
 def cmd_generate(a) -> int:
@@ -200,7 +216,7 @@ def cmd_run(a) -> int:
                   f"see the stderr lines above)", file=sys.stderr)
         if failed == len(res):
             dead.append(spec)
-    print_table(rows, f"AuditGym {a.mode} run", a.format)
+    print_table(rows, f"Results ({a.mode} mode, {len(next(iter(results.values()), []))} episodes per policy)", a.format)
     if dead:
         print(f"FAIL: {', '.join(dead)} crashed or timed out on every episode: these rows are not a score", file=sys.stderr)
         return 1
@@ -227,11 +243,20 @@ def cmd_compare(a) -> int:
             raise ValueError(f"{d}: no split {a.split!r} in this run (has: {sorted(k[6:] for k in s if k.startswith('split:'))})")
         rows.append({"policy": meta["policy"], **part,
                      "failed": sum(part.get("termination", {}).get(t, 0) for t in ("timeout", "policy_crash"))})
-    print_table(rows, "comparison", a.format)
+    print_table(rows, "Comparison of runs", a.format)
     if a.per_type:
+        per = []
         for d in a.runs:
             s = json.loads((Path(d) / "summary.json").read_text())["all"]
-            print(f"\n{Path(d).name} per type: " + ", ".join(f"{t}: tp={v['tp']} fp={v['fp']} fn={v['fn']}" for t, v in sorted(s["per_type"].items())))
+            per += [[Path(d).name, t, str(v["tp"]), str(v["fp"]), str(v["fn"])] for t, v in sorted(s["per_type"].items())]
+        if a.format == "auto":
+            print()
+            rich_table("By error type", ["Run", "Error type", "Found", "False alarms", "Missed"], per,
+                       "Found: planted errors the policy reported · False alarms: reported errors that were not planted · "
+                       "Missed: planted errors it did not report", left=2)
+        else:
+            print(json.dumps([dict(zip(("run", "type", "tp", "fp", "fn"), r)) for r in per], indent=2) if a.format == "json" else
+                  "\n".join(["run,type,tp,fp,fn"] + [",".join(r) for r in per]))
     return 0
 
 
@@ -340,7 +365,11 @@ def cmd_schema(a) -> int:
 
 def cmd_check(a) -> int:
     from .checks import run_check
-    return run_check(quick=a.quick, as_json=a.json, out=Path(a.out))
+    if a.json:
+        return run_check(quick=a.quick, as_json=True, out=Path(a.out))
+    from .tour import working  # a live status line in a terminal, one line per stage otherwise
+    with working(_console(), "Starting the check") as say:
+        return run_check(quick=a.quick, out=Path(a.out), progress=say)
 
 
 # ------------------------------------------------------------------------------------------ play
@@ -415,17 +444,20 @@ def cmd_play(a) -> int:
 
 # ------------------------------------------------------------------------------------------ main
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="auditgym", description="Reproducible RL environment for AI financial auditors.")
+    p = argparse.ArgumentParser(prog="auditgym", description=START.format(v=__version__), formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--version", action="version", version=f"auditgym {__version__}")
-    sub = p.add_subparsers(dest="cmd")
+    sub = p.add_subparsers(dest="cmd", title="all commands", metavar="<command>")
 
-    t = sub.add_parser("tour", help="the jury's whole flow in ~1 minute with a scorecard per case criterion (start here)")
+    def cmdp(name: str, h: str):
+        return sub.add_parser(name, help=h, description=h[0].upper() + h[1:] + ".")
+
+    t = cmdp("tour", "start here: the whole jury check in 1-2.5 minutes, ending with a pass/fail scorecard for each case criterion")
     t.add_argument("--out", help="report directory (default: ./auditgym-report)")
     t.add_argument("--quick", action="store_true", help="fewer fresh seeds in the test step")
     t.add_argument("--split", help="'-' = run steps 2-4 on YOUR split from stdin (AUDITGYM_SALT if set and not visible to a wrapper process such as npx/run.sh, else a random salt)")
     t.set_defaults(fn=cmd_tour)
 
-    spl = sub.add_parser("split", help="print a new closed split (organizers' shape, fresh random seeds): auditgym split > my_split.json")
+    spl = cmdp("split", "write a new hidden split: random seeds in the organizers' format (use: auditgym split > my_split.json)")
     spl.set_defaults(fn=cmd_split)
 
     def source(sp, default="dev"):
@@ -434,13 +466,13 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--seeds", help="seed list/ranges, e.g. 1-20,40 (closed runs: set AUDITGYM_SALT)")
         sp.add_argument("--config", help="config JSON for --seeds (a split file with 'episodes' is used as a split)")
 
-    c = sub.add_parser("check", help="the single verification command (offline). Exit 0 = pass")
+    c = cmdp("check", "the official test suite and baseline checks on their own, offline; exit code 0 means everything passed")
     c.add_argument("--quick", action="store_true", help="fewer fresh seeds (CI smoke)")
     c.add_argument("--json", action="store_true", help="print one JSON document")
     c.add_argument("--out", default=str(ROOT / "runs" / "check"))
     c.set_defaults(fn=cmd_check)
 
-    g = sub.add_parser("generate", help="write episodes for split(s) or one seed")
+    g = cmdp("generate", "write episode folders to disk (the open splits or one seed) so you can look at the data")
     g.add_argument("--split", default="train,dev")
     g.add_argument("--seed", help="integer or string seed")
     g.add_argument("--config")
@@ -448,8 +480,9 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--no-grader", action="store_true", help="do not write _grader/ (truth, provenance)")
     g.set_defaults(fn=cmd_generate)
 
-    r = sub.add_parser("run", help="run policy(ies) on episodes; writes trajectories/results/summary")
-    r.add_argument("--policy", required=True, help="random|reconcile|flag_all|expert|oracle|pkg.module:Class|'cmd:<command>' (comma separated)")
+    r = cmdp("run", "test agents (policies) on a set of episodes: grades every answer and saves trajectories, results and a summary")
+    r.add_argument("--policy", required=True, help="the agent(s) to test, comma separated: a built-in (random, reconcile, flag_all, "
+                   "oracle, expert), your Python class as module:Class, or any program as 'cmd:<command>'")
     source(r)
     r.add_argument("--mode", choices=["eval", "train"], default="eval")
     r.add_argument("--out", default=str(ROOT / "runs"))
@@ -459,32 +492,32 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--trust-policies", action="store_true", help="allow custom policies on a user-writable install (your own code only)")
     r.add_argument("--public-salt", action="store_true", help="allow an eval run of non-open episodes without AUDITGYM_SALT (not a closed evaluation)")
     r.add_argument("--allow-forks", action="store_true", help="let the policy spawn processes/threads (weakens isolation; e.g. node)")
-    r.add_argument("--format", choices=["auto", "md", "json", "csv"], default="auto")
+    r.add_argument("--format", choices=["auto", "md", "json", "csv"], default="auto", help="auto = a table; md, json or csv for files and scripts")
     r.set_defaults(fn=cmd_run)
 
-    cp = sub.add_parser("compare", help="side-by-side table of runs")
+    cp = cmdp("compare", "show finished runs side by side; --per-type adds found / false alarms / missed for each error type")
     cp.add_argument("runs", nargs="+")
     cp.add_argument("--split")
-    cp.add_argument("--per-type", action="store_true")
-    cp.add_argument("--format", choices=["auto", "md", "json", "csv"], default="auto")
+    cp.add_argument("--per-type", action="store_true", help="add a table of found / false alarms / missed per error type")
+    cp.add_argument("--format", choices=["auto", "md", "json", "csv"], default="auto", help="auto = a table; md, json or csv for files and scripts")
     cp.set_defaults(fn=cmd_compare)
 
-    gr = sub.add_parser("grade", help="grade a findings.json against an episode directory (prints the match trace)")
+    gr = cmdp("grade", "grade one findings.json against one episode folder and print how each finding was matched")
     gr.add_argument("--episode", required=True)
     gr.add_argument("--findings", required=True)
     gr.add_argument("--steps", type=int, default=0, help="inspection steps to charge")
     gr.set_defaults(fn=cmd_grade)
 
-    rp = sub.add_parser("replay", help="re-execute a run's actions and diff observations/rewards")
+    rp = cmdp("replay", "re-run a finished run step by step and confirm it reproduces byte for byte and gets the same grade")
     rp.add_argument("run")
     source(rp)
     rp.set_defaults(fn=cmd_replay)
 
-    lk = sub.add_parser("leakscan", help="scan run trajectories for closed-truth leakage")
+    lk = cmdp("leakscan", "scan the trajectories of runs for answer-key data that leaked into what the agent saw")
     lk.add_argument("runs", nargs="+")
     lk.set_defaults(fn=cmd_leakscan)
 
-    pt = sub.add_parser("perturb", help="write a permuted + ID-renamed copy of an episode (paired checks)")
+    pt = cmdp("perturb", "write a copy of an episode with shuffled rows and renamed IDs; its grade must not change (paired checks)")
     pt.add_argument("--episode", required=True)
     pt.add_argument("--out", required=True)
     pt.add_argument("--seed", type=int, default=1)
@@ -492,27 +525,53 @@ def build_parser() -> argparse.ArgumentParser:
     pt.add_argument("--no-shuffle", action="store_true")
     pt.set_defaults(fn=cmd_perturb)
 
-    pl = sub.add_parser("play", help="play an episode by hand (train mode)")
+    pl = cmdp("play", "play one episode by hand, seeing exactly what an agent sees (train mode)")
     source(pl)
     pl.add_argument("--index", type=int, default=0)
     pl.set_defaults(fn=cmd_play)
 
-    sc = sub.add_parser("schema", help="export JSON Schemas (findings, action, tools for LLMs)")
+    sc = cmdp("schema", "export JSON Schemas for actions and findings (ready-made tool definitions for an LLM agent)")
     sc.add_argument("--out", default=str(ROOT / "schema"))
     sc.set_defaults(fn=cmd_schema)
     return p
 
 
-START = """AuditGym {v} — RL-среда и оценщик для ИИ-аудиторов (офлайн, без ключей и GPU)
+START = """AuditGym {v}: an RL environment and grader for AI financial auditors.
+It generates a month of bookkeeping for a made-up company, plants accounting errors in it,
+and grades whether an agent finds them. Runs offline: no network, API keys, GPU or accounts.
 
-  auditgym tour       весь путь жюри за ~1 минуту + итог по критериям кейса   <- начните отсюда
-  auditgym split      новый закрытый split со случайными сидами: auditgym split > my_split.json
-  auditgym tour --split - < my_split.json    тот же тур на ваших сидах
-  auditgym check      единая официальная проверка (exit 0 = всё пройдено)
-  auditgym run        прогнать политику(и): --policy reconcile,flag_all,random,oracle --split dev
-  auditgym compare    таблица P, R, F1, награда, шаги, время по прогонам
-  auditgym play       сыграть эпизод вручную
-  auditgym --help     все команды
+START HERE
+  auditgym tour
+      The whole jury check in 1-2.5 minutes. Ends with a pass/fail scorecard for each case criterion.
+
+CHECK THE GRADER ON SEEDS ONLY YOU KNOW
+  auditgym split > my_split.json
+      Writes a new hidden split: random seeds in the organizers' format
+      (5 clean books, 5 with interacting errors, 10 others).
+  auditgym tour --split - < my_split.json
+      Runs the tour on the episodes from that file instead of its own.
+
+TEST AN AGENT
+  auditgym run --policy reconcile,random --split dev --out out
+      Runs agents on a set of episodes and grades every answer: precision, recall, F1, reward.
+  auditgym compare out/reconcile out/random --per-type
+      Shows finished runs side by side, with found / false alarms / missed per error type.
+  auditgym replay out/reconcile
+      Re-runs a finished run and confirms it reproduces exactly and gets the same grade.
+
+LOOK INSIDE
+  auditgym play      Play one episode by hand, seeing exactly what an agent sees.
+  auditgym check     The official test suite on its own. Exit code 0 means everything passed.
+  auditgym schema    Export JSON Schemas for actions and findings (tool definitions for an LLM agent).
+
+TERMS
+  policy   the agent being tested. Built in: random, reconcile, flag_all and oracle (the case's four
+           reference policies; oracle reads the answer key) and expert (our solver, no answer key).
+  episode  one made-up company's books for one month, clean or with planted errors.
+  split    a list of episode seeds. train and dev are open; a hidden split is kept by you or the organizers.
+  salt     a secret mixed into the seeds so an agent cannot rebuild the answer key from the open generator.
+
+Options of one command: auditgym <command> --help
 """
 
 

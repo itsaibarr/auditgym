@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -28,6 +29,7 @@ from .runner import run_episode, run_policies, summarize
 from .splits import ROOT, split_episodes
 
 POLICIES = ["oracle", "expert", "reconcile", "flag_all", "random"]
+STAGE_TESTS = "Running the test suite (pytest)"
 
 
 class Report:
@@ -45,16 +47,23 @@ class Report:
         return all(i["ok"] for i in self.items)
 
 
-def _pytest(rep: Report, quick: bool) -> None:
+def _pytest(rep: Report, quick: bool, say) -> None:
     t0 = time.time()
     with tempfile.TemporaryDirectory() as td:
         xml = Path(td) / "junit.xml"
         drop = {"AUDITGYM_SALT", "AUDITGYM_SHELL", "AUDITGYM_LAUNCHER", "AUDITGYM_REPORT_HOST"}
         env = {**{k: v for k, v in os.environ.items() if k not in drop}, "AUDITGYM_FRESH_SEEDS": "15" if quick else "40", "PYTHONHASHSEED": "0"}
-        proc = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", str(ROOT / "tests"), f"--junitxml={xml}"],
-                              cwd=ROOT, env=env, capture_output=True, text=True)
+        proc = subprocess.Popen([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", str(ROOT / "tests"), f"--junitxml={xml}"],
+                                cwd=ROOT, env={**env, "PYTHONUNBUFFERED": "1"}, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        lines = []
+        for line in proc.stdout:  # pytest -q ends each line of dots with "[ NN%]": show it while the suite runs
+            lines.append(line)
+            m = re.search(r"\[\s*(\d+)%\]\s*$", line)
+            if m:
+                say(STAGE_TESTS, f"{m.group(1)}% done")
+        proc.wait()
         if not xml.exists():
-            rep.add("tests.collect", False, proc.stdout[-500:] + proc.stderr[-500:], time.time() - t0)
+            rep.add("tests.collect", False, "".join(lines)[-1000:], time.time() - t0)
             return
         groups: dict[str, list] = defaultdict(lambda: [0, 0, []])
         skipped: dict[str, int] = defaultdict(int)
@@ -75,7 +84,9 @@ def _pytest(rep: Report, quick: bool) -> None:
     rep.add("tests.exit_code", proc.returncode == 0, f"pytest exit {proc.returncode}", time.time() - t0)
 
 
-def run_check(quick: bool = False, as_json: bool = False, out: Path | None = None) -> int:
+def run_check(quick: bool = False, as_json: bool = False, out: Path | None = None, progress=None) -> int:
+    """progress(stage, detail="") is called as the check moves on, for a live status line (see tour.working)."""
+    say = progress or (lambda stage, detail="": None)
     out = out or ROOT / "runs" / "check"
     os.environ.pop("AUDITGYM_SALT", None)  # the official check uses open data and its own salts, never a juror's
     from .runner import harden_runner
@@ -83,12 +94,14 @@ def run_check(quick: bool = False, as_json: bool = False, out: Path | None = Non
     rep = Report(as_json)
     t_all = time.time()
     try:
-        _pytest(rep, quick)
+        say(STAGE_TESTS)
+        _pytest(rep, quick, say)
         t0 = time.time()
         episodes = split_episodes("train") + split_episodes("dev")
         rep.add("data.open_splits", len(episodes) == 20, f"{len(episodes)} episodes (10 train + 10 dev)", time.time() - t0)
 
         summaries = {}
+        say("Running the 5 baseline policies on the 20 open episodes, each in an isolated process")
         t0 = time.time()
         all_res = run_policies(POLICIES, episodes, out, mode="eval", meta={"sources": "train,dev"})
         for spec in POLICIES:
@@ -117,6 +130,7 @@ def run_check(quick: bool = False, as_json: bool = False, out: Path | None = Non
                 all(r["termination"] in ("submitted", "step_limit") for s in POLICIES for r in summaries[s]["_results"]),
                 "every baseline episode ends by submit or the 100-step limit")
 
+        say("Scanning the trajectories for leaked answers")
         t0 = time.time()
         leaks = [p for spec in POLICIES for p in scan_run(out / spec)]
         rep.add("isolation.leakscan", not leaks, f"{len(leaks)} problems" + (f": {leaks[:3]}" if leaks else ""), time.time() - t0)
@@ -124,6 +138,7 @@ def run_check(quick: bool = False, as_json: bool = False, out: Path | None = Non
         bad_runs = [p for spec in POLICIES for p in verify_run(out / spec)]
         rep.add("isolation.run_integrity", not bad_runs, "every run dir matches the hashes in its run.json" + (f": {bad_runs[:2]}" if bad_runs else ""))
 
+        say("Paired checks: grading shuffled and renamed copies of each episode")
         t0 = time.time()
         bad = []
         for k, (_, ep) in enumerate(episodes):
@@ -135,6 +150,7 @@ def run_check(quick: bool = False, as_json: bool = False, out: Path | None = Non
                 bad.append(ep.episode_id)
         rep.add("repro.paired_permutation_rename", not bad, f"{20 - len(bad)}/20 paired checks preserve oracle & expert outcomes", time.time() - t0)
 
+        say("Regenerating the episodes and replaying the recorded trajectories")
         t0 = time.time()
         regen = split_episodes("train") + split_episodes("dev")
         same = all(dumps([a.public, a.truth]) == dumps([b.public, b.truth]) for (_, a), (_, b) in zip(episodes, regen))

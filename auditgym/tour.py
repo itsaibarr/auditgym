@@ -30,15 +30,41 @@ from .canon import dumps
 from .episode import Episode, generate
 from .splits import ROOT, load_split_config
 
-CRITERIA = [
-    ("contract", "Контракт и изоляция", 25),
-    ("data", "Данные и эталон", 25),
-    ("reward", "Надёжность награды", 25),
-    ("repro", "Воспроизводимость и обобщение", 15),
-    ("eng", "Инженерия и объяснение", 10),
+CRITERIA = [  # the case's five scoring criteria and their maximum points
+    ("contract", "Contract and isolation", 25),
+    ("data", "Data and answer key", 25),
+    ("reward", "Reward robustness", 25),
+    ("repro", "Reproducibility and generalization", 15),
+    ("eng", "Engineering and explanation", 10),
 ]
 POLICIES = ["random", "reconcile", "flag_all", "oracle", "expert"]
-POLICY_RU = {"random": "random", "reconcile": "reconcile", "flag_all": "flag_all", "oracle": "oracle*", "expert": "expert**"}
+POLICY_LABEL = {"random": "random", "reconcile": "reconcile", "flag_all": "flag_all", "oracle": "oracle*", "expert": "expert**"}
+FOOTNOTE = ("* oracle reads the answer key; it is the grader's reference for a perfect score · ** expert is our own solver: it sees "
+            "only the records an agent sees, never the answer key · Precision and recall are pooled over all findings; F1 is the "
+            "mean per episode (an empty answer on clean books scores F1 = 1)")
+
+
+@contextlib.contextmanager
+def working(con: Console, first: str):
+    """Show what is running now. In a terminal: a spinner, the current stage and the elapsed time on one live line.
+    Elsewhere (Docker without -t, CI logs): one plain line per stage. Yields say(stage, detail="")."""
+    if not con.is_terminal:
+        last = [None]
+
+        def say(stage: str, detail: str = "") -> None:
+            if stage != last[0]:
+                last[0] = stage
+                con.print(f"  ... {stage}", style="dim", markup=False, soft_wrap=True)
+        say(first)
+        yield say
+        return
+    from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+    with Progress(SpinnerColumn(), TextColumn("{task.description}"), TimeElapsedColumn(), console=con, transient=True) as prog:
+        task = prog.add_task(first)
+
+        def say(stage: str, detail: str = "") -> None:
+            prog.update(task, description=stage + (f" [dim]· {detail}[/]" if detail else ""))
+        yield say
 
 
 def _criterion(check_id: str) -> str:
@@ -72,6 +98,11 @@ def _shown(p: Path) -> str:
     """Path as the user sees it: the Windows launcher mounts the host report folder at /report."""
     host = os.environ.get("AUDITGYM_REPORT_HOST")
     return str(p).replace("/report", host, 1) if host and str(p).startswith("/report") else str(p)
+
+
+def _step(con: Console, title: str, question: str, what: str) -> None:
+    con.rule(f"[bold]{title}[/]  [dim]({question})[/]")
+    con.print(what, style="dim", markup=False, soft_wrap=False)
 
 
 def _closed_episodes(split: dict | None = None) -> tuple[list[tuple[str, Episode]], int, dict, str]:
@@ -135,36 +166,42 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     from .perturb import perturb
     from .runner import code_hash, run_episode, run_policies, summarize, verify_run
 
-    con = Console(highlight=False)
+    # bound to the real stdout now: steps below capture sys.stdout, the live progress must not go there. Not a terminal
+    # (Docker without -t, a pipe): 160 columns instead of Rich's 80, so the scorecard is not squeezed.
+    con = Console(file=sys.stdout, highlight=False, width=None if sys.stdout.isatty() or os.environ.get("COLUMNS") else 160)
     t_all = time.time()
     outdir = _out_dir(out)
     report: dict = {"auditgym_version": __version__, "code_hash": code_hash(), "python": platform.python_version(),
                     "platform": platform.platform(), "steps": {}}
     con.print(Panel.fit(
-        f"[bold]AuditGym {__version__}[/] — тур жюри: весь путь проверки за 1–2,5 минуты\n"
-        f"Python {platform.python_version()} · {platform.system()} {platform.machine()} · код {report['code_hash']}\n"
-        "Сеть, GPU, ключи и платные API не нужны. Отчёт: " + _shown(outdir),
+        f"[bold]AuditGym {__version__} · jury tour[/]\n"
+        "Runs the whole verification in 1-2.5 minutes, then prints a pass/fail scorecard for each case criterion.\n"
+        "Fully offline: no network, GPU, API keys or accounts needed.\n"
+        f"[dim]Python {platform.python_version()} · {platform.system()} {platform.machine()} · code hash {report['code_hash']}[/]\n"
+        "Report folder: " + _shown(outdir),
         border_style="cyan"))
     in_docker = os.environ.get("AUDITGYM_LAUNCHER", "").startswith("docker run")
     if in_docker and out is None:
-        con.print("[yellow]Отчёт пишется внутри контейнера и исчезнет вместе с ним. Чтобы сохранить его: mkdir -p auditgym-report && "
+        con.print("[yellow]The report is written inside the container and disappears with it. To keep it: mkdir -p auditgym-report && "
                   "docker run --rm --network none --user \"$(id -u):$(id -g)\" -v \"$PWD/auditgym-report:/report\" auditgym:1.0.0 tour --out /report[/]",
                   soft_wrap=True)
 
     # 1. official check -------------------------------------------------------------------------------------------
-    con.rule("[bold]1/4  Официальная проверка[/]  (auditgym check: pytest, базовые политики, порядки наград, leakscan, парные проверки, replay)")
+    _step(con, "Step 1/4 · Official check", "the same as running `auditgym check` yourself",
+          "Runs the full test suite, then the 5 baseline policies on the 20 open episodes, then checks that rewards come out in "
+          "the required order, scans for leaked answers, and replays the runs.")
     t0 = time.time()
     cap_out, cap_err = io.StringIO(), io.StringIO()
     juror_salt = os.environ.pop("AUDITGYM_SALT", None)  # the official check uses its own open data, never the juror's salt
     try:
-        with con.status("идёт auditgym check …"), contextlib.redirect_stdout(cap_out), contextlib.redirect_stderr(cap_err):
-            rc = run_check(quick=quick, out=outdir / "check")
+        with working(con, "Starting the check") as say, contextlib.redirect_stdout(cap_out), contextlib.redirect_stderr(cap_err):
+            rc = run_check(quick=quick, out=outdir / "check", progress=say)
     finally:
         if juror_salt is not None:
             os.environ["AUDITGYM_SALT"] = juror_salt
     if not (outdir / "check" / "summary.json").exists():
         tail = "\n".join((cap_out.getvalue() + cap_err.getvalue()).strip().splitlines()[-8:])
-        con.print(f"auditgym check не смог выполниться (код {rc}):\n{tail}", style="red", markup=False, soft_wrap=True)
+        con.print(f"auditgym check could not run (exit code {rc}):\n{tail}", style="red", markup=False, soft_wrap=True)
         return 2
     summary = json.loads((outdir / "check" / "summary.json").read_text())
     by_c = {k: [0, 0] for k, _, _ in CRITERIA}
@@ -173,32 +210,37 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
         c[0] += it["ok"]
         c[1] += 1
     tb = Table(show_header=True, header_style="bold")
-    tb.add_column("Критерий кейса")
-    tb.add_column("Проверок пройдено", justify="right")
+    tb.add_column("Case criterion")
+    tb.add_column("Checks passed", justify="right")
     for k, name, _ in CRITERIA:
         p, n = by_c[k]
         tb.add_row(name, f"[{'green' if p == n else 'red'}]{p}/{n}[/]")
     con.print(tb)
     n_ok, n_all = sum(i["ok"] for i in summary["checks"]), len(summary["checks"])
-    con.print(f"{'[green]PASS[/]' if rc == 0 else '[red]FAIL[/]'}: {n_ok}/{n_all} проверок за {time.time() - t0:.0f} с · "
-              f"подробно: {outdir / 'check' / 'summary.md'}")
+    con.print(f"{'[green]PASS[/]' if rc == 0 else '[red]FAIL[/]'}: {n_ok}/{n_all} checks passed in {time.time() - t0:.0f} s · "
+              f"one line per check: {_shown(outdir / 'check' / 'summary.md')}")
     failed = [f"{i['id']}: {i['detail']}"[:160] for i in summary["checks"] if not i["ok"]]
     for f in failed[:10]:
         con.print(f"  FAIL {f}", style="red", markup=False, soft_wrap=True)
     report["steps"]["check"] = {"ok": rc == 0, "passed": n_ok, "total": n_all, "by_criterion": by_c, "failed": failed}
 
     # 2. closed evaluation like the organizers' ---------------------------------------------------------------------
-    src = "ваш split (stdin)" if split is not None else "новые случайные сиды и соль, 5 чистых, 5 со связанными ошибками"
-    con.rule(f"[bold]2/4  Закрытая проверка как у организаторов[/]  ({src})")
+    _step(con, "Step 2/4 · Hidden-episode evaluation", "how the organizers will test agents",
+          ("Uses the episodes from your split (read from stdin). " if split is not None else
+           "Creates 20 new episodes from secret random seeds and a secret salt that are never written down "
+           "(5 with clean books, 5 with errors that interact). ")
+          + "Checks each episode's data independently, then runs the 4 organizer policies and our expert policy on them, "
+            "each in its own isolated process.")
     t0 = time.time()
     if split is not None and os.environ.get("AUDITGYM_SALT"):
         from .runner import salt_exposures
         if salt_exposures():  # npx / run.sh wrappers hold it: a policy could read it, so the tour does not use it
             os.environ.pop("AUDITGYM_SALT", None)
-            con.print("Примечание: AUDITGYM_SALT виден процессу-обёртке (npx / run.sh), политика могла бы его прочитать, "
-                      "поэтому тур взял новую случайную соль. Строгая закрытая проверка с вашей солью — рецепт Docker в README.",
+            con.print("Note: AUDITGYM_SALT is visible to the npx / run.sh wrapper process, so a policy could read it. The tour "
+                      "uses a new random salt instead. For a strict closed evaluation with your own salt, use the Docker recipe "
+                      "in the README.",
                       style="yellow", markup=False, soft_wrap=True)
-    with con.status("генерация эпизодов и прогон 5 политик в изолированных процессах …"), \
+    with working(con, "Generating the episodes and running 5 policies in isolated processes"), \
             contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
         eps, redrawn, used_split, salt = _closed_episodes(split)
         closed = outdir / "closed"
@@ -219,23 +261,24 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
         checks = [verify_episode(ep) for _, ep in eps]
     n_eps = len(eps)
     data_ok_n = sum(c["ok"] for c in checks)
-    con.print(f"{'[green]✓[/]' if data_ok_n == n_eps else '[red]✗[/]'} данные, независимо на каждом из {n_eps} эпизодов: "
-              f"инварианты I1–I8 до ошибок {sum(c['invariants_before'] is not False for c in checks)}/{n_eps} · "
-              f"нарушения = объявленным {sum(c['declared_after'] for c in checks)}/{n_eps} · "
-              f"доказательства воспроизводят суммы {sum(c['evidence'] for c in checks)}/{n_eps} "
-              f"({sum(c['issues'] for c in checks)} ошибок, {sum(1 for c in checks if not c['issues'])} чистых)")
+    con.print(f"{'[green]✓[/]' if data_ok_n == n_eps else '[red]✗[/]'} Data, checked on each of the {n_eps} episodes by code that "
+              f"does not use the generator ({sum(c['issues'] for c in checks)} errors injected, "
+              f"{sum(1 for c in checks if not c['issues'])} clean books):")
+    con.print(f"    books are consistent before errors are injected (invariants I1-I8): {sum(c['invariants_before'] is not False for c in checks)}/{n_eps}\n"
+              f"    the problems found in the books are exactly the declared errors: {sum(c['declared_after'] for c in checks)}/{n_eps}\n"
+              f"    the evidence in the answer key reproduces the amounts: {sum(c['evidence'] for c in checks)}/{n_eps}")
     rows = {}
     tb = Table(show_header=True, header_style="bold")
-    for h, j in (("Политика", "left"), ("P (micro)", "right"), ("R (micro)", "right"), ("F1 (ср.)", "right"), ("Награда", "right"),
-                 ("На чистых", "right"), ("Шаги", "right"), ("с/эпизод", "right")):
-        tb.add_column(h, justify=j, no_wrap=h == "Политика")
+    for h, j in (("Policy", "left"), ("Precision", "right"), ("Recall", "right"), ("F1", "right"), ("Reward", "right"),
+                 ("Reward, clean books", "right"), ("Steps", "right"), ("Sec/episode", "right")):
+        tb.add_column(h, justify=j, no_wrap=h == "Policy")
     for spec in POLICIES:
         s = summarize(res[spec])["all"]
         clean = [r["reward"] for r in res[spec] if r["clean"]]
         rows[spec] = {**{k: s[k] for k in ("micro_precision", "micro_recall", "mean_f1", "mean_return", "mean_steps", "mean_wall_s")},
                       "clean_return": round(sum(clean) / len(clean), 4) if clean else None}
         r = rows[spec]
-        tb.add_row(POLICY_RU[spec], f"{r['micro_precision']:.3f}", f"{r['micro_recall']:.3f}", f"{r['mean_f1']:.3f}",
+        tb.add_row(POLICY_LABEL[spec], f"{r['micro_precision']:.3f}", f"{r['micro_recall']:.3f}", f"{r['mean_f1']:.3f}",
                    f"{r['mean_return']:+.3f}", "—" if r["clean_return"] is None else f"{r['clean_return']:+.3f}",
                    f"{r['mean_steps']:.1f}", f"{r['mean_wall_s']:.3f}")
     con.print(tb)
@@ -244,26 +287,27 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     flag_clean = all(r["reward"] == -1.0 for r in res["flag_all"] if r["clean"])
     dirty = {sp: [r["reward"] for r in res[sp] if not r["clean"]] for sp in POLICIES}  # the ordering check/README assert: books with errors
     dm = {sp: sum(v) / len(v) if v else 0.0 for sp, v in dirty.items()}
-    order_txt = (f"на книгах с ошибками expert {dm['expert']:+.3f} > reconcile {dm['reconcile']:+.3f} ≥ "
+    order_txt = (f"on books with errors expert {dm['expert']:+.3f} > reconcile {dm['reconcile']:+.3f} ≥ "
                  f"max(flag_all {dm['flag_all']:+.3f}, random {dm['random']:+.3f})" if dirty["expert"]
-                 else "порядок не проверялся: в split нет книг с ошибками")
+                 else "order on books with errors not checked: this split has none")
     order_ok = (not any(term_bad.values()) and oracle_one == len(res["oracle"]) and flag_clean
                 and (not dirty["expert"] or dm["expert"] > dm["reconcile"] > max(dm["flag_all"], dm["random"]) - 1e-9))
-    con.print("[dim]* oracle видит эталон (только для оценщика) · ** expert — наш решатель по видимым записям, без эталона · "
-              "P и R — по всем выводам (micro), F1 — среднее по эпизодам (пустой ответ на чистых книгах даёт F1 = 1) · "
-              + ("сиды и соль новые при каждом запуске" + (f", {redrawn} сидов перевыбрано генератором" if redrawn else "")
-                 if split is None else "ваши сиды") + "[/]")
-    con.print(f"{'[green]✓[/]' if order_ok else '[red]✗[/]'} oracle = 1.0 на {oracle_one}/{n_eps}; flag_all = −1 на чистых: "
-              f"{'да' if flag_clean else 'нет'}; {order_txt}; сбоев/тайм-аутов: {sum(term_bad.values())} · {time.time() - t0:.0f} с")
+    con.print(FOOTNOTE + " · " + ("seeds and salt are new on every run" + (f" ({redrawn} seeds redrawn by the generator)" if redrawn else "")
+              if split is None else "seeds from your split"), style="dim", markup=False, soft_wrap=True)
+    con.print(f"{'[green]✓[/]' if order_ok else '[red]✗[/]'} Rewards come out in the required order: oracle = 1.0 on {oracle_one}/{n_eps} · "
+              f"flag_all = −1 on clean books: {'yes' if flag_clean else 'no'} · {order_txt} · "
+              f"crashes/timeouts: {sum(term_bad.values())} · {time.time() - t0:.0f} s")
     report["steps"]["closed_eval"] = {"ok": order_ok and data_ok_n == n_eps, "policies": rows, "episodes": n_eps,
                                       "source": "juror split" if split is not None else "random", "seeds_redrawn": redrawn,
                                       "data_checks": {"ok": data_ok_n, "total": n_eps}, "bad_terminations": term_bad}
 
     # 3. paired checks ---------------------------------------------------------------------------------------------
-    con.rule(f"[bold]3/4  {n_eps} парных проверок[/]  (перестановка строк + смена ID документов и строк на закрытых эпизодах)")
+    _step(con, f"Step 3/4 · {n_eps} paired checks", "does the grade depend on anything it should not?",
+          "Copies each hidden episode with its rows shuffled and its document and line IDs renamed. The grade must not change: "
+          "oracle stays at 1.0 and expert gets exactly the same result.")
     t0 = time.time()
     bad = []
-    with con.status("парные проверки …"):
+    with working(con, "Grading shuffled and renamed copies of each episode"):
         for k, (_, ep) in enumerate(eps):
             pub2, truth2, _ = perturb(ep.public, ep.truth, seed=secrets.randbits(32))
             ep2 = Episode(pub2, truth2, ep.provenance, {})
@@ -272,15 +316,18 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
             if a["reward"] != 1.0 or (b["tp"], b["fp"], b["fn"], b["reward"]) != (b2["tp"], b2["fp"], b2["fn"], b2["reward"]):
                 bad.append(ep.episode_id)
     paired_ok = not bad
-    con.print(f"{'[green]✓[/]' if paired_ok else '[red]✗[/]'} {len(eps) - len(bad)}/{len(eps)}: oracle = 1.0 после смены ID, "
-              f"исход expert не меняется · {time.time() - t0:.0f} с")
+    con.print(f"{'[green]✓[/]' if paired_ok else '[red]✗[/]'} {len(eps) - len(bad)}/{len(eps)} pairs graded the same: oracle still 1.0, "
+              f"expert result unchanged · {time.time() - t0:.0f} s")
     report["steps"]["paired"] = {"ok": paired_ok, "passed": len(eps) - len(bad), "total": len(eps)}
 
     # 4. replay, integrity, leakscan ---------------------------------------------------------------------------------
-    con.rule("[bold]4/4  Повтор, целостность, утечки[/]  (побайтный replay с перепроверкой оценки, хеши run.json, leakscan)")
+    _step(con, "Step 4/4 · Replay, integrity, leaks", "can anyone reproduce and trust these results?",
+          "Re-runs the recorded actions and grades them again, checks every run folder against the signed hashes in its "
+          "run.json, and scans everything the policies saw for leaked answers.")
     t0 = time.time()
     epmap = {ep.episode_id: ep for _, ep in eps}
-    rep_ok, rep_n = _replay_ok(outdir / "closed" / "reconcile", epmap)
+    with working(con, "Replaying the reconcile run and re-grading it"):
+        rep_ok, rep_n = _replay_ok(outdir / "closed" / "reconcile", epmap)
     old = os.environ.get("AUDITGYM_SALT")
     os.environ["AUDITGYM_SALT"] = salt  # verify the keyed signatures of this salted run
     try:
@@ -293,29 +340,29 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     integ = [p for v in integ_by.values() for p in v]
     leaks = [p for spec in POLICIES for p in scan_run(outdir / "closed" / spec)]
     tail_ok = rep_ok == rep_n and not integ and not leaks
-    con.print(f"{'[green]✓[/]' if rep_ok == rep_n else '[red]✗[/]'} replay: {rep_ok}/{rep_n} эпизодов совпали побайтно и по оценке")
-    con.print(f"{'[green]✓[/]' if not integ else '[red]✗[/]'} целостность: {sum(not v for v in integ_by.values())}/{len(POLICIES)} папок прогона сходятся с run.json (подпись HMAC)")
-    con.print(f"{'[green]✓[/]' if not leaks else '[red]✗[/]'} leakscan: {len(leaks)} проблем в наблюдениях закрытых прогонов · {time.time() - t0:.0f} с")
+    con.print(f"{'[green]✓[/]' if rep_ok == rep_n else '[red]✗[/]'} Replay: {rep_ok}/{rep_n} episodes reproduce byte for byte and get the same grade")
+    con.print(f"{'[green]✓[/]' if not integ else '[red]✗[/]'} Integrity: {sum(not v for v in integ_by.values())}/{len(POLICIES)} run folders match the HMAC-signed hashes in run.json")
+    con.print(f"{'[green]✓[/]' if not leaks else '[red]✗[/]'} Leak scan: {len(leaks)} leaked answers in what the policies saw · {time.time() - t0:.0f} s")
     report["steps"]["replay_integrity_leaks"] = {"ok": tail_ok, "replay": [rep_ok, rep_n], "integrity_problems": integ[:5], "leaks": leaks[:5]}
 
     # scorecard -------------------------------------------------------------------------------------------------------
     all_ok = rc == 0 and order_ok and paired_ok and tail_ok and data_ok_n == n_eps
     evidence = {
-        "contract": f"{by_c['contract'][0]}/{by_c['contract'][1]} проверок; сбоев {sum(term_bad.values())}; утечек {len(leaks)}; "
-                    f"целостность {sum(not v for v in integ_by.values())}/{len(POLICIES)}",
-        "data": f"{by_c['data'][0]}/{by_c['data'][1]} проверок; {data_ok_n}/{n_eps} закрытых эпизодов: I1–I8, объявленные, доказательства",
-        "reward": f"{by_c['reward'][0]}/{by_c['reward'][1]} проверок; oracle 1.0 на {oracle_one}/{n_eps}; "
-                  f"flag_all −1 на чистых: {'да' if flag_clean else 'нет'}; {order_txt}",
-        "repro": f"парные {len(eps) - len(bad)}/{len(eps)}; replay {rep_ok}/{rep_n}",
-        "eng": "туром не измеряется: версии и хеши — run.json, траектории — closed/*/trajectories.jsonl, "
-               "разбор сбоев — docs/FAILURE_ANALYSIS.md, ограничения — README",
+        "contract": f"{by_c['contract'][0]}/{by_c['contract'][1]} checks passed; {sum(term_bad.values())} crashes; "
+                    f"{len(leaks)} leaks; {sum(not v for v in integ_by.values())}/{len(POLICIES)} run folders intact",
+        "data": f"{by_c['data'][0]}/{by_c['data'][1]} checks passed; {data_ok_n}/{n_eps} hidden episodes pass all three data checks",
+        "reward": f"{by_c['reward'][0]}/{by_c['reward'][1]} checks passed; oracle 1.0 on {oracle_one}/{n_eps}; "
+                  f"flag_all −1 on clean books: {'yes' if flag_clean else 'no'}; {order_txt}",
+        "repro": f"paired checks {len(eps) - len(bad)}/{len(eps)}; replay {rep_ok}/{rep_n}",
+        "eng": "not measured by the tour. Versions and hashes: run.json · trajectories: closed/*/trajectories.jsonl · "
+               "failure analysis: docs/FAILURE_ANALYSIS.md · limitations: README",
     }
-    con.rule("[bold]Итог по критериям кейса[/]")
+    con.rule("[bold]Scorecard by case criterion[/]")
     tb = Table(show_header=True, header_style="bold")
-    tb.add_column("Критерий")
-    tb.add_column("Макс. баллов")
-    tb.add_column("Статус")
-    tb.add_column("Доказательство")
+    tb.add_column("Criterion")
+    tb.add_column("Max points", justify="right")
+    tb.add_column("Status", justify="center")
+    tb.add_column("Evidence from this run")
     status = {}
     for k, name, pts in CRITERIA:
         ok_k = status[k] = {"contract": by_c[k][0] == by_c[k][1] and not leaks and not integ and not any(term_bad.values()),
@@ -325,47 +372,46 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
                 "eng": None}[k]
         tb.add_row(name, str(pts), "—" if ok_k is None else "[green]✓[/]" if ok_k else "[red]✗[/]", evidence[k])
     con.print(tb)
-    con.print(f"[bold]{'[green]ВСЁ ПРОЙДЕНО[/]' if all_ok else '[red]ЕСТЬ ПРОВАЛЫ[/]'}[/] за {time.time() - t_all:.0f} с · "
-              f"отчёт: {_shown(outdir / 'report.md')}")
+    con.print(f"[bold]{'[green]ALL PASSED[/]' if all_ok else '[red]SOME CHECKS FAILED[/]'}[/] in {time.time() - t_all:.0f} s · "
+              f"report: {_shown(outdir / 'report.md')}")
     report.update({"ok": all_ok, "seconds": round(time.time() - t_all, 1), "evidence": evidence, "status": status})
     _write_report(outdir, report, rows)
 
     steps = next_steps()
     ag0 = os.environ.get("AUDITGYM_LAUNCHER", "auditgym")
     if not ag0.startswith("docker run") and split is None:
-        steps.insert(0, ("Повторить и перепроверить закрытый прогон этого тура (его split и одноразовая соль сохранены в отчёте)",
+        steps.insert(0, ("Re-check this tour's hidden run yourself: replay it and grade it again (its split and one-time salt are saved in the report)",
                          f"AUDITGYM_SALT=$(cat {shlex.quote(str(outdir / 'closed' / 'SALT'))}) {ag0} replay "
                          f"{shlex.quote(str(outdir / 'closed' / 'reconcile'))} --split - < {shlex.quote(str(outdir / 'closed' / 'split.json'))}"))
-    con.rule("[bold]Что дальше[/]  (команды можно копировать как есть)")
+    con.rule("[bold]What you can do next[/]  (every command can be copied as is)")
     for label, cmd in steps:
         con.print(f"[bold]{label}[/]")
         con.print(cmd, soft_wrap=True, markup=False)
     with open(outdir / "report.md", "a", encoding="utf-8") as f:
-        f.write("\n## Что дальше\n\n" + "".join(f"{label}:\n\n```\n{cmd}\n```\n\n" for label, cmd in steps))
+        f.write("\n## What you can do next\n\n" + "".join(f"{label}:\n\n```\n{cmd}\n```\n\n" for label, cmd in steps))
     return 0 if all_ok else 1
 
 
 def _write_report(outdir: Path, report: dict, rows: dict) -> None:
     (outdir / "report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
-    md = [f"# AuditGym {report['auditgym_version']} — отчёт тура жюри: {'PASS' if report['ok'] else 'FAIL'}", "",
-          f"Python {report['python']} · {report['platform']} · код {report['code_hash']} · {report['seconds']} с", "",
-          "## Итог по критериям кейса", "", "| Критерий | Макс. баллов | Статус | Доказательство |", "|---|---|---|---|"]
+    md = [f"# AuditGym {report['auditgym_version']} jury tour: {'ALL PASSED' if report['ok'] else 'SOME CHECKS FAILED'}", "",
+          f"Python {report['python']} · {report['platform']} · code hash {report['code_hash']} · {report['seconds']} s", "",
+          "## Scorecard by case criterion", "", "| Criterion | Max points | Status | Evidence from this run |", "|---|---|---|---|"]
     sym = {True: "✓", False: "✗", None: "—"}
     md += [f"| {name} | {pts} | {sym[report['status'][k]]} | {report['evidence'][k]} |" for k, name, pts in CRITERIA]
     ce = report["steps"]["closed_eval"]
-    md += ["", f"## Закрытая проверка ({ce['episodes']} эпизодов, {'ваш split' if ce.get('source') == 'juror split' else 'новые случайные сиды'})", "",
-           "| Политика | P(micro) | R(micro) | F1(avg) | Награда | На чистых | Шаги | с/эпизод |", "|---|---|---|---|---|---|---|---|"]
-    md += [f"| {POLICY_RU[s]} | {r['micro_precision']:.3f} | {r['micro_recall']:.3f} | {r['mean_f1']:.3f} | {r['mean_return']:+.3f} | "
+    md += ["", f"## Hidden-episode evaluation ({ce['episodes']} episodes, {'your split' if ce.get('source') == 'juror split' else 'new random seeds'})", "",
+           "| Policy | Precision | Recall | F1 | Reward | Reward, clean books | Steps | Sec/episode |", "|---|---|---|---|---|---|---|---|"]
+    md += [f"| {POLICY_LABEL[s]} | {r['micro_precision']:.3f} | {r['micro_recall']:.3f} | {r['mean_f1']:.3f} | {r['mean_return']:+.3f} | "
            f"{'—' if r['clean_return'] is None else format(r['clean_return'], '+.3f')} | {r['mean_steps']:.1f} | {r['mean_wall_s']:.3f} |"
            for s, r in rows.items()]
-    md += ["", "\\* oracle видит эталон (только для оценщика) · \\*\\* expert — наш решатель по видимым записям, без эталона · "
-           "P и R — по всем выводам (micro), F1 — среднее по эпизодам"]
+    md += ["", FOOTNOTE.replace("*", "\\*")]
     st = report["steps"]
-    md += ["", "## Шаги", "", f"- Официальная проверка: {st['check']['passed']}/{st['check']['total']}",
-           f"- Парные проверки: {st['paired']['passed']}/{st['paired']['total']}",
+    md += ["", "## Steps", "", f"- Official check: {st['check']['passed']}/{st['check']['total']} checks passed",
+           f"- Paired checks: {st['paired']['passed']}/{st['paired']['total']}",
            f"- Replay: {st['replay_integrity_leaks']['replay'][0]}/{st['replay_integrity_leaks']['replay'][1]}; "
-           f"проблем целостности: {len(st['replay_integrity_leaks']['integrity_problems'])}; утечек: {len(st['replay_integrity_leaks']['leaks'])}",
-           "", "Прогоны: `check/`, `closed/<политика>/` (trajectories.jsonl, results.jsonl, summary.json, run.json)."]
+           f"integrity problems: {len(st['replay_integrity_leaks']['integrity_problems'])}; leaks: {len(st['replay_integrity_leaks']['leaks'])}",
+           "", "Run folders: `check/`, `closed/<policy>/` (trajectories.jsonl, results.jsonl, summary.json, run.json)."]
     (outdir / "report.md").write_text("\n".join(md) + "\n")
 
 
@@ -376,15 +422,15 @@ def next_steps() -> list[tuple[str, str]]:
         ag = 'mkdir -p out && docker run --rm -i --network none --user "$(id -u):$(id -g)" -v "$PWD/out:/out" auditgym:1.0.0'
         out, trust = "/out", ""
     steps = [
-        ("Новый закрытый split (сиды случайные, формат как у организаторов)", f"{ag} split > my_split.json" if not ag.startswith("mkdir")
+        ("Make your own hidden split: new random seeds in the organizers' format", f"{ag} split > my_split.json" if not ag.startswith("mkdir")
          else "docker run --rm auditgym:1.0.0 split > my_split.json"),
-        ("Тот же тур на ваших сидах", f"{ag} tour --split - --out {out}/tour < my_split.json"),
-        ("Четыре политики организаторов на вашем split", f"{ag} run --policy random,reconcile,flag_all,oracle --split - --public-salt --out {out} < my_split.json"),
-        ("Своя политика: класс Python с reset/step", f"{ag} run --policy my_policy:LookAround --policy-path {shlex.quote(str(ex))} --split dev --out {out}{trust}"),
-        ("Своя политика: любая программа (JSON-строки через stdin/stdout)", f"{ag} run --policy \"cmd:python3 {shlex.quote(str(ex / 'stdio_policy.py'))}\" --split dev --out {out}{trust}"),
-        ("Сравнить прогоны (P, R, F1, награда, шаги, время, падения)", f"{ag} compare {out}/random {out}/reconcile {out}/flag_all {out}/oracle --per-type"),
-        ("Сыграть эпизод вручную", f"{ag} play"),
-        ("JSON Schema выводов и действий (tool-определения для LLM)", f"{ag} schema --out {out}/schema"),
+        ("Run this whole tour on your own split", f"{ag} tour --split - --out {out}/tour < my_split.json"),
+        ("Score the 4 organizer policies on your split", f"{ag} run --policy random,reconcile,flag_all,oracle --split - --public-salt --out {out} < my_split.json"),
+        ("Test your own agent, written as a Python class with reset/step (example: examples/my_policy.py)", f"{ag} run --policy my_policy:LookAround --policy-path {shlex.quote(str(ex))} --split dev --out {out}{trust}"),
+        ("Test your own agent, written as any program that reads and writes JSON lines on stdin/stdout", f"{ag} run --policy \"cmd:python3 {shlex.quote(str(ex / 'stdio_policy.py'))}\" --split dev --out {out}{trust}"),
+        ("Compare runs side by side, broken down by error type", f"{ag} compare {out}/random {out}/reconcile {out}/flag_all {out}/oracle --per-type"),
+        ("Play an episode by hand, seeing exactly what an agent sees", f"{ag} play"),
+        ("Export JSON Schemas for actions and findings (ready-made tool definitions for an LLM agent)", f"{ag} schema --out {out}/schema"),
     ]
     if os.environ.get("AUDITGYM_SHELL") == "powershell":  # Windows launcher: PowerShell syntax
         steps = [(label, _powershell(cmd)) for label, cmd in steps]

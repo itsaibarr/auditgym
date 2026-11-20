@@ -952,7 +952,7 @@ def test_tour_fails_when_a_baseline_crashes(tmp_path, monkeypatch):
     import auditgym.runner as R
     from auditgym.tour import run_tour
 
-    def fake_check(quick=False, as_json=False, out=None):
+    def fake_check(quick=False, as_json=False, out=None, progress=None):
         out.mkdir(parents=True, exist_ok=True)
         (out / "summary.json").write_text(json.dumps({"checks": [{"id": "tests.test_contract::x", "ok": True, "detail": ""}]}))
         return 0
@@ -980,7 +980,7 @@ def test_tour_on_unusual_juror_splits(tmp_path, monkeypatch, profile):
     import auditgym.checks as C
     from auditgym.tour import run_tour
 
-    def fake_check(quick=False, as_json=False, out=None):
+    def fake_check(quick=False, as_json=False, out=None, progress=None):
         out.mkdir(parents=True, exist_ok=True)
         (out / "summary.json").write_text(json.dumps({"checks": [{"id": "tests.test_contract::x", "ok": True, "detail": ""}]}))
         return 0
