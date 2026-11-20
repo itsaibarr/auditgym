@@ -38,7 +38,7 @@ def print_table(rows: list[dict], title: str = "", fmt: str = "auto") -> None:
         for _, h in COLUMNS:
             t.add_column(h, justify="left" if h == "policy" else "right")
         for r in rows:
-            t.add_row(*[_fmt(r.get(k)) for k, _ in COLUMNS])
+            t.add_row(*[_fmt(r.get(k), k) for k, _ in COLUMNS])
         Console().print(t)
         return
     if title:
@@ -46,12 +46,14 @@ def print_table(rows: list[dict], title: str = "", fmt: str = "auto") -> None:
     print("| " + " | ".join(h for _, h in COLUMNS) + " |")
     print("|" + "---|" * len(COLUMNS))
     for r in rows:
-        print("| " + " | ".join(_fmt(r.get(k)) for k, _ in COLUMNS) + " |")
+        print("| " + " | ".join(_fmt(r.get(k), k) for k, _ in COLUMNS) + " |")
 
 
-def _fmt(v) -> str:
+def _fmt(v, key: str = "") -> str:
     if v is None:
         return "-"
+    if key == "mean_steps":
+        return f"{v:.1f}"
     if isinstance(v, float):
         return f"{v:.1f}" if abs(v) > 1.5 else (f"{v:+.3f}" if v < 0 else f"{v:.3f}")
     return str(v)
@@ -177,6 +179,8 @@ def cmd_run(a) -> int:
     source = a.split if not (a.episodes or a.seeds or a.config) else {"episodes": a.episodes, "seeds": a.seeds, "config": a.config}
     from .runner import probe_policy
     for spec in specs:
+        if a.policy_path and not Path(a.policy_path).exists() and (ROOT / a.policy_path).is_dir():
+            a.policy_path = str(ROOT / a.policy_path)  # e.g. `--policy-path examples` via npx: the package's own examples
         why = probe_policy(spec, a.policy_arg, a.policy_path, a.allow_forks)
         if why:
             hint = (f" (put your module in {a.policy_path}; example: examples/my_policy.py)" if a.policy_path else
@@ -221,7 +225,8 @@ def cmd_compare(a) -> int:
         part = s.get(f"split:{a.split}") if a.split else s["all"]
         if part is None:
             raise ValueError(f"{d}: no split {a.split!r} in this run (has: {sorted(k[6:] for k in s if k.startswith('split:'))})")
-        rows.append({"policy": meta["policy"], **part})
+        rows.append({"policy": meta["policy"], **part,
+                     "failed": sum(part.get("termination", {}).get(t, 0) for t in ("timeout", "policy_crash"))})
     print_table(rows, "comparison", a.format)
     if a.per_type:
         for d in a.runs:

@@ -60,7 +60,7 @@ def salt_exposures() -> list[int]:
     salt = os.environ.get("AUDITGYM_SALT")
     if not sys.platform.startswith("linux") or not salt:
         return []
-    needles = (b"AUDITGYM_SALT=", salt.encode())
+    needle = salt.encode()
     hits = []
     for d in Path("/proc").iterdir():
         if not d.name.isdigit() or int(d.name) == os.getpid():
@@ -70,7 +70,7 @@ def salt_exposures() -> list[int]:
                 data = (d / f).read_bytes()
             except OSError:
                 continue
-            if any(n in data for n in needles):
+            if needle in data:
                 hits.append(int(d.name))
                 break
     return hits

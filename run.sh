@@ -15,6 +15,17 @@ fetch() {  # fetch URL to stdout, with timeouts and retries (a stalled download 
   elif command -v wget >/dev/null 2>&1; then wget -q -T 30 -t 3 -O- "$1"
   else say "need curl or wget"; exit 2; fi
 }
+fetch_to() {  # fetch URL $1 to file $2: 3 attempts, resuming, a progress bar on a terminal
+  for k in 1 2 3; do
+    [ "$k" -gt 1 ] && say "download interrupted, attempt $k/3 (resuming) ..."
+    if command -v curl >/dev/null 2>&1; then
+      if [ -t 2 ]; then B="-#"; else B="-sS"; fi
+      curl -fL "$B" -C - --connect-timeout 20 --speed-limit 1000 --speed-time 60 -o "$2" "$1" && return 0
+    elif command -v wget >/dev/null 2>&1; then wget -q -c -T 30 -t 1 -O "$2" "$1" && return 0
+    else say "need curl or wget"; exit 2; fi
+  done
+  return 1
+}
 [ $# -eq 0 ] && set -- tour
 
 if [ "$(uname -s)" != "Darwin" ] && [ "$(uname -s)" != "Linux" ]; then
@@ -30,7 +41,7 @@ fi
 if [ -z "${AUDITGYM_SRC:-}" ]; then
   say "downloading AuditGym ($REF) into $SRC ..."
   TGZ="$SRC.$$.tgz"; NEW="$SRC.new.$$"; rm -rf "$TGZ" "$NEW"
-  case "$URL" in http*) fetch "$URL" > "$TGZ" || true ;; *) cp "$URL" "$TGZ" ;; esac
+  case "$URL" in http*) fetch_to "$URL" "$TGZ" || true ;; *) cp "$URL" "$TGZ" ;; esac
   if [ -f "$SRC/.tarball.cksum" ] && [ "$(cksum < "$TGZ")" = "$(cat "$SRC/.tarball.cksum")" ]; then
     rm -f "$TGZ"   # same version as last time: keep the tree and its environment (no rebuild, works offline)
   else
@@ -61,7 +72,7 @@ if [ -z "$UV" ]; then
   esac
   say "downloading uv 0.12.17 ($T, static binary, ~20 MB) into $HOME_DIR/bin (one time) ..."
   TMP="$HOME_DIR/bin/.dl.$$"; rm -rf "$TMP"; mkdir -p "$TMP"
-  fetch "https://github.com/astral-sh/uv/releases/download/0.12.17/uv-$T.tar.gz" > "$TMP/uv.tgz" || true
+  fetch_to "https://github.com/astral-sh/uv/releases/download/0.12.17/uv-$T.tar.gz" "$TMP/uv.tgz" || true
   GOT=$( (sha256sum "$TMP/uv.tgz" 2>/dev/null || shasum -a 256 "$TMP/uv.tgz") | cut -d' ' -f1)
   if [ "$GOT" != "$S" ] || ! tar -xzf "$TMP/uv.tgz" --strip-components=1 -C "$TMP" 2>/dev/null; then
     rm -rf "$TMP"; say "could not download uv (network drop?); nothing was installed - run the same command again, or use Docker (see README)"; exit 2
@@ -73,8 +84,9 @@ fi
 
 say "running: auditgym $*   (first run downloads Python 3.11 + pinned deps; later runs start in ~1 s)"
 rc=0
-AUDITGYM_LAUNCHER="sh '$SRC/run.sh'" AUDITGYM_SRC="$SRC" "$UV" run --quiet --frozen --extra gym --project "$SRC" auditgym "$@" || rc=$?
+Q="--quiet"; [ -d "$SRC/.venv" ] || Q=""   # first run: show uv's download progress
+AUDITGYM_LAUNCHER="sh '$SRC/run.sh'" AUDITGYM_SRC="$SRC" "$UV" run $Q --frozen --extra gym --project "$SRC" auditgym "$@" || rc=$?
 if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then
-  say "if this was a download error: just run the same command again (finished downloads are kept), or use Docker (see README)"
+  say "exit code 2: if the message above is a network/download error, run the same command again (finished downloads are kept); otherwise it explains what to change"
 fi
 exit "$rc"

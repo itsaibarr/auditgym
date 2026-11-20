@@ -39,8 +39,9 @@ function installUv() {
   const tgz = path.join(bin, `uv-${process.pid}.tar.gz`);
   say(`uv not found: downloading uv ${UV_VERSION} (~20 MB, one time) into ${bin}; nothing else on your system changes ...`);
   // curl honours HTTPS_PROXY; Node https (no proxy support) is the fallback
-  const dl = which("curl") ? spawnSync("curl", ["-fsSL", "--retry", "3", "--connect-timeout", "20", "--speed-limit", "1000", "--speed-time", "60", "-o", tgz, url], { stdio: ["ignore", "inherit", "inherit"] })
-    : which("wget") ? spawnSync("wget", ["-q", "-T", "30", "-t", "3", "-O", tgz, url], { stdio: ["ignore", "inherit", "inherit"] })
+  const bar = process.stderr.isTTY ? "-#" : "-sS";
+  const fetch1 = () => which("curl") ? spawnSync("curl", ["-fL", bar, "-C", "-", "--retry", "3", "--connect-timeout", "20", "--speed-limit", "1000", "--speed-time", "60", "-o", tgz, url], { stdio: ["ignore", "inherit", "inherit"] })
+    : which("wget") ? spawnSync("wget", ["-q", "-c", "-T", "30", "-t", "3", "-O", tgz, url], { stdio: ["ignore", "inherit", "inherit"] })
     : spawnSync(process.execPath, ["-e", `
     const https = require("https"), fs = require("fs");
     const get = (u, n) => https.get(u, { headers: { "user-agent": "auditgym-launcher" }, timeout: 30000 }, (res) => {
@@ -50,6 +51,8 @@ function installUv() {
     }).on("timeout", function () { console.error("download stalled (no data for 30 s)"); this.destroy(); process.exit(1); })
       .on("error", (e) => { console.error(String(e)); process.exit(1); });
     get(process.argv[1], 0);`, url, tgz], { stdio: ["ignore", "inherit", "inherit"] });
+  let dl = fetch1();
+  for (let k = 2; k <= 3 && dl.status !== 0; k++) { say(`download interrupted, attempt ${k}/3 (resuming) ...`); dl = fetch1(); }
   let sum = "";
   try { sum = require("crypto").createHash("sha256").update(fs.readFileSync(tgz)).digest("hex"); } catch {}
   if (dl.status !== 0 || sum !== UV_SHA256[target]) {
@@ -98,10 +101,11 @@ let uv = process.env.AUDITGYM_UV ||
   [path.join(CACHE, "bin", "uv"), which("uv"), path.join(os.homedir(), ".local", "bin", "uv"), path.join(os.homedir(), ".cargo", "bin", "uv")].find((u) => u && exists(u) && runs(u));
 if (!uv) uv = installUv();
 say(`running: auditgym ${args.join(" ")}   (first run downloads Python 3.11 + pinned deps; later runs start in ~1 s)`);
-const r = spawnSync(uv, ["run", "--quiet", "--frozen", "--extra", "gym", "--project", ROOT, "auditgym", ...args], {
+const first = !fs.existsSync(path.join(ROOT, ".venv"));  // first run: show uv's download progress
+const r = spawnSync(uv, ["run", ...(first ? [] : ["--quiet"]), "--frozen", "--extra", "gym", "--project", ROOT, "auditgym", ...args], {
   stdio: "inherit",
   env: { ...process.env, AUDITGYM_LAUNCHER: LAUNCHER },
 });
 if (r.error) { say(String(r.error)); process.exit(2); }
-if (r.status !== 0 && r.status !== 1) say("if this was a download error: just run the same command again (finished downloads are kept), or use Docker (see README)");
+if (r.status !== 0 && r.status !== 1) say("exit code 2: if the message above is a network/download error, run the same command again (finished downloads are kept); otherwise it explains what to change");
 process.exit(r.status === null ? 1 : r.status);

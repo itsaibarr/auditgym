@@ -997,3 +997,32 @@ def test_tour_on_unusual_juror_splits(tmp_path, monkeypatch, profile):
 def test_unknown_policy_arg_for_builtins_is_an_error(tmp_path):
     from auditgym.cli import main
     assert main(["run", "--policy", "random", "--policy-arg", "sed=7", "--split", "dev", "--out", str(tmp_path)]) == 2
+
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="/proc scan is Linux-only")
+def test_salt_exposure_matches_value_not_name(monkeypatch):
+    import subprocess
+    from auditgym.runner import salt_exposures
+    wrapper = subprocess.Popen(["sleep", "30"], env={"AUDITGYM_SALT": "j" * 40, "PATH": os.environ.get("PATH", "")})
+    try:
+        for _ in range(100):  # wait until the exec'd wrapper's environ is in /proc
+            try:
+                if b"jjjj" in open(f"/proc/{wrapper.pid}/environ", "rb").read():
+                    break
+            except OSError:
+                pass
+            time.sleep(0.02)
+        monkeypatch.setenv("AUDITGYM_SALT", "t" * 40)
+        assert wrapper.pid not in salt_exposures()  # the tour's own random salt is not in the wrapper
+        monkeypatch.setenv("AUDITGYM_SALT", "j" * 40)
+        assert wrapper.pid in salt_exposures()
+    finally:
+        wrapper.kill()
+
+
+def test_policy_path_resolves_against_the_package(tmp_path, monkeypatch):
+    from auditgym.cli import main
+    monkeypatch.chdir(tmp_path)
+    assert main(["run", "--policy", "my_policy:LookAround", "--policy-path", "examples", "--split", "dev",
+                 "--out", str(tmp_path / "o"), "--trust-policies"]) == 0

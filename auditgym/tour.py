@@ -80,15 +80,7 @@ def _closed_episodes(split: dict | None = None) -> tuple[list[tuple[str, Episode
     seeds and configs, salted with AUDITGYM_SALT if set, else a random salt. Returns (episodes, seeds redrawn)."""
     from .splits import split_episodes
     if split is not None:
-        salt = os.environ.get("AUDITGYM_SALT")
-        if salt:
-            from .runner import salt_exposures
-            if salt_exposures():  # npx / run.sh wrappers hold it: a policy could read it, so do not use it here
-                print("note: AUDITGYM_SALT is visible to a wrapper process (npx / run.sh); the tour uses a fresh random salt "
-                      "instead. Strict closed evaluation with your salt: the Docker recipe in the README.", file=sys.stderr)
-                os.environ.pop("AUDITGYM_SALT", None)
-                salt = None
-        salt = salt or secrets.token_hex(32)
+        salt = os.environ.get("AUDITGYM_SALT") or secrets.token_hex(32)
         old = os.environ.get("AUDITGYM_SALT")
         os.environ["AUDITGYM_SALT"] = salt  # split_episodes salts non-open splits from the environment
         try:
@@ -199,6 +191,13 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     src = "ваш split (stdin)" if split is not None else "новые случайные сиды и соль, 5 чистых, 5 со связанными ошибками"
     con.rule(f"[bold]2/4  Закрытая проверка как у организаторов[/]  ({src})")
     t0 = time.time()
+    if split is not None and os.environ.get("AUDITGYM_SALT"):
+        from .runner import salt_exposures
+        if salt_exposures():  # npx / run.sh wrappers hold it: a policy could read it, so the tour does not use it
+            os.environ.pop("AUDITGYM_SALT", None)
+            con.print("Примечание: AUDITGYM_SALT виден процессу-обёртке (npx / run.sh), политика могла бы его прочитать, "
+                      "поэтому тур взял новую случайную соль. Строгая закрытая проверка с вашей солью — рецепт Docker в README.",
+                      style="yellow", markup=False, soft_wrap=True)
     with con.status("генерация эпизодов и прогон 5 политик в изолированных процессах …"), \
             contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
         eps, redrawn, used_split, salt = _closed_episodes(split)
@@ -303,7 +302,10 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
                     f"целостность {sum(not v for v in integ_by.values())}/{len(POLICIES)}",
         "data": f"{by_c['data'][0]}/{by_c['data'][1]} проверок; {data_ok_n}/{n_eps} закрытых эпизодов: I1–I8, объявленные, доказательства",
         "reward": f"{by_c['reward'][0]}/{by_c['reward'][1]} проверок; oracle 1.0 на {oracle_one}/{n_eps}; "
-                  f"flag_all −1 на чистых: {'да' if flag_clean else 'нет'}",
+                  f"flag_all −1 на чистых: {'да' if flag_clean else 'нет'}; "
+                  + (f"на книгах с ошибками expert {dm['expert']:+.3f} > reconcile {dm['reconcile']:+.3f} > "
+                     f"max(flag_all {dm['flag_all']:+.3f}, random {dm['random']:+.3f})" if dirty["expert"]
+                     else "порядок не проверялся: в split нет книг с ошибками"),
         "repro": f"парные {len(eps) - len(bad)}/{len(eps)}; replay {rep_ok}/{rep_n}",
         "eng": "туром не измеряется: версии и хеши — run.json, траектории — closed/*/trajectories.jsonl, "
                "разбор сбоев — docs/FAILURE_ANALYSIS.md, ограничения — README",
@@ -352,7 +354,7 @@ def _write_report(outdir: Path, report: dict, rows: dict) -> None:
     md += [f"| {name} | {pts} | {sym[report['status'][k]]} | {report['evidence'][k]} |" for k, name, pts in CRITERIA]
     ce = report["steps"]["closed_eval"]
     md += ["", f"## Закрытая проверка ({ce['episodes']} эпизодов, {'ваш split' if ce.get('source') == 'juror split' else 'новые случайные сиды'})", "",
-           "| Политика | P | R | F1 | Награда | На чистых | Шаги | с/эпизод |", "|---|---|---|---|---|---|---|---|"]
+           "| Политика | P(micro) | R(micro) | F1(avg) | Награда | На чистых | Шаги | с/эпизод |", "|---|---|---|---|---|---|---|---|"]
     md += [f"| {POLICY_RU[s]} | {r['micro_precision']:.3f} | {r['micro_recall']:.3f} | {r['mean_f1']:.3f} | {r['mean_return']:+.3f} | "
            f"{'—' if r['clean_return'] is None else format(r['clean_return'], '+.3f')} | {r['mean_steps']:.1f} | {r['mean_wall_s']:.3f} |"
            for s, r in rows.items()]
