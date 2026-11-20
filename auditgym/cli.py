@@ -363,6 +363,64 @@ def cmd_schema(a) -> int:
     return 0
 
 
+def _yes(v) -> str:
+    return "n/a" if v is None else "yes" if v else "NO"
+
+
+def cmd_datacheck(a) -> int:
+    """The case's data check (section 10): on each episode, the books balance before the errors are injected, the
+    injected books break exactly the declared errors, and every evidence set reproduces its amount from its own records.
+    Uses code that does not import the generator. Episodes from a split are regenerated (so the books before injection
+    exist); episode folders on disk only have the injected books, so that column says n/a."""
+    from .datacheck import verify_episode
+    rows, bad = [], 0
+    for _, ep in _episodes(a):
+        c = verify_episode(ep)
+        bad += not c["ok"]
+        rows.append([ep.episode_id, str(c["issues"]), _yes(c["invariants_before"]), _yes(c["declared_after"]),
+                     _yes(c["evidence"]), "✓ PASS" if c["ok"] else "✗ FAIL"])
+    rich_table("Independent data check (case section 10, 'Data and answer key')",
+               ["Episode", "Errors injected", "Books balance before injection (I1-I8)", "Problems found = declared errors",
+                "Evidence reproduces the amounts", "Result"], rows,
+               "I1 each journal entry balances · I2 trial balance nets to zero · I3 AR control account = subledger · I4 invoice "
+               "lines add up to the total · I5 FX conversion follows the policy · I6 period cut-off · I7 payments are allocated "
+               "in full · I8 each delivery is billed once. Code: auditgym/datacheck.py, auditgym/invariants.py, "
+               "auditgym/recheck.py; none of it imports the generator.")
+    print(f"{len(rows) - bad}/{len(rows)} episodes pass all data checks")
+    return 1 if bad else 0
+
+
+def cmd_paired(a) -> int:
+    """The case's paired checks (section 06/10): each episode is copied with its rows shuffled and its document and line
+    IDs renamed; the oracle must still get reward 1.0 under the new IDs and the expert policy must get exactly the same
+    outcome as on the original."""
+    from .episode import Episode
+    from .perturb import perturb
+    from .runner import harden_runner, run_episode, salt_exposures
+    harden_runner()
+    if salt_exposures():
+        raise RuntimeError("AUDITGYM_SALT is readable by another process (a wrapper such as npx/run.sh or docker --init); "
+                           "run paired checks on a closed split with: docker run -i --rm -e AUDITGYM_SALT=... auditgym:1.0.0 paired --split - < split.json")
+    rows, bad = [], 0
+    for k, (_, ep) in enumerate(_episodes(a)):
+        pub2, truth2, mapping = perturb(ep.public, ep.truth, seed=a.seed + k)
+        ep2 = Episode(pub2, truth2, ep.provenance, {})
+        o2 = run_episode("oracle", ep2, "eval").result
+        e1, e2 = (run_episode("expert", e, "eval", isolate=False).result for e in (ep, ep2))
+        same = all(e1[f] == e2[f] for f in ("tp", "fp", "fn", "reward"))
+        ok = o2["reward"] == 1.0 and same
+        bad += not ok
+        rows.append([ep.episode_id, str(len(mapping)), f"{o2['reward']:+.3f}", f"{e1['reward']:+.3f} → {e2['reward']:+.3f}",
+                     "yes" if same else "NO", "✓ PASS" if ok else "✗ FAIL"])
+    rich_table("Paired checks (case sections 06 and 10, 'Reproducibility and generalization')",
+               ["Episode", "IDs renamed", "Oracle reward on the copy", "Expert reward: original → copy", "Expert outcome unchanged",
+                "Result"], rows,
+               "Each copy has its rows shuffled and its document and line IDs renamed (auditgym/perturb.py). Oracle must stay at "
+               "+1.000 under the new IDs; expert must find exactly the same errors (TP, FP, FN and reward).")
+    print(f"{len(rows) - bad}/{len(rows)} paired checks pass")
+    return 1 if bad else 0
+
+
 def cmd_check(a) -> int:
     from .checks import run_check
     if a.json:
@@ -525,6 +583,17 @@ def build_parser() -> argparse.ArgumentParser:
     pt.add_argument("--no-shuffle", action="store_true")
     pt.set_defaults(fn=cmd_perturb)
 
+    dc = cmdp("datacheck", "check the data of episodes independently: books balance before injection, the injected books break "
+                           "exactly the declared errors, evidence reproduces the amounts (case section 10)")
+    source(dc)
+    dc.set_defaults(fn=cmd_datacheck)
+
+    pc = cmdp("paired", "paired checks: shuffle rows and rename IDs in each episode; oracle must stay at 1.0 and expert must get "
+                        "the same outcome (case sections 06 and 10)")
+    source(pc)
+    pc.add_argument("--seed", type=int, default=1, help="seed of the first shuffle/rename; episode k uses seed + k")
+    pc.set_defaults(fn=cmd_paired)
+
     pl = cmdp("play", "play one episode by hand, seeing exactly what an agent sees (train mode)")
     source(pl)
     pl.add_argument("--index", type=int, default=0)
@@ -550,6 +619,11 @@ CHECK THE GRADER ON SEEDS ONLY YOU KNOW
       (5 clean books, 5 with interacting errors, 10 others).
   auditgym tour --split - < my_split.json
       Runs the tour on the episodes from that file instead of its own.
+  auditgym datacheck --split - < my_split.json
+      Checks each episode's data independently: books balance before the errors, the errors are exactly the declared ones.
+  auditgym paired --split - < my_split.json
+      Shuffles rows and renames IDs in each episode; the oracle must stay at 1.0 and our expert must not change.
+  (The organizers' full process from the case, step by step: README section "Проверка организаторов по разделу 06 кейса".)
 
 TEST AN AGENT
   auditgym run --policy reconcile,random --split dev --out out

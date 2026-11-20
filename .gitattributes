@@ -1,0 +1,7 @@
+# Left out of the GitHub tarball that `npx <codeload url>` and run.sh download, so a juror's first run fetches less.
+# `git clone` and the Docker build (which clones) keep everything; nothing at runtime reads these folders.
+trajectories/ export-ignore
+submission/ export-ignore
+research/ export-ignore
+training/ export-ignore
+.claude/ export-ignore

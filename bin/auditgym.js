@@ -103,7 +103,7 @@ let uv = process.env.AUDITGYM_UV ||
   [path.join(CACHE, "bin", "uv"), which("uv"), path.join(os.homedir(), ".local", "bin", "uv"), path.join(os.homedir(), ".cargo", "bin", "uv")].find((u) => u && exists(u) && runs(u));
 if (!uv) uv = installUv();
 const first = !fs.existsSync(path.join(ROOT, ".venv"));  // first run: show uv's download progress
-say(first ? `first run: installing Python 3.11 and the pinned packages (usually under a minute, up to 3 on a slow network; ` +
+say(first ? `first run: setting up Python 3.11 (downloaded only if missing) and the pinned packages (usually under a minute, up to 3 on a slow network; ` +
             `later runs start in about 1 s), then: auditgym ${args.join(" ")}`
           : `auditgym ${args.join(" ")}`);
 const r = spawnSync(uv, ["run", ...(first ? [] : ["--quiet"]), "--frozen", "--extra", "gym", "--project", ROOT, "auditgym", ...args], {

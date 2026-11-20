@@ -1037,3 +1037,12 @@ def test_direct_check_ignores_juror_salt(monkeypatch, tmp_path):
     with pytest.raises(SystemExit):
         C.run_check(quick=True, out=tmp_path)
     assert "AUDITGYM_SALT" not in os.environ
+
+
+def test_organizer_datacheck_and_paired_commands(capsys):
+    """Case sections 06/10: the jury's independent data check and paired checks are one command each."""
+    from auditgym.cli import main
+    assert main(["datacheck", "--split", "dev"]) == 0
+    assert "10/10 episodes pass all data checks" in capsys.readouterr().out
+    assert main(["paired", "--split", "dev", "--seed", "5"]) == 0
+    assert "10/10 paired checks pass" in capsys.readouterr().out

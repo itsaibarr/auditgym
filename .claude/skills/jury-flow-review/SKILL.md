@@ -72,7 +72,15 @@ above 8 is allowed only if you quote the row from the **longest** wait in which 
 - Three reviewers, same evidence, independent: (a) first-time juror (persona above), (b) jury replica (also uses
   `../genesis-jury/SKILL.md`: does the flow make each of the 5 criteria's evidence obvious?), (c) CLI-UX expert (checks the
   20 rules in `references/A_guidelines.md` and the patterns in `references/B_peers.md` / `C_onboarding.md`, with timestamps).
-- Pass = all three >= 9 in the same round, each with the evidence log. Fix, re-record, re-run the kit, new round.
+- Plus (d) the **organizer harness** reviewer, first in priority: the case (`research/case.pdf` §06, §07, §09, §10) says
+  how the jury really checks a submission, and it is mostly NOT our tour. They build the container, run the one check
+  command offline, plug in THEIR four policies (random with a fixed seed, simple reconciliation, flag-everything,
+  grader-only oracle), run them on THEIR 20 hidden episodes (5 clean, 5 interacting), do 20 paired order/ID checks, verify
+  truth and evidence independently from the records, and read P/R/F1/return/steps/time as diagnostics, within Python 3.11,
+  2 CPU, 4 GB, no network, 60 s per episode, 100 steps. This reviewer follows exactly that process from the README alone,
+  in a clean Docker container (`--network none --cpus 2 --memory 4g`), times each step, and scores with the same caps
+  (a step that needs reading code, guessing a flag or a workaround is a confusion event).
+- Pass = all reviewers >= 9 in the same round, each with the evidence log. Fix, re-record, re-run the kit, new round.
 - Calibration: the rubric must score the pre-fix cold recording (25 s near-static test suite) at <= 6. If a reviewer
   scores it higher, the brief is too lenient; tighten before trusting any 9.
 - Reviewers write only to their own scratch folder, never edit the repo, `~/.claude` or settings, and skip-and-report

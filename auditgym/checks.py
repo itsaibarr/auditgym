@@ -37,7 +37,15 @@ TEST_TOPIC = {  # test file -> what it checks, in the juror's words
     "test_units": "money and currency arithmetic", "test_gymnasium": "the Gymnasium wrapper",
 }
 _COLLECTED = re.compile(r"collected (\d+) items?")
-_RESULT = re.compile(r"^tests/(test_\w+)\.py::.* (PASSED|FAILED|SKIPPED|ERROR|XFAIL|XPASS)\b")
+_RESULT = re.compile(r"^tests/(test_\w+)\.py::(\w+).* (PASSED|FAILED|SKIPPED|ERROR|XFAIL|XPASS)\b")
+# Slow files (they start subprocesses) first: progress that speeds up feels shorter than progress that stalls at the end.
+SLOW_FIRST = ["test_hardening", "test_isolation", "test_preflight_leak", "test_gymnasium", "test_repro"]
+
+
+def _test_files() -> list[str]:
+    files = sorted((ROOT / "tests").glob("test_*.py"), key=lambda f: (f.stem not in SLOW_FIRST,
+                   SLOW_FIRST.index(f.stem) if f.stem in SLOW_FIRST else 0, f.name))
+    return [str(f) for f in files]
 
 
 class Report:
@@ -62,7 +70,7 @@ def _pytest(rep: Report, quick: bool, say) -> None:
         drop = {"AUDITGYM_SALT", "AUDITGYM_SHELL", "AUDITGYM_LAUNCHER", "AUDITGYM_REPORT_HOST"}
         env = {**{k: v for k, v in os.environ.items() if k not in drop}, "AUDITGYM_FRESH_SEEDS": "15" if quick else "40", "PYTHONHASHSEED": "0"}
         # -vv: pyproject's addopts has -q, so this nets one line per test, which we count as the suite runs
-        proc = subprocess.Popen([sys.executable, "-m", "pytest", "-vv", "-p", "no:cacheprovider", str(ROOT / "tests"), f"--junitxml={xml}"],
+        proc = subprocess.Popen([sys.executable, "-m", "pytest", "-vv", "-p", "no:cacheprovider", *_test_files(), f"--junitxml={xml}"],
                                 cwd=ROOT, env={**env, "PYTHONUNBUFFERED": "1", "COLUMNS": "400"}, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT, text=True)
         lines, total, done, failed = [], 0, 0, 0
@@ -72,8 +80,9 @@ def _pytest(rep: Report, quick: bool, say) -> None:
                 total = int(m.group(1))
             elif m := _RESULT.match(line):
                 done += 1
-                failed += m.group(2) in ("FAILED", "ERROR")
-                say(STAGE_TESTS, f"now testing {TEST_TOPIC.get(m.group(1), m.group(1))}" + (f" · {failed} failed" if failed else ""),
+                failed += m.group(3) in ("FAILED", "ERROR")
+                name = m.group(2).removeprefix("test_").replace("_", " ")
+                say(STAGE_TESTS, f"{TEST_TOPIC.get(m.group(1), m.group(1))} · {name[:60]}" + (f" · {failed} failed" if failed else ""),
                     done, total or None)
         proc.wait()
         if not xml.exists():

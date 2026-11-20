@@ -87,7 +87,7 @@ fi
 
 rc=0
 Q="--quiet"; [ -d "$SRC/.venv" ] || Q=""   # first run: show uv's download progress
-if [ -z "$Q" ]; then say "first run: installing Python 3.11 and the pinned packages (usually under a minute, up to 3 on a slow network; later runs start in about 1 s), then: auditgym $*"
+if [ -z "$Q" ]; then say "first run: setting up Python 3.11 (downloaded only if missing) and the pinned packages (usually under a minute, up to 3 on a slow network; later runs start in about 1 s), then: auditgym $*"
 else say "auditgym $*"; fi
 AUDITGYM_LAUNCHER="sh '$SRC/run.sh'" AUDITGYM_SRC="$SRC" "$UV" run $Q --frozen --extra gym --project "$SRC" auditgym "$@" || rc=$?
 if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then
