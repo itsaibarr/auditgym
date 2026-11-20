@@ -24,6 +24,9 @@ LR, GRAD_ACCUM, WARMUP = 1e-4, 8, 3
 TRAIN_SECONDS = float(os.environ.get("GAG_TRAIN_SECONDS", "8400"))   # wall-clock stop; the adapter is saved first
 TRAIN_SAMPLES = int(os.environ.get("GAG_TRAIN_SAMPLES", "240"))      # planned samples (cosine schedule length)
 TRAIN_DEVICES = os.environ.get("GAG_TRAIN_DEVICES", "balanced")      # "single" (GPU0 only) or "balanced" (both GPUs)
+# config 1 used "sample_mean": per-sample mean CE, then /accum (short answers dominate, see README); config 2: "token_sum":
+# summed CE over the accumulation group / number of completion tokens in that group
+LOSS_NORM = os.environ.get("GAG_LOSS_NORM", "sample_mean")
 
 
 def sh(c, check=True):
@@ -214,6 +217,8 @@ def train(spec):
     scaler = torch.amp.GradScaler("cuda")
     causal = m.base_model.model           # the CausalLM with LoRA layers injected
     dev0 = causal.model.embed_tokens.weight.device
+    group_tok = [sum(len(c) for _, c, _ in data[i:i + accum]) for i in range(0, len(data), accum)]
+    log(event="loss_norm", norm=LOSS_NORM)
     t0, step, acc_loss, acc_tok, seen = time.time(), 0, 0.0, 0, 0
     m.train()
     for k, (p, c, seed) in enumerate(data):
@@ -224,7 +229,8 @@ def train(spec):
             logits = causal.lm_head(h.to(causal.lm_head.weight.device)).float()
         tgt = ids[:, len(p):].to(logits.device)
         loss = torch.nn.functional.cross_entropy(logits.reshape(-1, logits.shape[-1]), tgt.reshape(-1))
-        scaler.scale(loss / accum).backward()
+        obj = loss / accum if LOSS_NORM == "sample_mean" else loss * len(c) / group_tok[k // accum]
+        scaler.scale(obj).backward()
         acc_loss += loss.item() * len(c)
         acc_tok += len(c)
         seen += 1
@@ -247,7 +253,7 @@ def train(spec):
     m.save_pretrained(out_dir)
     json.dump({"samples_trained": seen, "optimizer_steps": step, "seconds": round(time.time() - t0),
                "trained_seeds": [s for _, _, s in data[:seen]], "lora": LORA, "lr": LR, "grad_accum": accum,
-               "planned_samples": len(data), "devices": devices, "model": MODEL_REPO, "revision": MODEL_REV},
+               "planned_samples": len(data), "devices": devices, "loss_norm": LOSS_NORM, "model": MODEL_REPO, "revision": MODEL_REV},
               open(f"{out_dir}/train_meta.json", "w"), indent=1)
     log(event="sft_saved", samples=seen, steps=step, s=round(time.time() - t0))
 
@@ -309,6 +315,8 @@ def main():
         generate_sharded(path, sorted(held, key=lambda r: -r["prompt_tokens"])[:2 * GEN_BATCH], "smoke")
     elif MODE == "base":
         generate_sharded(path, held, "base")
+        run_train(path, sft, TRAIN_DEVICES, "main")
+    elif MODE == "sft":
         run_train(path, sft, TRAIN_DEVICES, "main")
     elif MODE == "diag":
         tg = {json.loads(l)["seed"]: json.loads(l)["target"] for l in open(find("heldout_expert_targets.jsonl"))}

@@ -106,7 +106,7 @@ def paired_bootstrap(a: list[float], b: list[float]) -> dict:
 def main():
     held = [json.loads(l) for l in (HERE / "data" / "heldout.jsonl").read_text().splitlines()]
     arms = {}
-    for arm in ("base", "after"):
+    for arm in ("base", "after", "after2"):
         gens = load_gens(arm)
         if gens:
             arms[arm] = grade_arm(held, gens)
@@ -117,12 +117,14 @@ def main():
     for arm, rows in arms.items():
         metrics["arms"][arm] = summary(rows)
         metrics["by_group"][arm] = {g: summary([r for r in rows if r["group"] == g]) for g in ("clean", "single", "multi")}
-    if "base" in arms and "after" in arms:
-        ra, rb = arms["base"], arms["after"]
+    for b_arm, a_arm in (("base", "after"), ("base", "after2"), ("ref_empty", "after2")):
+        if b_arm not in arms or a_arm not in arms:
+            continue
+        ra, rb = arms[b_arm], arms[a_arm]
         assert [r["seed"] for r in ra] == [r["seed"] for r in rb]
-        metrics["paired_after_minus_base"] = {
-            k: paired_bootstrap([r[k] for r in ra], [r[k] for r in rb]) for k in ("reward", "f1")}
-        metrics["paired_after_minus_base_by_group"] = {
+        key = f"paired_{a_arm}_minus_{b_arm}"
+        metrics[key] = {k: paired_bootstrap([r[k] for r in ra], [r[k] for r in rb]) for k in ("reward", "f1")}
+        metrics[key + "_by_group"] = {
             g: paired_bootstrap([r["reward"] for r in ra if r["group"] == g], [r["reward"] for r in rb if r["group"] == g])
             for g in ("clean", "single", "multi")}
     out = HERE / "results"
@@ -137,8 +139,9 @@ def main():
     for arm, s in metrics["arms"].items():
         print(f"| {arm} | {s['n']} | {s['mean_reward']} | {s['mean_f1']} | {s['micro_f1']} | {s['schema_error_rate']} | "
               f"{s['unparseable_rate']} | {s['mean_steps']} | {s['clean_books_false_accusation_rate']} |")
-    if "paired_after_minus_base" in metrics:
-        print(json.dumps(metrics["paired_after_minus_base"], indent=1))
+    for k, v in metrics.items():
+        if k.startswith("paired_") and not k.endswith("_by_group"):
+            print(k, {m: (x["delta_mean"], x["ci95"], (x["wins"], x["ties"], x["losses"])) for m, x in v.items()})
 
 
 if __name__ == "__main__":

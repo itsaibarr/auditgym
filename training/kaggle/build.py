@@ -17,6 +17,10 @@ KERNELS = {  # slug: (env, kernel_sources)
                       "GAG_TRAIN_SECONDS": "15000"}, []),
     "gag-after": ({"GAG_MODE": "after"}, [f"{USER}/gag-base-sft"]),
     "gag-diag": ({"GAG_MODE": "diag"}, [f"{USER}/gag-base-sft"]),
+    # configuration 2 (disclosed follow-up): token-sum loss normalisation, otherwise identical
+    "gag-sft2": ({"GAG_MODE": "sft", "GAG_TRAIN_DEVICES": "balanced", "GAG_TRAIN_SAMPLES": "400", "GAG_TRAIN_SECONDS": "15000",
+                  "GAG_LOSS_NORM": "token_sum"}, []),
+    "gag-after2": ({"GAG_MODE": "after"}, [f"{USER}/gag-sft2"]),
 }
 STUB = '''import glob, os, subprocess, sys
 os.environ.update({env!r})

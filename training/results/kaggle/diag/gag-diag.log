@@ -1,0 +1,53 @@
+[{"stream_name":"stdout","time":1.141345627,"data":"running /kaggle/input/datasets/itsaibarr/gag-train-pkg/gag_kaggle.py {'GAG_MODE': 'diag'}\n"}
+,{"stream_name":"stdout","time":1.268320216,"data":"+ nvidia-smi; python -V\n"}
+,{"stream_name":"stdout","time":1.30348036,"data":"Fri Nov 20 00:31:32 2026       \n"}
+,{"stream_name":"stdout","time":1.303501043,"data":"+-----------------------------------------------------------------------------------------+\n"}
+,{"stream_name":"stdout","time":1.303505782,"data":"| NVIDIA-SMI 580.178.04             Driver Version: 580.178.04     CUDA Version: 13.0     |\n"}
+,{"stream_name":"stdout","time":1.303509829,"data":"+-----------------------------------------+------------------------+----------------------+\n"}
+,{"stream_name":"stdout","time":1.303513738,"data":"| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |\n"}
+,{"stream_name":"stdout","time":1.303517271,"data":"| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |\n"}
+,{"stream_name":"stdout","time":1.30352088,"data":"|                                         |                        |               MIG M. |\n"}
+,{"stream_name":"stdout","time":1.303525384,"data":"|=========================================+========================+======================|\n"}
+,{"stream_name":"stdout","time":1.34801582,"data":"|   0  Tesla T4                       Off |   00000000:00:04.0 Off |                    0 |\n"}
+,{"stream_name":"stdout","time":1.348033306,"data":"| N/A   53C    P8             10W /   70W |       0MiB /  15360MiB |      0%      Default |\n"}
+,{"stream_name":"stdout","time":1.348038004,"data":"|                                         |                        |                  N/A |\n"}
+,{"stream_name":"stdout","time":1.348043325,"data":"+-----------------------------------------+------------------------+----------------------+\n"}
+,{"stream_name":"stdout","time":1.348048669,"data":"|   1  Tesla T4                       Off |   00000000:00:05.0 Off |                    0 |\n"}
+,{"stream_name":"stdout","time":1.348054056,"data":"| N/A   52C    P8             10W /   70W |       0MiB /  15360MiB |      0%      Default |\n"}
+,{"stream_name":"stdout","time":1.348059442,"data":"|                                         |                        |                  N/A |\n"}
+,{"stream_name":"stdout","time":1.3480648419999999,"data":"+-----------------------------------------+------------------------+----------------------+\n"}
+,{"stream_name":"stdout","time":1.348822238,"data":"\n"}
+,{"stream_name":"stdout","time":1.348834938,"data":"+-----------------------------------------------------------------------------------------+\n"}
+,{"stream_name":"stdout","time":1.348839567,"data":"| Processes:                                                                              |\n"}
+,{"stream_name":"stdout","time":1.348844938,"data":"|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |\n"}
+,{"stream_name":"stdout","time":1.348850285,"data":"|        ID   ID                                                               Usage      |\n"}
+,{"stream_name":"stdout","time":1.348855651,"data":"|=========================================================================================|\n"}
+,{"stream_name":"stdout","time":1.350318896,"data":"|  No running processes found                                                             |\n"}
+,{"stream_name":"stdout","time":1.350333391,"data":"+-----------------------------------------------------------------------------------------+\n"}
+,{"stream_name":"stdout","time":1.6829146270000002,"data":"Python 3.13.16\n"}
+,{"stream_name":"stdout","time":1.6833449200000001,"data":"+ pip install -q -U bitsandbytes peft 2\u003e\u00261 | tail -3\n"}
+,{"stream_name":"stdout","time":7.673782265,"data":"+ pip freeze | grep -iE '^(torch|transformers|peft|bitsandbytes|accelerate|safetensors)==' || true\n"}
+,{"stream_name":"stdout","time":8.652826317,"data":"accelerate==1.15.0\n"}
+,{"stream_name":"stdout","time":8.652870421,"data":"bitsandbytes==0.50.2\n"}
+,{"stream_name":"stdout","time":8.652877076,"data":"peft==0.22.0\n"}
+,{"stream_name":"stdout","time":8.652882061,"data":"safetensors==0.8.0\n"}
+,{"stream_name":"stdout","time":8.652886901,"data":"torch==2.11.0+cu130\n"}
+,{"stream_name":"stdout","time":8.652892165,"data":"transformers==5.20.2\n"}
+,{"stream_name":"stdout","time":8.654100905,"data":"+ pip freeze \u003e /kaggle/working/freeze_diag.txt\n"}
+,{"stream_name":"stderr","time":10.895864011,"data":"\rFetching 14 files:   0%|          | 0/14 [00:00\u003c?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":60.834139185,"data":"\rFetching 14 files:   7%|▋         | 1/14 [00:00\u003c00:03,  3.96it/s]\rFetching 14 files:  43%|████▎     | 6/14 [00:00\u003c00:00, 17.20it/s]\rFetching 14 files:  64%|██████▍   | 9/14 [00:00\u003c00:00, 19.87it/s]\rFetching 14 files:  86%|████████▌ | 12/14 [00:02\u003c00:00,  4.17it/s]\rFetching 14 files:  86%|████████▌ | 12/14 [00:20\u003c00:00,  4.17it/s]\rFetching 14 files:  93%|█████████▎| 13/14 [00:50\u003c00:07,  7.55s/it]\rFetching 14 files: 100%|██████████| 14/14 [00:50\u003c00:00,  3.58s/it]\n"}
+,{"stream_name":"stdout","time":60.83433601,"data":"{\"event\": \"downloaded\", \"s\": 51, \"t\": 1795134751.8}\n"}
+,{"stream_name":"stdout","time":61.066620047,"data":"{\"event\": \"start\", \"mode\": \"diag\", \"n_held\": 60, \"n_sft\": 400, \"t\": 1795134752.0}\n"}
+,{"stream_name":"stderr","time":97.011023964,"data":"\rLoading weights:   0%|          | 0/443 [00:00\u003c?, ?it/s]\rLoading weights:   0%|          | 0/443 [00:00\u003c?, ?it/s]\rLoading weights:   0%|          | 1/443 [00:02\u003c19:58,  2.71s/it]\rLoading weights:   0%|          | 1/443 [00:02\u003c21:22,  2.90s/it]\rLoading weights:   4%|▎         | 16/443 [00:02\u003c00:55,  7.75it/s]\rLoading weights:   4%|▍         | 17/443 [00:03\u003c00:54,  7.82it/s]\rLoading weights:  10%|▉         | 43/443 [00:02\u003c00:16, 24.67it/s]\rLoading weights:  10%|█         | 46/443 [00:03\u003c00:15, 25.49it/s]\rLoading weights:  15%|█▍        | 65/443 [00:03\u003c00:09, 40.96it/s]\rLoading weights:  15%|█▍        | 65/443 [00:03\u003c00:09, 38.95it/s]\rLoading weights:  19%|█▊        | 83/443 [00:03\u003c00:06, 55.82it/s]\rLoading weights:  21%|██        | 94/443 [00:03\u003c00:05, 64.83it/s]\rLoading weights:  24%|██▎       | 105/443 [00:03\u003c00:04, 77.28it/s]\rLoading weights:  26%|██▌       | 116/443 [00:03\u003c00:03, 82.44it/s]\rLoading weights:  30%|██▉       | 131/443 [00:03\u003c00:02, 106.32it/s]\rLoading weights:  31%|███       | 137/443 [00:03\u003c00:03, 99.52it/s]\rLoading weights:  35%|███▍      | 155/443 [00:03\u003c00:02, 130.58it/s]\rLoading weights:  35%|███▌      | 157/443 [00:03\u003c00:02, 112.68it/s]\rLoading weights:  40%|███▉      | 177/443 [00:03\u003c00:01, 148.62it/s]\rLoading weights:  40%|███▉      | 176/443 [00:03\u003c00:02, 123.07it/s]\rLoading weights:  45%|████▍     | 199/443 [00:03\u003c00:01, 156.13it/s]\rLoading weights:  45%|████▌     | 200/443 [00:03\u003c00:01, 143.68it/s]\rLoading weights:  51%|█████     | 225/443 [00:03\u003c00:01, 175.61it/s]\rLoading weights:  50%|████▉     | 221/443 [00:04\u003c00:01, 157.09it/s]\rLoading weights:  58%|█████▊    | 255/443 [00:03\u003c00:00, 201.64it/s]\rLoading weights: 100%|██████████| 443/443 [00:04\u003c00:00, 110.54it/s]\n"}
+,{"stream_name":"stderr","time":97.020572566,"data":"\rLoading weights:  91%|█████████ | 402/443 [00:04\u003c00:00, 557.65it/s]\rLoading weights: 100%|██████████| 443/443 [00:04\u003c00:00, 107.42it/s]\n"}
+,{"stream_name":"stdout","time":1690.561675858,"data":"{\"event\": \"diag_done\", \"tag\": \"base\", \"n\": 80, \"t\": 1795136381.5}\n"}
+,{"stream_name":"stdout","time":1856.954526489,"data":"{\"event\": \"diag_done\", \"tag\": \"after\", \"n\": 80, \"t\": 1795136547.9}\n"}
+,{"stream_name":"stdout","time":1858.479689508,"data":"{\"event\": \"diag_exit\", \"codes\": [0, 0], \"t\": 1795136549.4}\n"}
+,{"stream_name":"stdout","time":1858.479952449,"data":"{\"event\": \"end\", \"mode\": \"diag\", \"t\": 1795136549.4}\n"}
+,{"stream_name":"stderr","time":1860.576272051,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":1860.576319051,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":1860.767941093,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":1860.767966967,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":1861.488679259,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":1862.372026243,"data":"[NbConvertApp] Writing 274367 bytes to __results__.html\n"}
+]
