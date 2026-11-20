@@ -38,33 +38,58 @@ CRITERIA = [  # the case's five scoring criteria and their maximum points
     ("eng", "Engineering and explanation", 10),
 ]
 POLICIES = ["random", "reconcile", "flag_all", "oracle", "expert"]
-POLICY_LABEL = {"random": "random", "reconcile": "reconcile", "flag_all": "flag_all", "oracle": "oracle*", "expert": "expert**"}
-FOOTNOTE = ("* oracle reads the answer key; it is the grader's reference for a perfect score · ** expert is our own solver: it sees "
-            "only the records an agent sees, never the answer key · Precision and recall are pooled over all findings; F1 is the "
-            "mean per episode (an empty answer on clean books scores F1 = 1)")
+POLICY_LABEL = {p: p for p in POLICIES}
+ROLE = {  # what each row is for, so the table reads without a footnote
+    "random": "floor: random actions", "reconcile": "simple rule-based baseline", "flag_all": "floor: accuses everything",
+    "oracle": "install check: reads the answer key, must be +1.000", "expert": "our solver: sees only what an agent sees",
+}
+FOOTNOTE = ("Reward: the case's score for one episode, from -1 to +1, higher is better · Precision and recall: pooled over all "
+            "findings · F1: mean per episode (an empty answer on clean books scores F1 = 1)")
 
 
 @contextlib.contextmanager
-def working(con: Console, first: str):
-    """Show what is running now. In a terminal: a spinner, the current stage and the elapsed time on one live line.
-    Elsewhere (Docker without -t, CI logs): one plain line per stage. Yields say(stage, detail="")."""
+def working(con: Console, first: str | None = None):
+    """Show what is running, as a checklist (like Docker BuildKit): each stage gets its own line with a spinner, a moving
+    bar, a count when the total is known, what it is doing right now and its elapsed time; a finished stage turns into a
+    ✓ line that keeps its time. Not a terminal (Docker without -t, CI logs): one plain line per stage.
+    Yields say(stage, detail="", done=None, total=None); a new stage text starts a new line."""
     if not con.is_terminal:
         last = [None]
 
-        def say(stage: str, detail: str = "") -> None:
+        def say(stage: str, detail: str = "", done: int | None = None, total: int | None = None) -> None:
             if stage != last[0]:
                 last[0] = stage
                 con.print(f"  ... {stage}", style="dim", markup=False, soft_wrap=True)
-        say(first)
+        if first:
+            say(first)
         yield say
         return
-    from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
-    with Progress(SpinnerColumn(), TextColumn("{task.description}"), TimeElapsedColumn(), console=con, transient=True) as prog:
-        task = prog.add_task(first)
+    from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+    cols = (SpinnerColumn(finished_text="[green]✓[/]"), TextColumn("{task.description}"), BarColumn(bar_width=20),
+            TextColumn("{task.fields[count]}"), TimeElapsedColumn(), TextColumn("[dim]{task.fields[detail]}"))
+    with Progress(*cols, console=con) as prog:
+        cur: dict = {"id": None, "stage": None}
 
-        def say(stage: str, detail: str = "") -> None:
-            prog.update(task, description=stage + (f" [dim]· {detail}[/]" if detail else ""))
-        yield say
+        def close() -> None:
+            if cur["id"] is not None:
+                t = next(t for t in prog.tasks if t.id == cur["id"])
+                prog.update(cur["id"], total=t.total or 1, completed=t.total or 1, detail="",
+                            count=f"{int(t.total)}/{int(t.total)}" if t.total else "")
+
+        def say(stage: str, detail: str = "", done: int | None = None, total: int | None = None) -> None:
+            if stage != cur["stage"]:
+                close()
+                cur["stage"], cur["id"] = stage, prog.add_task(stage, total=None, count="", detail="")
+            kw: dict = {"detail": detail}
+            if total:
+                kw.update(total=total, completed=min(done or 0, total), count=f"{done}/{total}")
+            prog.update(cur["id"], **kw)
+        if first:
+            say(first)
+        try:
+            yield say
+        finally:
+            close()
 
 
 def _criterion(check_id: str) -> str:
@@ -176,7 +201,8 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     con.print(Panel.fit(
         f"[bold]AuditGym {__version__} · jury tour[/]\n"
         "Runs the whole verification in 1-2.5 minutes, then prints a pass/fail scorecard for each case criterion.\n"
-        "Fully offline: no network, GPU, API keys or accounts needed.\n"
+        "Fully offline: no network, GPU, API keys or accounts needed. Ctrl-C stops it at any time.\n"
+        "4 steps: official check → hidden-episode evaluation → paired checks → replay and leak scan → scorecard\n"
         f"[dim]Python {platform.python_version()} · {platform.system()} {platform.machine()} · code hash {report['code_hash']}[/]\n"
         "Report folder: " + _shown(outdir),
         border_style="cyan"))
@@ -189,12 +215,12 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     # 1. official check -------------------------------------------------------------------------------------------
     _step(con, "Step 1/4 · Official check", "the same as running `auditgym check` yourself",
           "Runs the full test suite, then the 5 baseline policies on the 20 open episodes, then checks that rewards come out in "
-          "the required order, scans for leaked answers, and replays the runs.")
+          "the required order, scans for leaked answers, and replays the runs. Usually 30-60 s.")
     t0 = time.time()
     cap_out, cap_err = io.StringIO(), io.StringIO()
     juror_salt = os.environ.pop("AUDITGYM_SALT", None)  # the official check uses its own open data, never the juror's salt
     try:
-        with working(con, "Starting the check") as say, contextlib.redirect_stdout(cap_out), contextlib.redirect_stderr(cap_err):
+        with working(con) as say, contextlib.redirect_stdout(cap_out), contextlib.redirect_stderr(cap_err):
             rc = run_check(quick=quick, out=outdir / "check", progress=say)
     finally:
         if juror_salt is not None:
@@ -217,8 +243,8 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
         tb.add_row(name, f"[{'green' if p == n else 'red'}]{p}/{n}[/]")
     con.print(tb)
     n_ok, n_all = sum(i["ok"] for i in summary["checks"]), len(summary["checks"])
-    con.print(f"{'[green]PASS[/]' if rc == 0 else '[red]FAIL[/]'}: {n_ok}/{n_all} checks passed in {time.time() - t0:.0f} s · "
-              f"one line per check: {_shown(outdir / 'check' / 'summary.md')}")
+    con.print(f"{'[green]✓ Step 1 of 4 passed[/]' if rc == 0 else '[red]✗ Step 1 of 4 failed[/]'}: {n_ok}/{n_all} checks passed "
+              f"in {time.time() - t0:.0f} s · one line per check: {_shown(outdir / 'check' / 'summary.md')}")
     failed = [f"{i['id']}: {i['detail']}"[:160] for i in summary["checks"] if not i["ok"]]
     for f in failed[:10]:
         con.print(f"  FAIL {f}", style="red", markup=False, soft_wrap=True)
@@ -230,7 +256,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
            "Creates 20 new episodes from secret random seeds and a secret salt that are never written down "
            "(5 with clean books, 5 with errors that interact). ")
           + "Checks each episode's data independently, then runs the 4 organizer policies and our expert policy on them, "
-            "each in its own isolated process.")
+            "each in its own isolated process. Usually under 10 s.")
     t0 = time.time()
     if split is not None and os.environ.get("AUDITGYM_SALT"):
         from .runner import salt_exposures
@@ -240,8 +266,8 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
                       "uses a new random salt instead. For a strict closed evaluation with your own salt, use the Docker recipe "
                       "in the README.",
                       style="yellow", markup=False, soft_wrap=True)
-    with working(con, "Generating the episodes and running 5 policies in isolated processes"), \
-            contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+    with working(con) as say, contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        say("Generating the hidden episodes" if split is None else "Generating the episodes of your split")
         eps, redrawn, used_split, salt = _closed_episodes(split)
         closed = outdir / "closed"
         closed.mkdir(parents=True, exist_ok=True)
@@ -251,14 +277,21 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
         old = os.environ.get("AUDITGYM_SALT")
         os.environ["AUDITGYM_SALT"] = salt
         try:
+            stage = f"Running 5 policies on the {len(eps)} episodes, each in an isolated process"
+            say(stage)
             res = run_policies(POLICIES, eps, closed, mode="eval",
-                               meta={"sources": "-", "tour": "juror split" if split is not None else "random secret seeds"})
+                               meta={"sources": "-", "tour": "juror split" if split is not None else "random secret seeds"},
+                               on_episode=lambda spec, n, tot: say(stage, f"now: {spec}", n, tot))
         finally:
             if old is None:
                 os.environ.pop("AUDITGYM_SALT", None)
             else:
                 os.environ["AUDITGYM_SALT"] = old
-        checks = [verify_episode(ep) for _, ep in eps]
+        say("Checking each episode's data with code that does not use the generator")
+        checks = []
+        for _, ep in eps:
+            checks.append(verify_episode(ep))
+            say("Checking each episode's data with code that does not use the generator", "", len(checks), len(eps))
     n_eps = len(eps)
     data_ok_n = sum(c["ok"] for c in checks)
     con.print(f"{'[green]✓[/]' if data_ok_n == n_eps else '[red]✗[/]'} Data, checked on each of the {n_eps} episodes by code that "
@@ -269,16 +302,16 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
               f"    the evidence in the answer key reproduces the amounts: {sum(c['evidence'] for c in checks)}/{n_eps}")
     rows = {}
     tb = Table(show_header=True, header_style="bold")
-    for h, j in (("Policy", "left"), ("Precision", "right"), ("Recall", "right"), ("F1", "right"), ("Reward", "right"),
+    for h, j in (("Policy", "left"), ("Role", "left"), ("Precision", "right"), ("Recall", "right"), ("F1", "right"), ("Reward", "right"),
                  ("Reward, clean books", "right"), ("Steps", "right"), ("Sec/episode", "right")):
-        tb.add_column(h, justify=j, no_wrap=h == "Policy")
+        tb.add_column(h, justify=j, no_wrap=h == "Policy", style="dim" if h == "Role" else None)
     for spec in POLICIES:
         s = summarize(res[spec])["all"]
         clean = [r["reward"] for r in res[spec] if r["clean"]]
         rows[spec] = {**{k: s[k] for k in ("micro_precision", "micro_recall", "mean_f1", "mean_return", "mean_steps", "mean_wall_s")},
                       "clean_return": round(sum(clean) / len(clean), 4) if clean else None}
         r = rows[spec]
-        tb.add_row(POLICY_LABEL[spec], f"{r['micro_precision']:.3f}", f"{r['micro_recall']:.3f}", f"{r['mean_f1']:.3f}",
+        tb.add_row(POLICY_LABEL[spec], ROLE[spec], f"{r['micro_precision']:.3f}", f"{r['micro_recall']:.3f}", f"{r['mean_f1']:.3f}",
                    f"{r['mean_return']:+.3f}", "—" if r["clean_return"] is None else f"{r['clean_return']:+.3f}",
                    f"{r['mean_steps']:.1f}", f"{r['mean_wall_s']:.3f}")
     con.print(tb)
@@ -304,11 +337,12 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     # 3. paired checks ---------------------------------------------------------------------------------------------
     _step(con, f"Step 3/4 · {n_eps} paired checks", "does the grade depend on anything it should not?",
           "Copies each hidden episode with its rows shuffled and its document and line IDs renamed. The grade must not change: "
-          "oracle stays at 1.0 and expert gets exactly the same result.")
+          "oracle stays at 1.0 and expert gets exactly the same result. Usually a few seconds.")
     t0 = time.time()
     bad = []
-    with working(con, "Grading shuffled and renamed copies of each episode"):
+    with working(con) as say:
         for k, (_, ep) in enumerate(eps):
+            say("Grading shuffled and renamed copies of each episode", "", k, len(eps))
             pub2, truth2, _ = perturb(ep.public, ep.truth, seed=secrets.randbits(32))
             ep2 = Episode(pub2, truth2, ep.provenance, {})
             a = run_episode("oracle", ep2, "eval").result
@@ -323,10 +357,11 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     # 4. replay, integrity, leakscan ---------------------------------------------------------------------------------
     _step(con, "Step 4/4 · Replay, integrity, leaks", "can anyone reproduce and trust these results?",
           "Re-runs the recorded actions and grades them again, checks every run folder against the signed hashes in its "
-          "run.json, and scans everything the policies saw for leaked answers.")
+          "run.json, and scans everything the policies saw for leaked answers. Usually a few seconds.")
     t0 = time.time()
     epmap = {ep.episode_id: ep for _, ep in eps}
-    with working(con, "Replaying the reconcile run and re-grading it"):
+    with working(con) as say:
+        say("Replaying the recorded reconcile run and grading it again")
         rep_ok, rep_n = _replay_ok(outdir / "closed" / "reconcile", epmap)
     old = os.environ.get("AUDITGYM_SALT")
     os.environ["AUDITGYM_SALT"] = salt  # verify the keyed signatures of this salted run
@@ -354,8 +389,8 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
         "reward": f"{by_c['reward'][0]}/{by_c['reward'][1]} checks passed; oracle 1.0 on {oracle_one}/{n_eps}; "
                   f"flag_all −1 on clean books: {'yes' if flag_clean else 'no'}; {order_txt}",
         "repro": f"paired checks {len(eps) - len(bad)}/{len(eps)}; replay {rep_ok}/{rep_n}",
-        "eng": "not measured by the tour. Versions and hashes: run.json · trajectories: closed/*/trajectories.jsonl · "
-               "failure analysis: docs/FAILURE_ANALYSIS.md · limitations: README",
+        "eng": "judged from the docs: versions and hashes in run.json · trajectories in closed/*/trajectories.jsonl · "
+               "failure analysis in docs/FAILURE_ANALYSIS.md · limitations in the README",
     }
     con.rule("[bold]Scorecard by case criterion[/]")
     tb = Table(show_header=True, header_style="bold")
@@ -370,10 +405,13 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
                 "reward": by_c[k][0] == by_c[k][1] and order_ok,
                 "repro": by_c[k][0] == by_c[k][1] and paired_ok and rep_ok == rep_n,
                 "eng": None}[k]
-        tb.add_row(name, str(pts), "—" if ok_k is None else "[green]✓[/]" if ok_k else "[red]✗[/]", evidence[k])
+        tb.add_row(name, str(pts), "[dim]not measured[/]" if ok_k is None else "[green]✓ PASS[/]" if ok_k else "[red]✗ FAIL[/]", evidence[k])
     con.print(tb)
-    con.print(f"[bold]{'[green]ALL PASSED[/]' if all_ok else '[red]SOME CHECKS FAILED[/]'}[/] in {time.time() - t_all:.0f} s · "
-              f"report: {_shown(outdir / 'report.md')}")
+    con.print("Max points: the jury's weight for each criterion. PASS: every measurement for that criterion passed in this run. "
+              "Engineering and explanation is judged from the docs, so the tour does not score it.", style="dim", markup=False)
+    verdict = (f"{'[bold green]✓ ALL PASSED[/]' if all_ok else '[bold red]✗ SOME CHECKS FAILED[/]'} · "
+               f"{sum(v is True for v in status.values())} of {sum(v is not None for v in status.values())} measured criteria passed · "
+               f"{time.time() - t_all:.0f} s · report: {_shown(outdir / 'report.md')}")
     report.update({"ok": all_ok, "seconds": round(time.time() - t_all, 1), "evidence": evidence, "status": status})
     _write_report(outdir, report, rows)
 
@@ -383,10 +421,16 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
         steps.insert(0, ("Re-check this tour's hidden run yourself: replay it and grade it again (its split and one-time salt are saved in the report)",
                          f"AUDITGYM_SALT=$(cat {shlex.quote(str(outdir / 'closed' / 'SALT'))}) {ag0} replay "
                          f"{shlex.quote(str(outdir / 'closed' / 'reconcile'))} --split - < {shlex.quote(str(outdir / 'closed' / 'split.json'))}"))
-    con.rule("[bold]What you can do next[/]  (every command can be copied as is)")
-    for label, cmd in steps:
-        con.print(f"[bold]{label}[/]")
-        con.print(cmd, soft_wrap=True, markup=False)
+    con.rule("[bold]Next steps[/]  (copy any command as is)")
+    top = steps[:1] if steps[0][0].startswith("Re-check") else []
+    top += [st for st in steps if st[0].startswith(("Test your own agent, written as a Python", "Make your own hidden split", "Run this whole tour"))]
+    for label, cmd in top:
+        con.print(f"[bold cyan]»[/] [bold]{label}[/]")
+        con.print("  " + cmd, soft_wrap=True, markup=False)
+    con.print(f"More commands, each with when to use it: {ag0 if not ag0.startswith('docker run') else 'docker run --rm auditgym:1.0.0'} --help"
+              " · the full list is also in report.md", style="dim", markup=False, soft_wrap=True)
+    con.print()
+    con.print(verdict)  # the verdict is the last line on screen
     with open(outdir / "report.md", "a", encoding="utf-8") as f:
         f.write("\n## What you can do next\n\n" + "".join(f"{label}:\n\n```\n{cmd}\n```\n\n" for label, cmd in steps))
     return 0 if all_ok else 1
@@ -394,18 +438,18 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
 
 def _write_report(outdir: Path, report: dict, rows: dict) -> None:
     (outdir / "report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
+    sym = {True: "✓ PASS", False: "✗ FAIL", None: "not measured"}
     md = [f"# AuditGym {report['auditgym_version']} jury tour: {'ALL PASSED' if report['ok'] else 'SOME CHECKS FAILED'}", "",
           f"Python {report['python']} · {report['platform']} · code hash {report['code_hash']} · {report['seconds']} s", "",
           "## Scorecard by case criterion", "", "| Criterion | Max points | Status | Evidence from this run |", "|---|---|---|---|"]
-    sym = {True: "✓", False: "✗", None: "—"}
     md += [f"| {name} | {pts} | {sym[report['status'][k]]} | {report['evidence'][k]} |" for k, name, pts in CRITERIA]
     ce = report["steps"]["closed_eval"]
     md += ["", f"## Hidden-episode evaluation ({ce['episodes']} episodes, {'your split' if ce.get('source') == 'juror split' else 'new random seeds'})", "",
-           "| Policy | Precision | Recall | F1 | Reward | Reward, clean books | Steps | Sec/episode |", "|---|---|---|---|---|---|---|---|"]
-    md += [f"| {POLICY_LABEL[s]} | {r['micro_precision']:.3f} | {r['micro_recall']:.3f} | {r['mean_f1']:.3f} | {r['mean_return']:+.3f} | "
+           "| Policy | Role | Precision | Recall | F1 | Reward | Reward, clean books | Steps | Sec/episode |", "|---|---|---|---|---|---|---|---|---|"]
+    md += [f"| {POLICY_LABEL[s]} | {ROLE[s]} | {r['micro_precision']:.3f} | {r['micro_recall']:.3f} | {r['mean_f1']:.3f} | {r['mean_return']:+.3f} | "
            f"{'—' if r['clean_return'] is None else format(r['clean_return'], '+.3f')} | {r['mean_steps']:.1f} | {r['mean_wall_s']:.3f} |"
            for s, r in rows.items()]
-    md += ["", FOOTNOTE.replace("*", "\\*")]
+    md += ["", FOOTNOTE]
     st = report["steps"]
     md += ["", "## Steps", "", f"- Official check: {st['check']['passed']}/{st['check']['total']} checks passed",
            f"- Paired checks: {st['paired']['passed']}/{st['paired']['total']}",

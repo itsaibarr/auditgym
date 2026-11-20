@@ -384,8 +384,9 @@ def run_episode(spec: str, ep: Episode, mode: str = "eval", args=None, policy_pa
 
 def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root: Path, mode: str = "eval", args=None,
                  policy_path=None, isolate: bool = True, allow_forks: bool = False, meta: dict | None = None,
-                 dir_name=None) -> dict[str, list[dict]]:
-    """Run several policies (oracle last); write every output only after all of them have finished."""
+                 dir_name=None, on_episode=None) -> dict[str, list[dict]]:
+    """Run several policies (oracle last); write every output only after all of them have finished.
+    on_episode(policy, finished, total), if given, is called after each episode (for a live progress line)."""
     order = sorted(specs, key=lambda s: s == "oracle")
     out_root = Path(out_root)
     out_root.mkdir(parents=True, exist_ok=True)
@@ -418,6 +419,8 @@ def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root
             reap_leftovers(keep)
             er.result["split"] = split
             runs.append(er)
+            if on_episode:
+                on_episode(spec, len(runs) + len(episodes) * len(done), len(episodes) * len(order))
         done[spec] = runs
         crashed = next((er for er in runs if er.stderr_tail.strip()), None)
         if crashed:

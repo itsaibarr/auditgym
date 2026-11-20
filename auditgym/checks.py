@@ -29,7 +29,15 @@ from .runner import run_episode, run_policies, summarize
 from .splits import ROOT, split_episodes
 
 POLICIES = ["oracle", "expert", "reconcile", "flag_all", "random"]
-STAGE_TESTS = "Running the test suite (pytest)"
+STAGE_TESTS = "Running the test suite"
+TEST_TOPIC = {  # test file -> what it checks, in the juror's words
+    "test_contract": "the agent contract: actions, pages, errors", "test_data": "the data and the answer key",
+    "test_reward": "that the reward cannot be gamed", "test_repro": "reproducibility", "test_isolation": "agent isolation",
+    "test_hardening": "hardening and the launchers", "test_preflight_leak": "salt-leak guards",
+    "test_units": "money and currency arithmetic", "test_gymnasium": "the Gymnasium wrapper",
+}
+_COLLECTED = re.compile(r"collected (\d+) items?")
+_RESULT = re.compile(r"^tests/(test_\w+)\.py::.* (PASSED|FAILED|SKIPPED|ERROR|XFAIL|XPASS)\b")
 
 
 class Report:
@@ -53,14 +61,20 @@ def _pytest(rep: Report, quick: bool, say) -> None:
         xml = Path(td) / "junit.xml"
         drop = {"AUDITGYM_SALT", "AUDITGYM_SHELL", "AUDITGYM_LAUNCHER", "AUDITGYM_REPORT_HOST"}
         env = {**{k: v for k, v in os.environ.items() if k not in drop}, "AUDITGYM_FRESH_SEEDS": "15" if quick else "40", "PYTHONHASHSEED": "0"}
-        proc = subprocess.Popen([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", str(ROOT / "tests"), f"--junitxml={xml}"],
-                                cwd=ROOT, env={**env, "PYTHONUNBUFFERED": "1"}, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-        lines = []
-        for line in proc.stdout:  # pytest -q ends each line of dots with "[ NN%]": show it while the suite runs
+        # -vv: pyproject's addopts has -q, so this nets one line per test, which we count as the suite runs
+        proc = subprocess.Popen([sys.executable, "-m", "pytest", "-vv", "-p", "no:cacheprovider", str(ROOT / "tests"), f"--junitxml={xml}"],
+                                cwd=ROOT, env={**env, "PYTHONUNBUFFERED": "1", "COLUMNS": "400"}, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True)
+        lines, total, done, failed = [], 0, 0, 0
+        for line in proc.stdout:  # pytest -v prints one line per test as it finishes: count them and name the topic
             lines.append(line)
-            m = re.search(r"\[\s*(\d+)%\]\s*$", line)
-            if m:
-                say(STAGE_TESTS, f"{m.group(1)}% done")
+            if not total and (m := _COLLECTED.search(line)):
+                total = int(m.group(1))
+            elif m := _RESULT.match(line):
+                done += 1
+                failed += m.group(2) in ("FAILED", "ERROR")
+                say(STAGE_TESTS, f"now testing {TEST_TOPIC.get(m.group(1), m.group(1))}" + (f" · {failed} failed" if failed else ""),
+                    done, total or None)
         proc.wait()
         if not xml.exists():
             rep.add("tests.collect", False, "".join(lines)[-1000:], time.time() - t0)
@@ -85,8 +99,8 @@ def _pytest(rep: Report, quick: bool, say) -> None:
 
 
 def run_check(quick: bool = False, as_json: bool = False, out: Path | None = None, progress=None) -> int:
-    """progress(stage, detail="") is called as the check moves on, for a live status line (see tour.working)."""
-    say = progress or (lambda stage, detail="": None)
+    """progress(stage, detail="", done=None, total=None) is called as the check moves on (see tour.working)."""
+    say = progress or (lambda stage, detail="", done=None, total=None: None)
     out = out or ROOT / "runs" / "check"
     os.environ.pop("AUDITGYM_SALT", None)  # the official check uses open data and its own salts, never a juror's
     from .runner import harden_runner
@@ -101,9 +115,11 @@ def run_check(quick: bool = False, as_json: bool = False, out: Path | None = Non
         rep.add("data.open_splits", len(episodes) == 20, f"{len(episodes)} episodes (10 train + 10 dev)", time.time() - t0)
 
         summaries = {}
-        say("Running the 5 baseline policies on the 20 open episodes, each in an isolated process")
+        stage = "Running 5 baseline policies on the 20 open episodes, each in an isolated process"
+        say(stage)
         t0 = time.time()
-        all_res = run_policies(POLICIES, episodes, out, mode="eval", meta={"sources": "train,dev"})
+        all_res = run_policies(POLICIES, episodes, out, mode="eval", meta={"sources": "train,dev"},
+                               on_episode=lambda spec, n, tot: say(stage, f"now: {spec}", n, tot))
         for spec in POLICIES:
             res = all_res[spec]
             summaries[spec] = summarize(res)["all"]
@@ -130,7 +146,7 @@ def run_check(quick: bool = False, as_json: bool = False, out: Path | None = Non
                 all(r["termination"] in ("submitted", "step_limit") for s in POLICIES for r in summaries[s]["_results"]),
                 "every baseline episode ends by submit or the 100-step limit")
 
-        say("Scanning the trajectories for leaked answers")
+        say("Scanning everything the policies saw for leaked answers")
         t0 = time.time()
         leaks = [p for spec in POLICIES for p in scan_run(out / spec)]
         rep.add("isolation.leakscan", not leaks, f"{len(leaks)} problems" + (f": {leaks[:3]}" if leaks else ""), time.time() - t0)
@@ -138,10 +154,12 @@ def run_check(quick: bool = False, as_json: bool = False, out: Path | None = Non
         bad_runs = [p for spec in POLICIES for p in verify_run(out / spec)]
         rep.add("isolation.run_integrity", not bad_runs, "every run dir matches the hashes in its run.json" + (f": {bad_runs[:2]}" if bad_runs else ""))
 
-        say("Paired checks: grading shuffled and renamed copies of each episode")
+        stage = "Grading shuffled and renamed copies of each episode (paired checks)"
+        say(stage)
         t0 = time.time()
         bad = []
         for k, (_, ep) in enumerate(episodes):
+            say(stage, "", k, len(episodes))
             pub2, truth2, m = perturb(ep.public, ep.truth, seed=1000 + k)
             ep2 = Episode(pub2, truth2, ep.provenance, {})
             a, b = run_episode("oracle", ep2, "eval").result, run_episode("expert", ep, "eval", isolate=False).result
@@ -150,7 +168,7 @@ def run_check(quick: bool = False, as_json: bool = False, out: Path | None = Non
                 bad.append(ep.episode_id)
         rep.add("repro.paired_permutation_rename", not bad, f"{20 - len(bad)}/20 paired checks preserve oracle & expert outcomes", time.time() - t0)
 
-        say("Regenerating the episodes and replaying the recorded trajectories")
+        say("Regenerating the episodes and replaying the recorded runs")
         t0 = time.time()
         regen = split_episodes("train") + split_episodes("dev")
         same = all(dumps([a.public, a.truth]) == dumps([b.public, b.truth]) for (_, a), (_, b) in zip(episodes, regen))

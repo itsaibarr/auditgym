@@ -85,9 +85,10 @@ if [ -z "$UV" ]; then
   [ -x "$UV" ] || { say "uv download incomplete: run the same command again"; exit 2; }
 fi
 
-say "running: auditgym $*   (first run downloads Python 3.11 + pinned deps; later runs start in ~1 s)"
 rc=0
 Q="--quiet"; [ -d "$SRC/.venv" ] || Q=""   # first run: show uv's download progress
+if [ -z "$Q" ]; then say "first run: installing Python 3.11 and the pinned packages (usually under a minute, up to 3 on a slow network; later runs start in about 1 s), then: auditgym $*"
+else say "auditgym $*"; fi
 AUDITGYM_LAUNCHER="sh '$SRC/run.sh'" AUDITGYM_SRC="$SRC" "$UV" run $Q --frozen --extra gym --project "$SRC" auditgym "$@" || rc=$?
 if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then
   say "exit code 2: if the message above is a network/download error, run the same command again (finished downloads are kept); otherwise it explains what to change"
