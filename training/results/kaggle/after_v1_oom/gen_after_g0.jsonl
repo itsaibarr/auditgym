@@ -1,0 +1,4 @@
+{"seed": 500058, "episode_id": "ep_de878cf616cc1000", "profile": "X1", "text": "{\"findings\": []}", "prompt_tokens": 5588, "new_tokens": 7, "hit_max_new_tokens": false, "batch_size": 2, "batch_seconds": 28.1}
+{"seed": 500003, "episode_id": "ep_42178aaad13a835c", "profile": "fx_conversion", "text": "{\"findings\": []}", "prompt_tokens": 5587, "new_tokens": 7, "hit_max_new_tokens": false, "batch_size": 2, "batch_seconds": 28.1}
+{"seed": 500014, "episode_id": "ep_52ee4fd4dd6939ad", "profile": "X1", "text": "{\"findings\": []}", "prompt_tokens": 5570, "new_tokens": 7, "hit_max_new_tokens": false, "batch_size": 2, "batch_seconds": 28.2}
+{"seed": 500038, "episode_id": "ep_326619388e02f4a3", "profile": "X1", "text": "{\"findings\": []}", "prompt_tokens": 5547, "new_tokens": 7, "hit_max_new_tokens": false, "batch_size": 2, "batch_seconds": 28.2}

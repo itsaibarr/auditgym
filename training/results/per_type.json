@@ -1,0 +1,46 @@
+{
+ "base": {
+  "duplicate_invoice": {
+   "tp": 2,
+   "fp": 12,
+   "fn": 6
+  },
+  "fx_conversion": {
+   "tp": 0,
+   "fp": 42,
+   "fn": 9
+  },
+  "payment_allocation": {
+   "tp": 0,
+   "fp": 26,
+   "fn": 8
+  },
+  "period_cutoff": {
+   "tp": 0,
+   "fp": 39,
+   "fn": 10
+  }
+ },
+ "after2": {
+  "duplicate_invoice": {
+   "tp": 17,
+   "fp": 2,
+   "fn": 12
+  },
+  "fx_conversion": {
+   "tp": 0,
+   "fp": 79,
+   "fn": 27
+  },
+  "payment_allocation": {
+   "tp": 1,
+   "fp": 16,
+   "fn": 18
+  },
+  "period_cutoff": {
+   "tp": 0,
+   "fp": 12,
+   "fn": 27
+  }
+ }
+}

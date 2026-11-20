@@ -1,0 +1,6 @@
+{"event": "downloaded", "s": 51, "t": 1795134751.8}
+{"event": "start", "mode": "diag", "n_held": 60, "n_sft": 400, "t": 1795134752.0}
+{"event": "diag_done", "tag": "base", "n": 80, "t": 1795136381.5}
+{"event": "diag_done", "tag": "after", "n": 80, "t": 1795136547.9}
+{"event": "diag_exit", "codes": [0, 0], "t": 1795136549.4}
+{"event": "end", "mode": "diag", "t": 1795136549.4}

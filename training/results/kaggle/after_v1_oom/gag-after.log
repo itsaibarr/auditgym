@@ -1,0 +1,173 @@
+[{"stream_name":"stdout","time":1.588811347,"data":"running /kaggle/input/datasets/itsaibarr/gag-train-pkg/gag_kaggle.py {'GAG_MODE': 'after'}\n"}
+,{"stream_name":"stdout","time":1.7415884780000002,"data":"+ nvidia-smi; python -V\n"}
+,{"stream_name":"stdout","time":1.772755862,"data":"Fri Nov 20 00:11:02 2026       \n"}
+,{"stream_name":"stdout","time":1.772785091,"data":"+-----------------------------------------------------------------------------------------+\n"}
+,{"stream_name":"stdout","time":1.7727889430000001,"data":"| NVIDIA-SMI 580.178.04             Driver Version: 580.178.04     CUDA Version: 13.0     |\n"}
+,{"stream_name":"stdout","time":1.772791394,"data":"+-----------------------------------------+------------------------+----------------------+\n"}
+,{"stream_name":"stdout","time":1.77279371,"data":"| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |\n"}
+,{"stream_name":"stdout","time":1.7727961049999998,"data":"| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |\n"}
+,{"stream_name":"stdout","time":1.7727984879999998,"data":"|                                         |                        |               MIG M. |\n"}
+,{"stream_name":"stdout","time":1.772801818,"data":"|=========================================+========================+======================|\n"}
+,{"stream_name":"stdout","time":1.827037615,"data":"|   0  Tesla T4                       Off |   00000000:00:04.0 Off |                    0 |\n"}
+,{"stream_name":"stdout","time":1.8270609740000001,"data":"| N/A   50C    P8             10W /   70W |       0MiB /  15360MiB |      0%      Default |\n"}
+,{"stream_name":"stdout","time":1.8270646799999999,"data":"|                                         |                        |                  N/A |\n"}
+,{"stream_name":"stdout","time":1.8270671790000002,"data":"+-----------------------------------------+------------------------+----------------------+\n"}
+,{"stream_name":"stdout","time":1.8270695639999999,"data":"|   1  Tesla T4                       Off |   00000000:00:05.0 Off |                    0 |\n"}
+,{"stream_name":"stdout","time":1.82707205,"data":"| N/A   53C    P8             10W /   70W |       0MiB /  15360MiB |      0%      Default |\n"}
+,{"stream_name":"stdout","time":1.8270743820000002,"data":"|                                         |                        |                  N/A |\n"}
+,{"stream_name":"stdout","time":1.827076725,"data":"+-----------------------------------------+------------------------+----------------------+\n"}
+,{"stream_name":"stdout","time":1.827624633,"data":"\n"}
+,{"stream_name":"stdout","time":1.827631416,"data":"+-----------------------------------------------------------------------------------------+\n"}
+,{"stream_name":"stdout","time":1.82763507,"data":"| Processes:                                                                              |\n"}
+,{"stream_name":"stdout","time":1.827638614,"data":"|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |\n"}
+,{"stream_name":"stdout","time":1.8276437159999999,"data":"|        ID   ID                                                               Usage      |\n"}
+,{"stream_name":"stdout","time":1.827654635,"data":"|=========================================================================================|\n"}
+,{"stream_name":"stdout","time":1.8294228430000001,"data":"|  No running processes found                                                             |\n"}
+,{"stream_name":"stdout","time":1.829437569,"data":"+-----------------------------------------------------------------------------------------+\n"}
+,{"stream_name":"stdout","time":2.161464352,"data":"Python 3.13.16\n"}
+,{"stream_name":"stdout","time":2.162121051,"data":"+ pip install -q -U bitsandbytes peft 2\u003e\u00261 | tail -3\n"}
+,{"stream_name":"stdout","time":9.780655231,"data":"+ pip freeze | grep -iE '^(torch|transformers|peft|bitsandbytes|accelerate|safetensors)==' || true\n"}
+,{"stream_name":"stdout","time":10.757051261,"data":"accelerate==1.15.0\n"}
+,{"stream_name":"stdout","time":10.757079281,"data":"bitsandbytes==0.50.2\n"}
+,{"stream_name":"stdout","time":10.757082333,"data":"peft==0.22.0\n"}
+,{"stream_name":"stdout","time":10.757084746,"data":"safetensors==0.8.0\n"}
+,{"stream_name":"stdout","time":10.757087013,"data":"torch==2.11.0+cu130\n"}
+,{"stream_name":"stdout","time":10.757089757,"data":"transformers==5.20.2\n"}
+,{"stream_name":"stdout","time":10.758392634,"data":"+ pip freeze \u003e /kaggle/working/freeze_after.txt\n"}
+,{"stream_name":"stderr","time":12.838578608,"data":"\rFetching 14 files:   0%|          | 0/14 [00:00\u003c?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":59.950166544,"data":"\rFetching 14 files:   7%|▋         | 1/14 [00:00\u003c00:02,  5.91it/s]\rFetching 14 files:  71%|███████▏  | 10/14 [00:00\u003c00:00, 44.41it/s]\rFetching 14 files:  86%|████████▌ | 12/14 [00:20\u003c00:00, 44.41it/s]\rFetching 14 files:  93%|█████████▎| 13/14 [00:47\u003c00:04,  4.81s/it]\rFetching 14 files: 100%|██████████| 14/14 [00:47\u003c00:00,  3.38s/it]\n"}
+,{"stream_name":"stdout","time":59.95027733,"data":"{\"event\": \"downloaded\", \"s\": 47, \"t\": 1795133520.2}\n"}
+,{"stream_name":"stdout","time":60.286460374,"data":"{\"event\": \"start\", \"mode\": \"after\", \"n_held\": 60, \"n_sft\": 400, \"t\": 1795133520.6}\n"}
+,{"stream_name":"stderr","time":106.994520608,"data":"\rLoading weights:   0%|          | 0/443 [00:00\u003c?, ?it/s]\rLoading weights:   0%|          | 0/443 [00:00\u003c?, ?it/s]\rLoading weights:   0%|          | 1/443 [00:02\u003c20:55,  2.84s/it]\rLoading weights:   0%|          | 1/443 [00:03\u003c23:15,  3.16s/it]\rLoading weights:   0%|          | 2/443 [00:03\u003c10:04,  1.37s/it]\rLoading weights:   4%|▍         | 17/443 [00:03\u003c00:45,  9.28it/s]\rLoading weights:   0%|          | 2/443 [00:03\u003c11:42,  1.59s/it]\rLoading weights:   9%|▉         | 39/443 [00:03\u003c00:16, 25.18it/s]\rLoading weights:   5%|▌         | 24/443 [00:03\u003c00:36, 11.60it/s]\rLoading weights:  14%|█▍        | 61/443 [00:03\u003c00:08, 43.59it/s]\rLoading weights:  11%|█         | 48/443 [00:03\u003c00:14, 26.61it/s]\rLoading weights:  19%|█▊        | 83/443 [00:03\u003c00:05, 64.50it/s]\rLoading weights:  16%|█▌        | 70/443 [00:03\u003c00:08, 43.29it/s]\rLoading weights:  23%|██▎       | 103/443 [00:03\u003c00:04, 83.76it/s]\rLoading weights:  22%|██▏       | 97/443 [00:04\u003c00:05, 66.64it/s]\rLoading weights:  28%|██▊       | 125/443 [00:03\u003c00:02, 107.02it/s]\rLoading weights:  26%|██▌       | 116/443 [00:04\u003c00:03, 81.76it/s]\rLoading weights:  33%|███▎      | 144/443 [00:03\u003c00:02, 119.38it/s]\rLoading weights:  31%|███       | 137/443 [00:04\u003c00:03, 101.47it/s]\rLoading weights:  38%|███▊      | 170/443 [00:04\u003c00:01, 144.83it/s]\rLoading weights:  36%|███▌      | 158/443 [00:04\u003c00:02, 119.13it/s]\rLoading weights: 100%|██████████| 443/443 [00:04\u003c00:00, 106.62it/s]\n"}
+,{"stream_name":"stderr","time":107.131058157,"data":"\rLoading weights:  59%|█████▉    | 262/443 [00:04\u003c00:00, 306.91it/s]\rLoading weights: 100%|██████████| 443/443 [00:04\u003c00:00, 97.01it/s] \n"}
+,{"stream_name":"stderr","time":118.857860355,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stderr","time":118.8579128,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stdout","time":146.703067711,"data":"{\"event\": \"gen_batch\", \"tag\": \"after\", \"n\": 2, \"s\": 28.1, \"peak_gb\": {\"0\": 14.08}, \"in_tokens\": 5588, \"done\": 2, \"total\": 30, \"t\": 1795133607.0}\n"}
+,{"stream_name":"stderr","time":146.731047551,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stdout","time":148.240958286,"data":"{\"event\": \"gen_batch\", \"tag\": \"after\", \"n\": 2, \"s\": 29.6, \"peak_gb\": {\"0\": 14.07}, \"in_tokens\": 5574, \"done\": 2, \"total\": 30, \"t\": 1795133608.5}\n"}
+,{"stream_name":"stderr","time":148.26675923,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stdout","time":174.937346213,"data":"{\"event\": \"gen_batch\", \"tag\": \"after\", \"n\": 2, \"s\": 28.2, \"peak_gb\": {\"0\": 14.08}, \"in_tokens\": 5570, \"done\": 4, \"total\": 30, \"t\": 1795133635.2}\n"}
+,{"stream_name":"stderr","time":174.961568386,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stdout","time":178.450793807,"data":"{\"event\": \"gen_batch\", \"tag\": \"after\", \"n\": 2, \"s\": 30.2, \"peak_gb\": {\"0\": 14.07}, \"in_tokens\": 5475, \"done\": 4, \"total\": 30, \"t\": 1795133638.7}\n"}
+,{"stream_name":"stderr","time":178.481116646,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stderr","time":202.493006981,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":202.496457474,"data":"  File \"/kaggle/input/datasets/itsaibarr/gag-train-pkg/gag_kaggle.py\", line 284, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":202.496473154,"data":"    main()\n"}
+,{"stream_name":"stderr","time":202.496478025,"data":"    ~~~~^^\n"}
+,{"stream_name":"stderr","time":202.496482566,"data":"  File \"/kaggle/input/datasets/itsaibarr/gag-train-pkg/gag_kaggle.py\", line 264, in main\n"}
+,{"stream_name":"stderr","time":202.496487338,"data":"    {\"--gen\": generate, \"--train\": train}[sys.argv[1]](spec)\n"}
+,{"stream_name":"stderr","time":202.496492414,"data":"    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n"}
+,{"stream_name":"stderr","time":202.496497072,"data":"  File \"/kaggle/input/datasets/itsaibarr/gag-train-pkg/gag_kaggle.py\", line 161, in generate\n"}
+,{"stream_name":"stderr","time":202.496501825,"data":"    out = m.generate(**enc, max_new_tokens=max_new, do_sample=False, temperature=None, top_p=None, top_k=None,\n"}
+,{"stream_name":"stderr","time":202.496519135,"data":"                     eos_token_id=eos, pad_token_id=tok.pad_token_id)\n"}
+,{"stream_name":"stderr","time":202.496523054,"data":"  File \"/usr/local/lib/python3.13/dist-packages/peft/peft_model.py\", line 2559, in generate\n"}
+,{"stream_name":"stderr","time":202.496526808,"data":"    outputs = self.base_model.generate(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":202.496530324,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/_contextlib.py\", line 124, in decorate_context\n"}
+,{"stream_name":"stderr","time":202.496534213,"data":"    return func(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":202.496544495,"data":"  File \"/usr/local/lib/python3.13/dist-packages/transformers/generation/utils.py\", line 2989, in generate\n"}
+,{"stream_name":"stderr","time":202.496548473,"data":"    result = decoding_method(\n"}
+,{"stream_name":"stderr","time":202.496551949,"data":"        self,\n"}
+,{"stream_name":"stderr","time":202.496555373,"data":"    ...\u003c5 lines\u003e...\n"}
+,{"stream_name":"stderr","time":202.496558928,"data":"        **model_kwargs,\n"}
+,{"stream_name":"stderr","time":202.496562408,"data":"    )\n"}
+,{"stream_name":"stderr","time":202.49656582,"data":"  File \"/usr/local/lib/python3.13/dist-packages/transformers/generation/utils.py\", line 3189, in _sample\n"}
+,{"stream_name":"stderr","time":202.496569621,"data":"    outputs = self._prefill(\n"}
+,{"stream_name":"stderr","time":202.496573085,"data":"        input_ids,\n"}
+,{"stream_name":"stderr","time":202.496576491,"data":"    ...\u003c2 lines\u003e...\n"}
+,{"stream_name":"stderr","time":202.496580021,"data":"        is_first_iteration=not generation_config.is_assistant,\n"}
+,{"stream_name":"stderr","time":202.496583666,"data":"    )\n"}
+,{"stream_name":"stderr","time":202.496587015,"data":"  File \"/usr/local/lib/python3.13/dist-packages/transformers/generation/utils.py\", line 4300, in _prefill\n"}
+,{"stream_name":"stderr","time":202.49659077,"data":"    return self(**model_inputs, return_dict=True)\n"}
+,{"stream_name":"stderr","time":202.496595031,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1779, in _wrapped_call_impl\n"}
+,{"stream_name":"stderr","time":202.496599023,"data":"    return self._call_impl(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":202.496602507,"data":"           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":202.496618053,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1790, in _call_impl\n"}
+,{"stream_name":"stderr","time":202.496622111,"data":"    return forward_call(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":202.49662572,"data":"  File \"/usr/local/lib/python3.13/dist-packages/transformers/utils/generic.py\", line 943, in wrapper\n"}
+,{"stream_name":"stderr","time":202.496629596,"data":"    output = func(self, *args, **kwargs)\n"}
+,{"stream_name":"stderr","time":202.496633124,"data":"  File \"/usr/local/lib/python3.13/dist-packages/transformers/models/qwen3/modeling_qwen3.py\", line 469, in forward\n"}
+,{"stream_name":"stderr","time":202.496636953,"data":"    outputs: BaseModelOutputWithPast = self.model(\n"}
+,{"stream_name":"stderr","time":202.496640586,"data":"                                       ~~~~~~~~~~^\n"}
+,{"stream_name":"stderr","time":202.496644134,"data":"        input_ids=input_ids,\n"}
+,{"stream_name":"stderr","time":202.496647675,"data":"        ^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":202.496651064,"data":"    ...\u003c5 lines\u003e...\n"}
+,{"stream_name":"stderr","time":202.496654536,"data":"        **kwargs,\n"}
+,{"stream_name":"stderr","time":202.496661612,"data":"        ^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":202.496665138,"data":"    )\n"}
+,{"stream_name":"stderr","time":202.496668546,"data":"    ^\n"}
+,{"stream_name":"stderr","time":202.496671937,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1779, in _wrapped_call_impl\n"}
+,{"stream_name":"stderr","time":202.496675669,"data":"    return self._call_impl(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":202.49667916,"data":"           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":202.496682679,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1790, in _call_impl\n"}
+,{"stream_name":"stderr","time":202.496686483,"data":"    return forward_call(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":202.496689953,"data":"  File \"/usr/local/lib/python3.13/dist-packages/transformers/utils/generic.py\", line 1081, in wrapper\n"}
+,{"stream_name":"stderr","time":202.496693684,"data":"    output = func(self, *args, **kwargs)\n"}
+,{"stream_name":"stderr","time":202.496697141,"data":"  File \"/usr/local/lib/python3.13/dist-packages/transformers/utils/output_capturing.py\", line 287, in wrapper\n"}
+,{"stream_name":"stderr","time":202.496700942,"data":"    outputs = func(self, *args, **kwargs)\n"}
+,{"stream_name":"stderr","time":202.496715981,"data":"  File \"/usr/local/lib/python3.13/dist-packages/transformers/models/qwen3/modeling_qwen3.py\", line 405, in forward\n"}
+,{"stream_name":"stderr","time":202.49672006,"data":"    hidden_states = decoder_layer(\n"}
+,{"stream_name":"stderr","time":202.496723577,"data":"        hidden_states,\n"}
+,{"stream_name":"stderr","time":202.496726981,"data":"    ...\u003c5 lines\u003e...\n"}
+,{"stream_name":"stderr","time":202.496730463,"data":"        **kwargs,\n"}
+,{"stream_name":"stderr","time":202.496733779,"data":"    )\n"}
+,{"stream_name":"stderr","time":202.496737453,"data":"  File \"/usr/local/lib/python3.13/dist-packages/transformers/modeling_layers.py\", line 111, in __call__\n"}
+,{"stream_name":"stderr","time":202.496744101,"data":"    return super().__call__(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":202.496747581,"data":"           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":202.496751098,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1779, in _wrapped_call_impl\n"}
+,{"stream_name":"stderr","time":202.496754888,"data":"    return self._call_impl(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":202.496758407,"data":"           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":202.496761925,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1790, in _call_impl\n"}
+,{"stream_name":"stderr","time":202.496765718,"data":"    return forward_call(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":202.496770313,"data":"  File \"/usr/local/lib/python3.13/dist-packages/transformers/models/qwen3/modeling_qwen3.py\", line 313, in forward\n"}
+,{"stream_name":"stderr","time":202.496774177,"data":"    hidden_states = self.mlp(hidden_states)\n"}
+,{"stream_name":"stderr","time":202.496777673,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1779, in _wrapped_call_impl\n"}
+,{"stream_name":"stderr","time":202.496781437,"data":"    return self._call_impl(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":202.496784967,"data":"           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":202.496788445,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1790, in _call_impl\n"}
+,{"stream_name":"stderr","time":202.496796681,"data":"    return forward_call(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":202.496800305,"data":"  File \"/usr/local/lib/python3.13/dist-packages/transformers/models/qwen3/modeling_qwen3.py\", line 81, in forward\n"}
+,{"stream_name":"stderr","time":202.496804192,"data":"    down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))\n"}
+,{"stream_name":"stderr","time":202.496807912,"data":"                                                                ~~~~~~~~~~~~^^^\n"}
+,{"stream_name":"stderr","time":202.496811597,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1779, in _wrapped_call_impl\n"}
+,{"stream_name":"stderr","time":202.496815453,"data":"    return self._call_impl(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":202.496818907,"data":"           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":202.49682244,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1790, in _call_impl\n"}
+,{"stream_name":"stderr","time":202.496826155,"data":"    return forward_call(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":202.496830149,"data":"  File \"/usr/local/lib/python3.13/dist-packages/peft/tuners/lora/bnb.py\", line 569, in forward\n"}
+,{"stream_name":"stderr","time":202.496833867,"data":"    output = lora_B(lora_A(dropout(x))) * scaling\n"}
+,{"stream_name":"stderr","time":202.496837473,"data":"             ~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~\n"}
+,{"stream_name":"stderr","time":202.496845343,"data":"torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 734.00 MiB. GPU 0 has a total capacity of 14.56 GiB of which 736.81 MiB is free. Including non-PyTorch memory, this process has 13.84 GiB memory in use. Of the allocated memory 13.26 GiB is allocated by PyTorch, and 458.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\n"}
+,{"stream_name":"stdout","time":211.774474678,"data":"{\"event\": \"gen_batch\", \"tag\": \"after\", \"n\": 2, \"s\": 33.3, \"peak_gb\": {\"0\": 14.07}, \"in_tokens\": 5365, \"done\": 6, \"total\": 30, \"t\": 1795133672.1}\n"}
+,{"stream_name":"stderr","time":211.79265599,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stdout","time":243.57620585,"data":"{\"event\": \"gen_batch\", \"tag\": \"after\", \"n\": 2, \"s\": 31.8, \"peak_gb\": {\"0\": 14.07}, \"in_tokens\": 5118, \"done\": 8, \"total\": 30, \"t\": 1795133703.9}\n"}
+,{"stream_name":"stderr","time":243.592835932,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stdout","time":272.714769923,"data":"{\"event\": \"gen_batch\", \"tag\": \"after\", \"n\": 2, \"s\": 29.1, \"peak_gb\": {\"0\": 14.07}, \"in_tokens\": 4989, \"done\": 10, \"total\": 30, \"t\": 1795133733.0}\n"}
+,{"stream_name":"stderr","time":272.731668612,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stdout","time":302.341685333,"data":"{\"event\": \"gen_batch\", \"tag\": \"after\", \"n\": 2, \"s\": 29.6, \"peak_gb\": {\"0\": 14.07}, \"in_tokens\": 4900, \"done\": 12, \"total\": 30, \"t\": 1795133762.6}\n"}
+,{"stream_name":"stderr","time":302.357964955,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stdout","time":330.735974325,"data":"{\"event\": \"gen_batch\", \"tag\": \"after\", \"n\": 2, \"s\": 28.4, \"peak_gb\": {\"0\": 14.07}, \"in_tokens\": 4766, \"done\": 14, \"total\": 30, \"t\": 1795133791.0}\n"}
+,{"stream_name":"stderr","time":330.753521461,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stdout","time":358.592807767,"data":"{\"event\": \"gen_batch\", \"tag\": \"after\", \"n\": 2, \"s\": 27.8, \"peak_gb\": {\"0\": 14.07}, \"in_tokens\": 4719, \"done\": 16, \"total\": 30, \"t\": 1795133818.9}\n"}
+,{"stream_name":"stderr","time":358.609105221,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stdout","time":385.526074656,"data":"{\"event\": \"gen_batch\", \"tag\": \"after\", \"n\": 2, \"s\": 26.9, \"peak_gb\": {\"0\": 14.07}, \"in_tokens\": 4583, \"done\": 18, \"total\": 30, \"t\": 1795133845.8}\n"}
+,{"stream_name":"stderr","time":385.546314507,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stdout","time":412.527593533,"data":"{\"event\": \"gen_batch\", \"tag\": \"after\", \"n\": 2, \"s\": 27.0, \"peak_gb\": {\"0\": 14.07}, \"in_tokens\": 4561, \"done\": 20, \"total\": 30, \"t\": 1795133872.8}\n"}
+,{"stream_name":"stderr","time":412.54358157,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stdout","time":438.331647205,"data":"{\"event\": \"gen_batch\", \"tag\": \"after\", \"n\": 2, \"s\": 25.8, \"peak_gb\": {\"0\": 14.07}, \"in_tokens\": 4416, \"done\": 22, \"total\": 30, \"t\": 1795133898.6}\n"}
+,{"stream_name":"stderr","time":438.346842236,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stdout","time":464.358472934,"data":"{\"event\": \"gen_batch\", \"tag\": \"after\", \"n\": 2, \"s\": 26.0, \"peak_gb\": {\"0\": 14.07}, \"in_tokens\": 4388, \"done\": 24, \"total\": 30, \"t\": 1795133924.6}\n"}
+,{"stream_name":"stderr","time":464.374409414,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stdout","time":489.622464297,"data":"{\"event\": \"gen_batch\", \"tag\": \"after\", \"n\": 2, \"s\": 25.2, \"peak_gb\": {\"0\": 14.07}, \"in_tokens\": 4338, \"done\": 26, \"total\": 30, \"t\": 1795133949.9}\n"}
+,{"stream_name":"stderr","time":489.638433209,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stdout","time":513.651796505,"data":"{\"event\": \"gen_batch\", \"tag\": \"after\", \"n\": 2, \"s\": 24.0, \"peak_gb\": {\"0\": 14.07}, \"in_tokens\": 4122, \"done\": 28, \"total\": 30, \"t\": 1795133973.9}\n"}
+,{"stream_name":"stderr","time":513.665153417,"data":"[transformers] Both `max_new_tokens` (=1024) and `max_length`(=40960) seem to have been set. `max_new_tokens` will take precedence. Please refer to the documentation for more information. (https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)\n"}
+,{"stream_name":"stdout","time":534.65945089,"data":"{\"event\": \"gen_batch\", \"tag\": \"after\", \"n\": 2, \"s\": 21.0, \"peak_gb\": {\"0\": 14.07}, \"in_tokens\": 3684, \"done\": 30, \"total\": 30, \"t\": 1795133994.9}\n"}
+,{"stream_name":"stdout","time":536.154497631,"data":"{\"event\": \"gen_done\", \"tag\": \"after\", \"codes\": [1, 0], \"t\": 1795133996.4}\n"}
+,{"stream_name":"stdout","time":536.154776833,"data":"{\"event\": \"end\", \"mode\": \"after\", \"t\": 1795133996.4}\n"}
+,{"stream_name":"stderr","time":538.794541725,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":538.794591575,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":539.03930358,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":539.039351703,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":539.840535451,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":540.894157673,"data":"[NbConvertApp] Writing 274369 bytes to __results__.html\n"}
+]
