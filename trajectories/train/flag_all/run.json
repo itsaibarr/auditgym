@@ -1,6 +1,6 @@
 {
   "auditgym_version": "1.0.0",
-  "code_hash": "9a4201164f54b5fe",
+  "code_hash": "f6668316c338b627",
   "policy": "flag_all",
   "policy_args": [],
   "mode": "train",
@@ -36,10 +36,13 @@
   ],
   "salt": "default-open",
   "sources": "train",
+  "isolate": true,
+  "allow_forks": false,
+  "trust_policies": false,
   "dir": "flag_all",
   "files": {
     "trajectories.jsonl": "6bf88bcca9f7018e5c82f1430c3df881b958683c55e7d7e9091ab78d03fa1297",
-    "results.jsonl": "87be2c6ccf70c1697d57d7c76749c4a4611773b199e87caecc46d3737cfbbeeb",
-    "summary.json": "3967fbd30f9b507fc265fcd6f82c0505670f964d39de667f48b5fc4bcc443ded"
+    "results.jsonl": "381cf49bc8c6aa0c0af52c24065fad17d198a064d950db0a71fb460b64e6b723",
+    "summary.json": "7df2eaad5fd44e8e912b85994c2e2b46dbca62fc858e51815de691a69f6f6c3c"
   }
 }
