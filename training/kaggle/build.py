@@ -16,6 +16,7 @@ KERNELS = {  # slug: (env, kernel_sources)
     "gag-base-sft": ({"GAG_MODE": "base", "GAG_TRAIN_DEVICES": "balanced", "GAG_TRAIN_SAMPLES": "400",
                       "GAG_TRAIN_SECONDS": "15000"}, []),
     "gag-after": ({"GAG_MODE": "after"}, [f"{USER}/gag-base-sft"]),
+    "gag-diag": ({"GAG_MODE": "diag"}, [f"{USER}/gag-base-sft"]),
 }
 STUB = '''import glob, os, subprocess, sys
 os.environ.update({env!r})
@@ -29,7 +30,7 @@ def main(overrides=None):
     shutil.rmtree(B, ignore_errors=True)
     pkg = B / "pkg"
     pkg.mkdir(parents=True)
-    for f in (HERE.parent / "data" / "heldout.jsonl", HERE.parent / "data" / "sft.jsonl", HERE / "gag_kaggle.py"):
+    for f in (HERE.parent / "data" / "heldout.jsonl", HERE.parent / "data" / "sft.jsonl", HERE.parent / "data" / "heldout_expert_targets.jsonl", HERE / "gag_kaggle.py"):
         shutil.copy(f, pkg / f.name)
     (pkg / "dataset-metadata.json").write_text(json.dumps(
         {"title": "gag-train-pkg", "id": DATASET, "licenses": [{"name": "CC0-1.0"}]}, indent=1))

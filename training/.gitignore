@@ -1,3 +1,5 @@
 data/
 kaggle/build/
 __pycache__/
+results/kaggle/*/adapter/*.safetensors
+results/kaggle/*/spec_*.json

@@ -120,6 +120,9 @@ def load(path, device_map, adapter=None, trainable=False):
     if adapter:
         from peft import PeftModel
         m = PeftModel.from_pretrained(m, adapter, is_trainable=False)
+        for n, p in m.named_parameters():   # adapter saved in fp32; infer in the model's fp16 (fp32 LoRA OOMs at 5.6k x 2)
+            if "lora_" in n:
+                p.data = p.data.half()
     elif trainable:
         from peft import LoraConfig, get_peft_model
         m.config.use_cache = False
@@ -249,6 +252,38 @@ def train(spec):
     log(event="sft_saved", samples=seen, steps=step, s=round(time.time() - t0))
 
 
+# ------------------------------------------------------------------------------------------- diagnostic (child)
+def diag(spec):
+    """Teacher-forced log-probs of the empty answer and of the truth-free expert answer (diagnostic only)."""
+    import torch
+    m, tok = load(spec["path"], {"": 0}, adapter=spec["adapter"])
+    causal = m.base_model.model if spec["adapter"] else m
+    with open(spec["out"], "w") as f:
+        for r in spec["rows"]:
+            p = tok(prompt_text(tok, r["messages"]), add_special_tokens=False)["input_ids"]
+            res = {"seed": r["seed"], "split": r["split"]}
+            for name, text in (("empty", '{"findings": []}'), ("expert", r["target"])):
+                c = tok(text + "<|im_end|>", add_special_tokens=False)["input_ids"]
+                ids = torch.tensor([p + c], device="cuda:0")
+                with torch.inference_mode():
+                    hs = causal.model(input_ids=ids, use_cache=False).last_hidden_state[:, len(p) - 1:-1]
+                    lp = torch.log_softmax(causal.lm_head(hs).float(), -1)[0]
+                tl = lp.gather(1, torch.tensor(c, device="cuda:0")[:, None])[:, 0]
+                first_div = next((i for i, (a, b) in enumerate(zip(c, tok('{"findings": []}<|im_end|>', add_special_tokens=False)["input_ids"])) if a != b), None)
+                res[name] = {"logp_sum": round(float(tl.sum()), 3), "n_tokens": len(c),
+                             "nll_per_token": round(float(-tl.mean()), 4),
+                             "greedy_token_agreement": round(float((lp.argmax(-1) == torch.tensor(c, device="cuda:0")).float().mean()), 4)}
+                if name == "expert":
+                    res["branch_index"] = first_div
+                    if first_div is not None:
+                        e_tok = tok('{"findings": []}<|im_end|>', add_special_tokens=False)["input_ids"][first_div]
+                        res["branch_logp_expert_token"] = round(float(lp[first_div, c[first_div]]), 3)
+                        res["branch_logp_empty_token"] = round(float(lp[first_div, e_tok]), 3)
+            f.write(json.dumps(res) + "\n")
+            f.flush()
+    log(event="diag_done", tag=spec["tag"], n=len(spec["rows"]))
+
+
 def run_train(path, rows, devices, tag, **extra):
     spec = dict(path=path, rows=rows, devices=devices, **extra)
     json.dump(spec, open(f"{W}/spec_train_{tag}.json", "w"))
@@ -261,7 +296,7 @@ def run_train(path, rows, devices, tag, **extra):
 def main():
     if len(sys.argv) > 2:
         spec = json.load(open(sys.argv[2]))
-        {"--gen": generate, "--train": train}[sys.argv[1]](spec)
+        {"--gen": generate, "--train": train, "--diag": diag}[sys.argv[1]](spec)
         return
     path = setup()
     held = [json.loads(l) for l in open(find("heldout.jsonl"))]
@@ -275,6 +310,17 @@ def main():
     elif MODE == "base":
         generate_sharded(path, held, "base")
         run_train(path, sft, TRAIN_DEVICES, "main")
+    elif MODE == "diag":
+        tg = {json.loads(l)["seed"]: json.loads(l)["target"] for l in open(find("heldout_expert_targets.jsonl"))}
+        rows = [{**r, "target": tg[r["seed"]], "split": "heldout"} for r in held] + \
+               [{**r, "split": "train_seen"} for r in sft[:20]]
+        adapter = os.path.dirname(find("adapter_config.json"))
+        procs = []
+        for g, (tag, ad) in enumerate((("base", None), ("after", adapter))):
+            spec = dict(path=path, rows=rows, adapter=ad, tag=tag, out=f"{W}/diag_{tag}.jsonl")
+            json.dump(spec, open(f"{W}/spec_diag_{tag}.json", "w"))
+            procs.append(child(["--diag", f"{W}/spec_diag_{tag}.json"], str(g)))
+        log(event="diag_exit", codes=[p.wait() for p in procs])
     elif MODE == "after":
         generate_sharded(path, held, "after", adapter=os.path.dirname(find("adapter_config.json")))
     log(event="end", mode=MODE)

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import random
+from collections import Counter
 import sys
 from pathlib import Path
 
@@ -34,6 +35,18 @@ def load_gens(arm: str) -> dict:
     return out
 
 
+def lenient(gens: dict) -> dict:
+    """Exploratory, not pre-registered: add a blank `explanation` to findings that lack it (the grader never reads it)."""
+    out = {}
+    for seed, g in gens.items():
+        p, ok = A.to_submission(g["text"], g["episode_id"])
+        if ok and isinstance(p["findings"], list):
+            p["findings"] = [{**f, "explanation": f.get("explanation", "")} if isinstance(f, dict) else f for f in p["findings"]]
+            g = {**g, "text": json.dumps({"findings": p["findings"]})}
+        out[seed] = g
+    return out
+
+
 def grade_arm(held: list[dict], gens: dict | None) -> list[dict]:
     rows = []
     for e in held:
@@ -54,7 +67,9 @@ def grade_arm(held: list[dict], gens: dict | None) -> list[dict]:
         assert obs0["manifest"]["episode_id"] == e["episode_id"]
         rows.append({**meta, "reward": res["reward"], "f1": res["f1"], "tp": res["tp"], "fp": res["fp"], "fn": res["fn"],
                      "valid": res["valid"], "parse_ok": parse_ok, "missing": missing,
-                     "steps": res["inspection_steps"] + 1, **extra})
+                     "steps": res["inspection_steps"] + 1,
+                     "fp_reasons": [m["reason"] for m in res["matches"] if m["result"] == "FP"],
+                     **extra})
     return rows
 
 
@@ -69,6 +84,7 @@ def summary(rows: list[dict]) -> dict:
          "schema_error_rate": round(sum(not r["valid"] for r in rows) / n, 4),
          "unparseable_rate": round(sum(not r["parse_ok"] for r in rows) / n, 4),
          "mean_steps": round(sum(r["steps"] for r in rows) / n, 2),
+         "fp_reasons": dict(sorted(Counter(x for r in rows for x in r["fp_reasons"]).items())),
          "clean_books_false_accusation_rate": round(sum(r["fp"] > 0 for r in clean) / len(clean), 4) if clean else None}
     if any("new_tokens" in r for r in rows):
         s["mean_new_tokens"] = round(sum(r.get("new_tokens", 0) for r in rows) / n, 1)
@@ -94,6 +110,7 @@ def main():
         gens = load_gens(arm)
         if gens:
             arms[arm] = grade_arm(held, gens)
+            arms[f"explore_{arm}_lenient_explanation"] = grade_arm(held, lenient(gens))
     arms["ref_expert"] = grade_arm([{**e, "_ref": "expert"} for e in held], None)
     arms["ref_empty"] = grade_arm(held, None)
     metrics = {"arms": {}, "by_group": {}}
