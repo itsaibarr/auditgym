@@ -103,21 +103,32 @@ def paired_bootstrap(a: list[float], b: list[float]) -> dict:
             "n": n, "resamples": B, "seed": CI_SEED}
 
 
+SETS = {  # held-out set -> (file, arms read from results/kaggle/<arm>/gen_*.jsonl, output suffix)
+    "A": ("heldout.jsonl", ("base", "after", "after2", "c3", "c4"), ""),
+    "B": ("heldout_b.jsonl", ("base_b", "c3_b", "c4_b"), "_b"),
+}
+
+
 def main():
-    held = [json.loads(l) for l in (HERE / "data" / "heldout.jsonl").read_text().splitlines()]
+    which = sys.argv[1] if len(sys.argv) > 1 else "A"
+    fname, arm_names, suffix = SETS[which]
+    held = [json.loads(l) for l in (HERE / "data" / fname).read_text().splitlines()]
     arms = {}
-    for arm in ("base", "after", "after2"):
+    for arm in arm_names:
         gens = load_gens(arm)
         if gens:
             arms[arm] = grade_arm(held, gens)
-            arms[f"explore_{arm}_lenient_explanation"] = grade_arm(held, lenient(gens))
+            if arm in ("base", "after", "after2"):
+                arms[f"explore_{arm}_lenient_explanation"] = grade_arm(held, lenient(gens))
     arms["ref_expert"] = grade_arm([{**e, "_ref": "expert"} for e in held], None)
     arms["ref_empty"] = grade_arm(held, None)
-    metrics = {"arms": {}, "by_group": {}}
+    metrics = {"set": which, "file": fname, "arms": {}, "by_group": {}}
     for arm, rows in arms.items():
         metrics["arms"][arm] = summary(rows)
         metrics["by_group"][arm] = {g: summary([r for r in rows if r["group"] == g]) for g in ("clean", "single", "multi")}
-    for b_arm, a_arm in (("base", "after"), ("base", "after2"), ("ref_empty", "after2")):
+    base = "base" if which == "A" else "base_b"
+    pairs = [(b, a) for a in arm_names if a not in ("base", "base_b") for b in (base, "ref_empty")]
+    for b_arm, a_arm in pairs:
         if b_arm not in arms or a_arm not in arms:
             continue
         ra, rb = arms[b_arm], arms[a_arm]
@@ -129,11 +140,11 @@ def main():
             for g in ("clean", "single", "multi")}
     out = HERE / "results"
     out.mkdir(exist_ok=True)
-    with open(out / "episodes.jsonl", "w") as f:
+    with open(out / f"episodes{suffix}.jsonl", "w") as f:
         for arm, rows in arms.items():
             for r in rows:
                 f.write(json.dumps({"arm": arm, **r}, sort_keys=True) + "\n")
-    (out / "metrics.json").write_text(json.dumps(metrics, indent=1) + "\n")
+    (out / f"metrics{suffix}.json").write_text(json.dumps(metrics, indent=1) + "\n")
     print("| arm | n | mean reward | mean F1 | micro-F1 | schema-error rate | unparseable | steps | clean FP rate |")
     print("|---|---|---|---|---|---|---|---|---|")
     for arm, s in metrics["arms"].items():
