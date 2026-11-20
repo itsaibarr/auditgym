@@ -171,7 +171,8 @@ def cmd_run(a) -> int:
                     " (pass --policy-path DIR with your module; example: examples/my_policy.py)") if not spec.startswith("cmd:") else ""
             raise ValueError(f"policy {spec!r} does not start{hint}:\n{why}")
     results = run_policies(specs, episodes, Path(a.out), mode=a.mode, args=a.policy_arg, policy_path=a.policy_path,
-                           isolate=not a.no_isolate, allow_forks=a.allow_forks, meta={"sources": source}, dir_name=name)
+                           isolate=not a.no_isolate, allow_forks=a.allow_forks, meta={"sources": source, "isolate": not a.no_isolate, "allow_forks": a.allow_forks,
+                                                     "trust_policies": a.trust_policies}, dir_name=name)
     rows, dead = [], []
     for spec in specs:
         res = results[spec]

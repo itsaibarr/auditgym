@@ -940,3 +940,20 @@ def test_tour_next_steps_are_copy_pasteable_for_docker(monkeypatch):
     runs = [c for c in cmds if " run --policy " in c]
     assert runs and all("--out /out" in c and '-v "$PWD/out:/out"' in c and "--user" in c for c in runs)
     assert all("\n" not in c for c in cmds)
+
+
+def test_tour_fails_when_a_baseline_crashes(tmp_path, monkeypatch):
+    import auditgym.checks as C
+    import auditgym.runner as R
+    from auditgym.tour import run_tour
+
+    def fake_check(quick=False, as_json=False, out=None):
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "summary.json").write_text(json.dumps({"checks": [{"id": "tests.test_contract::x", "ok": True, "detail": ""}]}))
+        return 0
+    monkeypatch.setattr(C, "run_check", fake_check)
+    real = R.make_policy
+    monkeypatch.setattr(R, "make_policy", lambda spec, ep, *a, **k: R.ChildPolicy("cmd:false") if spec == "expert" else real(spec, ep, *a, **k))
+    assert run_tour(str(tmp_path / "rep"), quick=True) == 1
+    rep = json.loads((tmp_path / "rep" / "report.json").read_text())
+    assert rep["ok"] is False and rep["steps"]["closed_eval"]["bad_terminations"]["expert"] == 20

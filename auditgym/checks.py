@@ -56,17 +56,21 @@ def _pytest(rep: Report, quick: bool) -> None:
             rep.add("tests.collect", False, proc.stdout[-500:] + proc.stderr[-500:], time.time() - t0)
             return
         groups: dict[str, list] = defaultdict(lambda: [0, 0, []])
+        skipped: dict[str, int] = defaultdict(int)
         for case in ET.parse(xml).getroot().iter("testcase"):
             name = case.get("name").split("[")[0]
             key = f"{case.get('classname').split('.')[-1]}::{name}"
             failed = case.find("failure") is not None or case.find("error") is not None
             g = groups[key]
             g[0] += 1
+            if case.find("skipped") is not None:
+                skipped[key] += 1
             if failed:
                 g[1] += 1
                 g[2].append(case.get("name"))
         for key, (n, nf, names) in sorted(groups.items()):
-            rep.add(f"tests.{key}", nf == 0, f"{n - nf}/{n} cases" + (f"; failed: {names[:3]}" if nf else ""))
+            rep.add(f"tests.{key}", nf == 0, f"{n - nf - skipped[key]}/{n} cases" + (f" ({skipped[key]} skipped on this platform)" if skipped[key] else "")
+                    + (f"; failed: {names[:3]}" if nf else ""))
     rep.add("tests.exit_code", proc.returncode == 0, f"pytest exit {proc.returncode}", time.time() - t0)
 
 

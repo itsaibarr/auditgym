@@ -22,8 +22,9 @@ if [ "$(uname -s)" != "Darwin" ] && [ "$(uname -s)" != "Linux" ]; then
 fi
 
 mkdir -p "$HOME_DIR/bin"
-HERE="$(cd "$(dirname "$0")" 2>/dev/null && pwd || true)"
-if [ -z "${AUDITGYM_SRC:-}" ] && [ -n "$HERE" ] && [ -f "$HERE/pyproject.toml" ] && [ -d "$HERE/auditgym" ]; then
+HERE=""
+if [ -f "$0" ] && [ "$(basename "$0")" = "run.sh" ]; then HERE="$(cd "$(dirname "$0")" 2>/dev/null && pwd || true)"; fi
+if [ -z "${AUDITGYM_SRC:-}" ] && [ -n "$HERE" ] && [ -f "$HERE/uv.lock" ] && [ -d "$HERE/auditgym" ]; then
   AUDITGYM_SRC="$HERE"   # run from a checkout: use it, no download
 fi
 if [ -z "${AUDITGYM_SRC:-}" ]; then
