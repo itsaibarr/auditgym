@@ -224,14 +224,16 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     term_bad = {sp: sum(r["termination"] not in ("submitted", "step_limit") for r in res[sp]) for sp in POLICIES}
     oracle_one = sum(r["reward"] == 1.0 for r in res["oracle"])
     flag_clean = all(r["reward"] == -1.0 for r in res["flag_all"] if r["clean"])
+    dirty = {sp: [r["reward"] for r in res[sp] if not r["clean"]] for sp in POLICIES}  # the ordering check/README assert: books with errors
+    dm = {sp: sum(v) / len(v) if v else 0.0 for sp, v in dirty.items()}
     order_ok = (not any(term_bad.values()) and oracle_one == len(res["oracle"]) and flag_clean
-                and rows["expert"]["mean_return"] > rows["reconcile"]["mean_return"] > max(rows["flag_all"]["mean_return"], rows["random"]["mean_return"]) - 1e-9)
+                and dm["expert"] > dm["reconcile"] > max(dm["flag_all"], dm["random"]) - 1e-9)
     con.print("[dim]* oracle видит эталон (только для оценщика) · ** expert — наш решатель по видимым записям, без эталона · "
               "P и R — по всем выводам (micro), F1 — среднее по эпизодам (пустой ответ на чистых книгах даёт F1 = 1) · "
               + ("сиды и соль новые при каждом запуске" + (f", {redrawn} сидов перевыбрано генератором" if redrawn else "")
                  if split is None else "ваши сиды") + "[/]")
     con.print(f"{'[green]✓[/]' if order_ok else '[red]✗[/]'} oracle = 1.0 на {oracle_one}/{n_eps}; flag_all = −1 на чистых: "
-              f"{'да' if flag_clean else 'нет'}; expert > reconcile ≥ атаки; сбоев/тайм-аутов: {sum(term_bad.values())} · {time.time() - t0:.0f} с")
+              f"{'да' if flag_clean else 'нет'}; expert > reconcile ≥ атаки на книгах с ошибками; сбоев/тайм-аутов: {sum(term_bad.values())} · {time.time() - t0:.0f} с")
     report["steps"]["closed_eval"] = {"ok": order_ok and data_ok_n == n_eps, "policies": rows, "episodes": n_eps,
                                       "source": "juror split" if split is not None else "random", "seeds_redrawn": redrawn,
                                       "data_checks": {"ok": data_ok_n, "total": n_eps}, "bad_terminations": term_bad}
@@ -349,12 +351,13 @@ def next_steps() -> list[tuple[str, str]]:
     steps = [
         ("Новый закрытый split (сиды случайные, формат как у организаторов)", f"{ag} split > my_split.json" if not ag.startswith("mkdir")
          else "docker run --rm auditgym:1.0.0 split > my_split.json"),
-        ("Тот же тур на ваших сидах", f"{ag} tour --split - < my_split.json"),
+        ("Тот же тур на ваших сидах", f"{ag} tour --split - --out {out}/tour < my_split.json"),
         ("Четыре политики организаторов на вашем split", f"{ag} run --policy random,reconcile,flag_all,oracle --split - --public-salt --out {out} < my_split.json"),
-        ("Своя политика: класс Python с reset/step", f"{ag} run --policy my_policy:LookAround --policy-path {ex} --split dev --out {out}{trust}"),
+        ("Своя политика: класс Python с reset/step", f"{ag} run --policy my_policy:LookAround --policy-path {shlex.quote(str(ex))} --split dev --out {out}{trust}"),
         ("Своя политика: любая программа (JSON-строки через stdin/stdout)", f"{ag} run --policy \"cmd:python3 {shlex.quote(str(ex / 'stdio_policy.py'))}\" --split dev --out {out}{trust}"),
         ("Сравнить прогоны (P, R, F1, награда, шаги, время, падения)", f"{ag} compare {out}/random {out}/reconcile {out}/flag_all {out}/oracle --per-type"),
-        ("Сыграть эпизод вручную / JSON Schema для LLM", f"{ag} play   |   {ag} schema --out {out}/schema"),
+        ("Сыграть эпизод вручную", f"{ag} play"),
+        ("JSON Schema выводов и действий (tool-определения для LLM)", f"{ag} schema --out {out}/schema"),
     ]
     if os.environ.get("AUDITGYM_SHELL") == "powershell":  # Windows launcher: PowerShell syntax
         steps = [(label, _powershell(cmd)) for label, cmd in steps]

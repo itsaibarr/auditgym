@@ -40,6 +40,7 @@ function installUv() {
   say(`uv not found: downloading uv ${UV_VERSION} (~20 MB, one time) into ${bin}; nothing else on your system changes ...`);
   // curl honours HTTPS_PROXY; Node https (no proxy support) is the fallback
   const dl = which("curl") ? spawnSync("curl", ["-fsSL", "--retry", "3", "--connect-timeout", "20", "--speed-limit", "1000", "--speed-time", "60", "-o", tgz, url], { stdio: ["ignore", "inherit", "inherit"] })
+    : which("wget") ? spawnSync("wget", ["-q", "-T", "30", "-t", "3", "-O", tgz, url], { stdio: ["ignore", "inherit", "inherit"] })
     : spawnSync(process.execPath, ["-e", `
     const https = require("https"), fs = require("fs");
     const get = (u, n) => https.get(u, { headers: { "user-agent": "auditgym-launcher" }, timeout: 30000 }, (res) => {
@@ -74,7 +75,11 @@ if (isWin) {
   }
   say("Windows detected: building the Docker image from this package (first time only, needs network) ...");
   let r = spawnSync("docker", ["build", "-q", "-t", "auditgym:1.0.0", ROOT], { stdio: "inherit" });
-  if (r.status !== 0) process.exit(r.status || 1);
+  if (r.status !== 0) {
+    const have = spawnSync("docker", ["image", "inspect", "auditgym:1.0.0"], { stdio: "ignore" }).status === 0;
+    if (!have) process.exit(r.status || 1);
+    say("rebuild failed (offline?): using the existing auditgym:1.0.0 image");
+  }
   const run = ["run", "--rm", "-i", "--network", "none"];
   let rep = null;
   if (args[0] === "tour" && !args.includes("--out")) {

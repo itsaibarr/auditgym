@@ -73,7 +73,7 @@ fi
 
 say "running: auditgym $*   (first run downloads Python 3.11 + pinned deps; later runs start in ~1 s)"
 rc=0
-AUDITGYM_LAUNCHER="sh $SRC/run.sh" AUDITGYM_SRC="$SRC" "$UV" run --quiet --frozen --extra gym --project "$SRC" auditgym "$@" || rc=$?
+AUDITGYM_LAUNCHER="sh '$SRC/run.sh'" AUDITGYM_SRC="$SRC" "$UV" run --quiet --frozen --extra gym --project "$SRC" auditgym "$@" || rc=$?
 if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then
   say "if this was a download error: just run the same command again (finished downloads are kept), or use Docker (see README)"
 fi

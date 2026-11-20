@@ -939,6 +939,7 @@ def test_run_refuses_a_policy_that_does_not_start(tmp_path):
 
 def test_tour_next_steps_are_copy_pasteable_for_docker(monkeypatch):
     from auditgym.tour import next_steps
+    monkeypatch.delenv("AUDITGYM_SHELL", raising=False)  # the Windows launcher sets it inside the container
     monkeypatch.setenv("AUDITGYM_LAUNCHER", "docker run --rm -i --network none auditgym:1.0.0")
     cmds = [c for _, c in next_steps()]
     runs = [c for c in cmds if " run --policy " in c]
@@ -961,3 +962,13 @@ def test_tour_fails_when_a_baseline_crashes(tmp_path, monkeypatch):
     assert run_tour(str(tmp_path / "rep"), quick=True) == 1
     rep = json.loads((tmp_path / "rep" / "report.json").read_text())
     assert rep["ok"] is False and rep["steps"]["closed_eval"]["bad_terminations"]["expert"] == 20
+
+
+
+def test_tour_next_steps_powershell_variant(monkeypatch):
+    from auditgym.tour import next_steps
+    monkeypatch.setenv("AUDITGYM_SHELL", "powershell")
+    monkeypatch.setenv("AUDITGYM_LAUNCHER", "docker run --rm -i --network none auditgym:1.0.0")
+    cmds = [c for _, c in next_steps()]
+    assert not any("$(id -u)" in c or "mkdir -p" in c or " < " in c for c in cmds)
+    assert any(c.startswith("Get-Content my_split.json | ") for c in cmds)
