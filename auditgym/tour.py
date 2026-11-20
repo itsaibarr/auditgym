@@ -14,6 +14,7 @@ import io
 import json
 import os
 import platform
+import re
 import secrets
 import shlex
 import sys
@@ -56,6 +57,16 @@ def _past(stage: str) -> str:
     return f"{PAST[verb]} {rest}" if verb in PAST else stage
 
 
+def _left(frac: float, elapsed: float, total: float, count: str | None) -> str:
+    """"~N s left". Early on, a bar weighted by measured seconds (count given) trusts its total of expected seconds;
+    a plain count extrapolates once something finished; with nothing to go on, no estimate."""
+    if frac <= 0.05 or elapsed < 2:
+        if count:
+            return f"~{max(total - elapsed, 1.0):.0f} s left"
+        return f"~{elapsed * (1 - frac) / frac:.0f} s left" if frac > 0 else ""
+    return f"~{elapsed * (1 - frac) / frac:.0f} s left"
+
+
 @contextlib.contextmanager
 def working(con: Console, first: str | None = None):
     """Show what is running, as a checklist (like Docker BuildKit): each stage gets its own line with a spinner, a moving
@@ -63,22 +74,38 @@ def working(con: Console, first: str | None = None):
     a finished stage turns into a ✓ line in the past tense that keeps its time. Not a terminal (Docker without -t, CI
     logs): one plain line per stage. Yields say(stage, detail="", done=None, total=None, count=None); a new stage text
     starts a new line; count overrides the "done/total" text (e.g. when the bar is weighted by time)."""
-    if not con.is_terminal:  # logs: a line per stage, then a progress line at most every 5 s (jury harnesses log to files)
-        st: dict = {"stage": None, "t0": 0.0, "last": 0.0}
+    if not con.is_terminal:  # logs (jury harnesses capture to files): a line per stage, then a status line every 5 s
+        import threading
+        st: dict = {"stage": None, "t0": 0.0, "last": 0.0, "count": "", "frac": None, "total": 0.0, "weighted": None}
+        stop = threading.Event()
 
         def say(stage: str, detail: str = "", done: float | None = None, total: float | None = None, count: str | None = None) -> None:
             now = time.monotonic()
             if stage != st["stage"]:
-                st.update(stage=stage, t0=now, last=now)
+                st.update(stage=stage, t0=now, last=now, count="", frac=None)
                 con.print(f"  ... {stage}", style="dim", markup=False, soft_wrap=True)
-            elif total and now - st["last"] >= 5:
-                st["last"] = now
-                frac, el = min((done or 0) / total, 1.0), now - st["t0"]
-                left = f" · ~{el * (1 - frac) / frac:.0f} s left" if frac > 0.05 else ""
-                con.print(f"      {count or f'{int(done or 0)}/{int(total)}'} · {el:.0f} s{left}", style="dim", markup=False)
+            if total:
+                st.update(frac=min((done or 0) / total, 1.0), total=total, weighted=count,
+                          count=count or f"{int(done or 0)}/{int(total)}")
+
+        def beat() -> None:  # runs even while a long step reports nothing (test collection, one slow episode)
+            while not stop.wait(1.0):
+                now = time.monotonic()
+                if st["stage"] and now - st["last"] >= 5:
+                    st["last"] = now
+                    el = now - st["t0"]
+                    left = _left(st["frac"], el, st["total"], st["weighted"]) if st["frac"] is not None else ""
+                    con.print(f"      {st['count'] + ' · ' if st['count'] else 'still working · '}{el:.0f} s{' · ' + left if left else ''}",
+                              style="dim", markup=False)
         if first:
             say(first)
-        yield say
+        th = threading.Thread(target=beat, daemon=True)
+        th.start()
+        try:
+            yield say
+        finally:
+            stop.set()
+            th.join()
         return
     from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
     cols = (SpinnerColumn(finished_text="[green]✓[/]"), TextColumn("{task.description}"), BarColumn(bar_width=20),
@@ -90,8 +117,9 @@ def working(con: Console, first: str | None = None):
         def close() -> None:
             if cur["id"] is not None:
                 t = next(t for t in prog.tasks if t.id == cur["id"])
+                done_count = f"{int(t.total)}/{int(t.total)}" if t.total and re.fullmatch(r"\d+/\d+", cur["count"]) else cur["count"]
                 prog.update(cur["id"], description=_past(cur["stage"]), total=t.total or 1, completed=t.total or 1, detail="",
-                            left="", count=cur["count"])
+                            left="", count=done_count)
 
         def say(stage: str, detail: str = "", done: float | None = None, total: float | None = None, count: str | None = None) -> None:
             if stage != cur["stage"]:
@@ -101,8 +129,7 @@ def working(con: Console, first: str | None = None):
             kw: dict = {"detail": detail}
             if total:
                 frac, el = min((done or 0) / total, 1.0), time.monotonic() - cur["t0"]
-                kw.update(total=total, completed=min(done or 0, total),
-                          left=f"~{el * (1 - frac) / frac:.0f} s left" if frac > 0.05 and el > 2 else "")
+                kw.update(total=total, completed=min(done or 0, total), left=_left(frac, el, total, count))
                 cur["count"] = count or f"{int(done or 0)}/{int(total)}"
                 kw["count"] = cur["count"]
             prog.update(cur["id"], **kw)
@@ -232,7 +259,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
         f"[bold]AuditGym {__version__} · jury tour[/]\n"
         "Runs the whole verification in 1-2.5 minutes, then prints a pass/fail scorecard for each case criterion.\n"
         "Fully offline: no network, GPU, API keys or accounts needed. Ctrl-C stops it at any time.\n"
-        "4 steps: official check → hidden-episode evaluation → paired checks → replay and leak scan → scorecard\n"
+        "4 steps: hidden-episode evaluation → paired checks → replay and leak scan → the full official check → scorecard\n"
         f"[dim]Python {platform.python_version()} · {platform.system()} {platform.machine()} · code hash {report['code_hash']}[/]\n"
         "Report folder: " + _shown(outdir),
         border_style="cyan"))
@@ -242,47 +269,8 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
                   "docker run --rm --network none --user \"$(id -u):$(id -g)\" -v \"$PWD/auditgym-report:/report\" auditgym:1.0.0 tour --out /report[/]",
                   soft_wrap=True)
 
-    # 1. official check -------------------------------------------------------------------------------------------
-    _step(con, "Step 1/4 · Official check", "the same as running `auditgym check` yourself",
-          "Runs the full test suite, then the 5 baseline policies on the 20 open episodes, then checks that rewards come out in "
-          "the required order, scans for leaked answers, and replays the runs. Usually 30-60 s.")
-    t0 = time.time()
-    cap_out, cap_err = io.StringIO(), io.StringIO()
-    juror_salt = os.environ.pop("AUDITGYM_SALT", None)  # the official check uses its own open data, never the juror's salt
-    try:
-        with working(con) as say, contextlib.redirect_stdout(cap_out), contextlib.redirect_stderr(cap_err):
-            rc = run_check(quick=quick, out=outdir / "check", progress=say)
-    finally:
-        if juror_salt is not None:
-            os.environ["AUDITGYM_SALT"] = juror_salt
-    if not (outdir / "check" / "summary.json").exists():
-        tail = "\n".join((cap_out.getvalue() + cap_err.getvalue()).strip().splitlines()[-8:])
-        con.print(f"auditgym check could not run (exit code {rc}):\n{tail}", style="red", markup=False, soft_wrap=True)
-        return 2
-    summary = json.loads((outdir / "check" / "summary.json").read_text())
-    by_c = {k: [0, 0] for k, _, _ in CRITERIA}
-    for it in summary["checks"]:
-        c = by_c[_criterion(it["id"])]
-        c[0] += it["ok"]
-        c[1] += 1
-    tb = Table(show_header=True, header_style="bold")
-    tb.add_column("Case criterion")
-    tb.add_column("Checks passed", justify="right")
-    for k, name, _ in CRITERIA:
-        p, n = by_c[k]
-        if n:  # engineering and explanation is judged from the docs, not by checks
-            tb.add_row(name, f"[{'green' if p == n else 'red'}]{p}/{n}[/]")
-    con.print(tb)
-    n_ok, n_all = sum(i["ok"] for i in summary["checks"]), len(summary["checks"])
-    con.print(f"{'[green]✓ Step 1 of 4 passed[/]' if rc == 0 else '[red]✗ Step 1 of 4 failed[/]'}: {n_ok}/{n_all} checks passed "
-              f"in {time.time() - t0:.0f} s · one line per check: {_shown(outdir / 'check' / 'summary.md')}")
-    failed = [f"{i['id']}: {i['detail']}"[:160] for i in summary["checks"] if not i["ok"]]
-    for f in failed[:10]:
-        con.print(f"  FAIL {f}", style="red", markup=False, soft_wrap=True)
-    report["steps"]["check"] = {"ok": rc == 0, "passed": n_ok, "total": n_all, "by_criterion": by_c, "failed": failed}
-
-    # 2. closed evaluation like the organizers' ---------------------------------------------------------------------
-    _step(con, "Step 2/4 · Hidden-episode evaluation", "how the organizers will test agents",
+    # 1. closed evaluation like the organizers' ---------------------------------------------------------------------
+    _step(con, "Step 1/4 · Hidden-episode evaluation", "how the organizers will test agents",
           ("Uses the episodes from your split (read from stdin). " if split is not None else
            "Creates 20 new episodes from secret random seeds and a secret salt (a random key mixed into every seed, so an "
            "agent cannot rebuild the answers with the open generator), never written down: 5 with clean books, 5 with "
@@ -366,34 +354,34 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
                                       "source": "juror split" if split is not None else "random", "seeds_redrawn": redrawn,
                                       "data_checks": {"ok": data_ok_n, "total": n_eps}, "bad_terminations": term_bad}
 
-    # 3. paired checks ---------------------------------------------------------------------------------------------
-    _step(con, f"Step 3/4 · {n_eps} paired checks", "does the grade depend on anything it should not?",
+    # 2. paired checks ---------------------------------------------------------------------------------------------
+    _step(con, f"Step 2/4 · {n_eps} paired checks", "does the grade depend on anything it should not?",
           "Copies each hidden episode with its rows shuffled and its document and line IDs renamed. The grade must not change: "
           "oracle stays at 1.0 and expert gets exactly the same result. Usually a few seconds.")
     t0 = time.time()
     bad = []
     with working(con) as say:
         for k, (_, ep) in enumerate(eps):
-            say("Grading shuffled and renamed copies of each episode", "", k, len(eps))
             pub2, truth2, _ = perturb(ep.public, ep.truth, seed=secrets.randbits(32))
             ep2 = Episode(pub2, truth2, ep.provenance, {})
             a = run_episode("oracle", ep2, "eval").result
             b, b2 = (run_episode("expert", e, "eval", isolate=False).result for e in (ep, ep2))
             if a["reward"] != 1.0 or (b["tp"], b["fp"], b["fn"], b["reward"]) != (b2["tp"], b2["fp"], b2["fn"], b2["reward"]):
                 bad.append(ep.episode_id)
+            say("Grading shuffled and renamed copies of each episode", "", k + 1, len(eps))  # after the item, so it ends at n/n
     paired_ok = not bad
     con.print(f"{'[green]✓[/]' if paired_ok else '[red]✗[/]'} {len(eps) - len(bad)}/{len(eps)} pairs graded the same: oracle still 1.0, "
               f"expert result unchanged · {time.time() - t0:.0f} s")
     report["steps"]["paired"] = {"ok": paired_ok, "passed": len(eps) - len(bad), "total": len(eps)}
 
-    # 4. replay, integrity, leakscan ---------------------------------------------------------------------------------
-    _step(con, "Step 4/4 · Replay, integrity, leaks", "can anyone reproduce and trust these results?",
+    # 3. replay, integrity, leakscan ---------------------------------------------------------------------------------
+    _step(con, "Step 3/4 · Replay, integrity, leaks", "can anyone reproduce and trust these results?",
           "Re-runs the recorded actions and grades them again, checks every run folder against the tamper-proof fingerprints "
           "(HMAC) saved in its run.json, and scans everything the policies saw for leaked answers. Usually a few seconds.")
     t0 = time.time()
     epmap = {ep.episode_id: ep for _, ep in eps}
     with working(con) as say:
-        say("Replaying the recorded reconcile run and grading it again")
+        say("Replaying the recorded reconcile run with re-grading")
         rep_ok, rep_n = _replay_ok(outdir / "closed" / "reconcile", epmap)
     old = os.environ.get("AUDITGYM_SALT")
     os.environ["AUDITGYM_SALT"] = salt  # verify the keyed signatures of this salted run
@@ -411,6 +399,45 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     con.print(f"{'[green]✓[/]' if not integ else '[red]✗[/]'} Integrity: {sum(not v for v in integ_by.values())}/{len(POLICIES)} run folders match their tamper-proof fingerprints (HMAC) in run.json")
     con.print(f"{'[green]✓[/]' if not leaks else '[red]✗[/]'} Leak scan: {len(leaks)} leaked answers in what the policies saw · {time.time() - t0:.0f} s")
     report["steps"]["replay_integrity_leaks"] = {"ok": tail_ok, "replay": [rep_ok, rep_n], "integrity_problems": integ[:5], "leaks": leaks[:5]}
+
+    # 4. official check (the longest step, so it runs last: results first) -------------------------------------------------------------------------------------------
+    _step(con, "Step 4/4 · Official check", "the same as running `auditgym check` yourself",
+          "Runs the full test suite, then the 5 baseline policies on the 20 open episodes, then checks that rewards come out in "
+          "the required order, scans for leaked answers, and replays the runs. Usually 30-60 s.")
+    t0 = time.time()
+    cap_out, cap_err = io.StringIO(), io.StringIO()
+    juror_salt = os.environ.pop("AUDITGYM_SALT", None)  # the official check uses its own open data, never the juror's salt
+    try:
+        with working(con) as say, contextlib.redirect_stdout(cap_out), contextlib.redirect_stderr(cap_err):
+            rc = run_check(quick=quick, out=outdir / "check", progress=say)
+    finally:
+        if juror_salt is not None:
+            os.environ["AUDITGYM_SALT"] = juror_salt
+    if not (outdir / "check" / "summary.json").exists():
+        tail = "\n".join((cap_out.getvalue() + cap_err.getvalue()).strip().splitlines()[-8:])
+        con.print(f"auditgym check could not run (exit code {rc}):\n{tail}", style="red", markup=False, soft_wrap=True)
+        return 2
+    summary = json.loads((outdir / "check" / "summary.json").read_text())
+    by_c = {k: [0, 0] for k, _, _ in CRITERIA}
+    for it in summary["checks"]:
+        c = by_c[_criterion(it["id"])]
+        c[0] += it["ok"]
+        c[1] += 1
+    tb = Table(show_header=True, header_style="bold")
+    tb.add_column("Case criterion")
+    tb.add_column("Checks passed", justify="right")
+    for k, name, _ in CRITERIA:
+        p, n = by_c[k]
+        if n:  # engineering and explanation is judged from the docs, not by checks
+            tb.add_row(name, f"[{'green' if p == n else 'red'}]{p}/{n}[/]")
+    con.print(tb)
+    n_ok, n_all = sum(i["ok"] for i in summary["checks"]), len(summary["checks"])
+    con.print(f"{'[green]✓ Step 4 of 4 passed[/]' if rc == 0 else '[red]✗ Step 4 of 4 failed[/]'}: {n_ok}/{n_all} checks passed "
+              f"in {time.time() - t0:.0f} s · one line per check: {_shown(outdir / 'check' / 'summary.md')}")
+    failed = [f"{i['id']}: {i['detail']}"[:160] for i in summary["checks"] if not i["ok"]]
+    for f in failed[:10]:
+        con.print(f"  FAIL {f}", style="red", markup=False, soft_wrap=True)
+    report["steps"]["check"] = {"ok": rc == 0, "passed": n_ok, "total": n_all, "by_criterion": by_c, "failed": failed}
 
     # scorecard -------------------------------------------------------------------------------------------------------
     all_ok = rc == 0 and order_ok and paired_ok and tail_ok and data_ok_n == n_eps

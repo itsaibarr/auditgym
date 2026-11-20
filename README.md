@@ -27,8 +27,8 @@ AuditGym генерирует бухгалтерию вымышленной ко
 
 | Что есть на компьютере | Команда |
 |---|---|
-| Node.js 16+ (`npx`) | `npx -y --no-update-notifier https://codeload.github.com/itsaibarr/auditgym/tar.gz/master` |
 | macOS / Linux (только `curl`) | `curl -fsSL https://raw.githubusercontent.com/itsaibarr/auditgym/master/run.sh \| sh` |
+| Node.js 16+ (`npx`) | `npx -y --no-update-notifier https://codeload.github.com/itsaibarr/auditgym/tar.gz/master` |
 | Linux только с `wget` (например, Ubuntu Desktop) | `wget -qO- https://raw.githubusercontent.com/itsaibarr/auditgym/master/run.sh \| sh` |
 | Docker (в т.ч. Windows) | `docker build -t auditgym:1.0.0 https://github.com/itsaibarr/auditgym.git`, затем `mkdir -p auditgym-report && docker run --rm --network none --user "$(id -u):$(id -g)" -v "$PWD/auditgym-report:/report" auditgym:1.0.0 tour --out /report` <br>Windows PowerShell: `mkdir -Force auditgym-report; docker run --rm --network none -v "${PWD}/auditgym-report:/report" auditgym:1.0.0 tour --out /report` |
 
@@ -51,10 +51,10 @@ AuditGym генерирует бухгалтерию вымышленной ко
 
 Без аргументов запускается `auditgym tour`. Он идёт 1–2,5 минуты, проходит четыре шага и печатает итог по критериям кейса. Весь вывод CLI на английском. Над каждым шагом тур пишет, что он проверяет и сколько это обычно длится. Пока шаг идёт, его стадии видны списком, как в Docker BuildKit: у текущей крутится индикатор, растёт счётчик (например, 463/570 тестов или 70/100 эпизодов) и идёт время, а законченная стадия получает ✓ и своё время. Во время pytest строка ещё называет, что проверяется прямо сейчас.
 
-1. **Официальная проверка.** Тур запускает `auditgym check`, это 148 проверок: pytest, базовые политики, порядки наград, leakscan, парные проверки и replay. Результат сгруппирован по критериям кейса.
-2. **Закрытая проверка в форме организаторов.** Тур берёт новые секретные сиды и соль и генерирует 20 эпизодов, из них 5 чистых и 5 со связанными ошибками. Данные каждого эпизода проверяет код, который не импортирует генератор. Он проверяет три вещи: инварианты I1–I8 на книгах до ошибок, совпадение нарушений с объявленными ошибками и то, что доказательства воспроизводят суммы. Затем на этих эпизодах работают random, reconcile, flag_all, oracle и наш expert. Таблица показывает P, R, F1, награду, награду на чистых книгах, шаги и время на эпизод. Порядок наград тур проверяет так: oracle получает 1.0 везде, flag_all получает −1 на чистых книгах, а на книгах с ошибками expert > reconcile ≥ max(flag_all, random). Строка с порядком печатает измеренные средние. Если в split нет ни одной книги с ошибками, тур так и пишет: «order on books with errors not checked».
-3. **20 парных проверок.** В закрытых эпизодах тур переставляет строки и меняет ID документов и строк. Oracle должен остаться на 1.0, исход expert меняться не должен.
-4. **Повтор, целостность, утечки.** Тур побайтно повторяет закрытый прогон и заново его оценивает, сверяет папки прогонов с хешами и подписью HMAC в `run.json` и прогоняет leakscan по наблюдениям.
+1. **Закрытая проверка в форме организаторов.** Тур берёт новые секретные сиды и соль и генерирует 20 эпизодов, из них 5 чистых и 5 со связанными ошибками. Данные каждого эпизода проверяет код, который не импортирует генератор. Он проверяет три вещи: инварианты I1–I8 на книгах до ошибок, совпадение нарушений с объявленными ошибками и то, что доказательства воспроизводят суммы. Затем на этих эпизодах работают random, reconcile, flag_all, oracle и наш expert. Таблица показывает P, R, F1, награду, награду на чистых книгах, шаги и время на эпизод. Порядок наград тур проверяет так: oracle получает 1.0 везде, flag_all получает −1 на чистых книгах, а на книгах с ошибками expert > reconcile ≥ max(flag_all, random). Строка с порядком печатает измеренные средние. Если в split нет ни одной книги с ошибками, тур так и пишет: «order on books with errors not checked».
+2. **20 парных проверок.** В закрытых эпизодах тур переставляет строки и меняет ID документов и строк. Oracle должен остаться на 1.0, исход expert меняться не должен.
+3. **Повтор, целостность, утечки.** Тур побайтно повторяет закрытый прогон и заново его оценивает, сверяет папки прогонов с хешами и подписью HMAC в `run.json` и прогоняет leakscan по наблюдениям.
+4. **Официальная проверка.** Самый долгий шаг, поэтому он последний: результаты видны раньше. Тур запускает `auditgym check`, это 148 проверок: pytest, базовые политики, порядки наград, leakscan, парные проверки и replay. Результат сгруппирован по критериям кейса.
 
 Итог по пяти критериям кейса берёт статус каждой строки только из измерений этого запуска, а в колонке «Evidence from this run» стоят сами числа. Пятый критерий, инженерию и объяснение, тур не измеряет. В этой строке стоит «—» и ссылки, где смотреть.
 
@@ -170,6 +170,25 @@ docker run --rm --network none --cpus 2 --memory 4g auditgym:1.0.0 check
 
 `check` не ходит в сеть и не использует GPU и платные API. При 2 CPU и 4 ГБ он идёт 40–110 секунд. Код 0 означает, что всё пройдено, 1 означает провал, 2 означает внутреннюю ошибку. Для каждой проверки печатается строка `PASS|FAIL <id> <сек> <детали>`. Отчёт пишется в `runs/check/summary.{md,json}`, а флаг `--json` печатает один JSON-документ.
 
+Где в выводе `check` искать каждое требование кейса (строка `PASS tests.<файл>::<тест>` или `PASS <id>`):
+
+| Требование кейса | Строка `check` |
+|---|---|
+| §04 reset → (observation, info), step → пять значений, JSON-совместимо | `test_contract::test_reset_returns_obs_info_json`, `test_step_contract_five_tuple`, `test_reset_from_seed_and_config_is_supported` |
+| §04 страницы до 50 строк, стабильные курсоры; get_record, get_document | `test_contract::test_pages_max_50_and_stable_cursors_cover_table`, `test_get_record_and_document` |
+| §04 неизвестный ID или действие: ограниченная ошибка, шаг расходуется; калькулятор только арифметика | `test_contract::test_bounded_errors_consume_a_step`, `test_calculator_is_decimal_exact` |
+| §04 100 шагов, лимит времени, truncated с пустым ответом; reset изолирует эпизод | `test_contract::test_step_limit_100_truncates_with_empty_answer`, `test_time_limit_truncates`, `test_reset_isolates_state` |
+| §04 награда по ходу нулевая, в eval скрыта до конца | `test_contract::test_eval_mode_zero_reward_minimal_info`, `test_train_mode_terminal_reward_only` |
+| §05 пять тестов награды из кейса | `test_reward::test_correct_with_evidence_beats_silence_on_dirty`, `test_silence_beats_false_accusations_on_clean`, `test_duplicates_give_no_gain`, `test_flag_everything_is_bad`, `test_step_savings_only_slightly_separate_equal_answers` |
+| §05 неверная структура = −1; формула награды; угаданные ID, неподтверждённые доказательства | `test_reward::test_malformed_findings_score_exactly_minus_one`, `test_reward_formula_exact`, `test_adversarial_findings_are_false_positives` |
+| §03, §10 равенства до ошибки, объявленные расхождения после, достаточность доказательств | `test_data::test_invariants_hold_before_injection`, `test_exactly_declared_discrepancies_after_injection`, `test_every_evidence_set_independently_reproduces_amount` |
+| §02 четыре типа, оба связанных сценария, отвлекающие случаи | `test_data::test_all_four_types_and_both_interacting_scenarios_occur`, `test_error_types_independently_configurable`, `test_clean_episodes_have_distractors` |
+| §03 эталон не утекает; оценщик вне процесса агента | `test_isolation::test_leakscan_clean_on_all_baselines`, `test_oracle_not_reachable_from_child`, `test_child_policy_has_scrubbed_environment`, `isolation.leakscan` |
+| §04, §10 повтор seed и действий, парные проверки | `test_repro::test_same_actions_same_transitions_and_rewards`, `test_paired_permutation_and_rename_preserve_oracle_and_mapped_answers`, `repro.paired_permutation_rename`, `repro.replay_trajectories` |
+| §06 порядок наград базовых политик | `reward.oracle_max_everywhere`, `reward.ordering_dirty`, `reward.flag_all_clean_is_minus_one` |
+
+Это наши проверки, их 148, а не 20 проверок жюри на критерий. Жюри считает свои по своим определениям; таблица показывает, где у нас лежит доказательство каждого требования.
+
 Что внутри:
 1. pytest, 570 случаев: контракт reset/step, данные и эталон, атакующие ответы, воспроизводимость, изоляция. Для данных тесты проверяют равенства до внесения ошибки, ровно объявленные расхождения после и достаточность доказательств без генератора.
 2. Базовые политики на 10 train и 10 dev эпизодах в eval-режиме, каждая в своём дочернем процессе.
@@ -195,6 +214,8 @@ auditgym compare runs/oracle runs/reconcile runs/flag_all runs/random --per-type
 
 Справка для своей политики:
 - первое наблюдение (`reset`) содержит ключи `task`, `manifest`, `policy`, `tables`, `available_actions`, `action_format`, `finding_types`, `limits`, `steps_remaining`; каждое следующее (`step`) содержит `result`, `error`, `steps_remaining`, в `info` всегда лежат `error_code` и `steps_remaining`;
+- ответ `list_records` лежит в `result` и содержит `table`, `rows` (до 50 строк), `next_cursor` (null на последней странице) и `total`; ошибка приходит в `error` как `{"code", "message"}` и тоже расходует шаг;
+- программа `cmd:` получает по строке JSON на сообщение: `{"type":"reset","observation","info"}`, затем `{"type":"step","observation","reward","terminated","truncated","info"}`, в конце `{"type":"close", ...}` с последним переходом;
 - на каждый эпизод раннер запускает новый процесс и создаёт новый экземпляр политики, поэтому состояние между эпизодами не переносится; для воспроизводимой случайности берите seed из аргумента и `episode_id`;
 - `--policy-arg k=v` передаётся в конструктор каждой своей политики как именованный аргумент, значение разбирается как JSON, если получается (`seed=7` станет числом 7), иначе остаётся строкой; встроенные политики берут только известные им аргументы.
 
@@ -230,7 +251,7 @@ Stdout служит каналом протокола. Для Python-полит�
 - часовой пояс: Asia/Almaty, Asia/Tashkent, Europe/Berlin с переходом на летнее время, Asia/Dubai, UTC;
 - месяц, имена, ID, порядок записей, суммы и сочетания ошибок.
 
-В типичном эпизоде 400–2000 проводок, 70–340 документов и 0–12 ошибок.
+В типичном эпизоде 400–2000 проводок, 70–340 документов и 0–12 ошибок. Документов бывает больше, чем в предложенном кейсом диапазоне 20–200: так выходит при настройках генератора по умолчанию из таблицы «Ключи конфигурации», на правила проверки это не влияет. Меньшие эпизоды задаются ключами `invoices` и `expenses`.
 
 | Файл | Содержимое |
 |---|---|

@@ -36,6 +36,7 @@ if [ "$(uname -s)" != "Darwin" ] && [ "$(uname -s)" != "Linux" ]; then
 fi
 
 mkdir -p "$HOME_DIR/bin"
+[ -d "$SRC/.venv" ] || say "first run, one time: downloads uv, a Python installer (~20 MB, unless installed), Python 3.11 (~30 MB, unless installed) and 19 pinned packages, then runs the tour. Usually 20-60 s before the tour starts, up to 3 min on a slow network. Ctrl-C is safe: running the same command again resumes. Later runs start in about 1 s."
 HERE=""
 if [ -f "$0" ] && [ "$(basename "$0")" = "run.sh" ]; then HERE="$(cd "$(dirname "$0")" 2>/dev/null && pwd || true)"; fi
 if [ -z "${AUDITGYM_SRC:-}" ] && [ -n "$HERE" ] && [ -f "$HERE/uv.lock" ] && [ -d "$HERE/auditgym" ]; then
@@ -87,7 +88,7 @@ fi
 
 rc=0
 Q="--quiet"; [ -d "$SRC/.venv" ] || Q=""   # first run: show uv's download progress
-if [ -z "$Q" ]; then say "first run: setting up Python 3.11 (downloaded only if missing) and the pinned packages (usually under a minute, up to 3 on a slow network; later runs start in about 1 s), then: auditgym $*"
+if [ -z "$Q" ]; then say "setting up Python 3.11 and the packages, then: auditgym $*"
 else say "auditgym $*"; fi
 AUDITGYM_LAUNCHER="sh '$SRC/run.sh'" AUDITGYM_SRC="$SRC" "$UV" run $Q --frozen --extra gym --project "$SRC" auditgym "$@" || rc=$?
 if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then

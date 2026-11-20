@@ -166,8 +166,9 @@ def cmd_run(a) -> int:
     harden_runner()  # first: same-user children (incl. the pre-flight probe) must not read /proc/<runner>/environ|mem
     exposed = salt_exposures()  # [] unless Linux and AUDITGYM_SALT is set
     if exposed:
-        raise RuntimeError(f"AUDITGYM_SALT is readable in the environment or command line of other process(es) {exposed[:5]} "
-                           "(e.g. docker --init, an sh -c / uv run wrapper); a policy could read it. Start the runner directly: "
+        raise RuntimeError(f"refusing to start: the secret salt (AUDITGYM_SALT) is visible to another process in this container "
+                           f"(process id {', '.join(map(str, exposed[:5]))}, for example the init process added by docker --init, or a "
+                           "shell or uv wrapper), so a policy could read it too. Start the runner directly: "
                            "docker run --rm -e AUDITGYM_SALT=... auditgym:1.0.0 run ...")
     episodes = _episodes(a)
     specs = a.policy.split(",")
@@ -380,10 +381,17 @@ def cmd_datacheck(a) -> int:
     injected books break exactly the declared errors, and every evidence set reproduces its amount from its own records.
     Uses code that does not import the generator. Episodes from a split are regenerated (so the books before injection
     exist); episode folders on disk only have the injected books, so that column says n/a."""
+    from rich.console import Console
     from .datacheck import kind, kind_counts, verify_episode
+    from .tour import working
     rows, bad, eps = [], 0, [ep for _, ep in _episodes(a)]
-    for ep in eps:
-        c = verify_episode(ep)
+    with working(Console(stderr=True, highlight=False)) as say:
+        checks = []
+        for ep in eps:
+            say(f"Checking the data of {len(eps)} episodes", "", len(checks), len(eps))
+            checks.append(verify_episode(ep))
+        say(f"Checking the data of {len(eps)} episodes", "", len(checks), len(eps))
+    for ep, c in zip(eps, checks):
         bad += not c["ok"]
         rows.append([ep.episode_id, kind(ep), str(c["issues"]), _yes(c["invariants_before"]), _yes(c["declared_after"]),
                      _yes(c["evidence"]), "✓ PASS" if c["ok"] else "✗ FAIL"])
@@ -414,7 +422,13 @@ def cmd_paired(a) -> int:
     specs = [s for s in a.policy.split(",") if s != "oracle"]
     if a.policy_path and not Path(a.policy_path).exists() and (ROOT / a.policy_path).is_dir():
         a.policy_path = str(ROOT / a.policy_path)
+    from rich.console import Console
+    from .tour import working
     rows, bad, eps = [], 0, [ep for _, ep in _episodes(a)]
+    stage = f"Grading shuffled and renamed copies of {len(eps)} episodes (oracle + {', '.join(specs)})"
+    ctx = working(Console(stderr=True, highlight=False))
+    say = ctx.__enter__()
+    say(stage, "", 0, len(eps))
     for k, ep in enumerate(eps):
         pub2, truth2, mapping = perturb(ep.public, ep.truth, seed=a.seed + k)
         ep2 = Episode(pub2, truth2, ep.provenance, {})
@@ -428,6 +442,8 @@ def cmd_paired(a) -> int:
         ok = o2["reward"] == 1.0 and same_all
         bad += not ok
         rows.append([ep.episode_id, kind(ep), str(len(mapping)), f"{o2['reward']:+.3f}", *cells, "✓ PASS" if ok else "✗ FAIL"])
+        say(stage, f"now: {ep.episode_id}", k + 1, len(eps))
+    ctx.__exit__(None, None, None)
     rich_table("Paired checks (case sections 06 and 10, 'Reproducibility and generalization')",
                ["Episode", "Kind", "IDs renamed", "Oracle reward on the copy", *[f"{s}: original → copy" for s in specs], "Result"], rows,
                "Each copy has its rows shuffled and its document and line IDs renamed (auditgym/perturb.py). Oracle must stay at "
@@ -461,7 +477,11 @@ def cmd_check(a) -> int:
     if a.json:
         return run_check(quick=a.quick, as_json=True, out=Path(a.out))
     from .tour import working  # a live status line in a terminal, one line per stage otherwise
-    with working(_console()) as say:
+    con = _console()
+    con.print("auditgym check: the test suite (570 tests), then the 5 baseline policies on the 20 open episodes, reward-order "
+              "checks, a leak scan, 20 paired checks and a replay. Usually 40-110 s at 2 CPU; a results table and "
+              "PASS/FAIL n/148 come at the end.", markup=False, soft_wrap=True)
+    with working(con) as say:
         return run_check(quick=a.quick, out=Path(a.out), progress=say)
 
 

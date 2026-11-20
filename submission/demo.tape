@@ -79,7 +79,7 @@ Wait
 Type "docker run --rm --network none -v $PWD/out:/out:ro auditgym:1.0.0 leakscan /out/random /out/reconcile /out/flag_all /out/oracle"
 Enter
 Wait
-Type "# A salt-leak attempt through PID 1 (docker --init): the runner refuses to start"
+Type "# Attack check: if any other process in the container can read the secret salt (here docker --init), the runner refuses"
 Enter
 Type "docker run -i --rm --init --network none -e AUDITGYM_SALT=$SALT auditgym:1.0.0 run --policy expert --split - --out /tmp/x < my_split.json; echo exit=$?"
 Enter
@@ -89,6 +89,8 @@ Sleep 8s
 Type "clear"
 Enter
 Type "# 3) Your own agent: init copies an example to edit. This toy one accuses nobody: +1 on clean books, -1 on the rest."
+Enter
+Type "# From here on, auditgym means the same one-line launch command"
 Enter
 Type "alias auditgym='npx -y --no-update-notifier --prefer-offline https://codeload.github.com/itsaibarr/auditgym/tar.gz/master'"
 Enter

@@ -37,7 +37,7 @@ function installUv() {
   const bin = path.join(CACHE, "bin");
   fs.mkdirSync(bin, { recursive: true });
   const tgz = path.join(bin, `uv-${process.pid}.tar.gz`);
-  say(`uv not found: downloading uv ${UV_VERSION} (~20 MB, one time) into ${bin}; besides uv's own caches (~/.cache/uv, ~/.local/share/uv) nothing on your system changes ...`);
+  say(`downloading uv ${UV_VERSION} into ${bin} (besides uv's own caches ~/.cache/uv and ~/.local/share/uv, nothing else on your system changes) ...`);
   // curl honours HTTPS_PROXY; Node https (no proxy support) is the fallback
   const bar = process.stderr.isTTY ? "-#" : "-sS";
   const fetch1 = () => which("curl") ? spawnSync("curl", ["-fL", bar, "-C", "-", "--retry", "3", "--connect-timeout", "20", "--speed-limit", "1000", "--speed-time", "60", "-o", tgz, url], { stdio: ["ignore", "inherit", "inherit"] })
@@ -98,14 +98,13 @@ if (isWin) {
   process.exit(r.status === null ? 1 : r.status);
 }
 
+const first = !fs.existsSync(path.join(ROOT, ".venv"));  // first run: say the plan before any download, show uv's progress
+if (first) say("first run, one time: downloads uv, a Python installer (~20 MB, unless installed), Python 3.11 (~30 MB, unless installed) and 19 pinned packages, then runs the tour. Usually 20-60 s before the tour starts, up to 3 min on a slow network. Ctrl-C is safe: running the same command again resumes. Later runs start in about 1 s.");
 const runs = (u) => spawnSync(u, ["--version"], { timeout: 15000 }).status === 0;  // a cached/system uv must actually start
 let uv = process.env.AUDITGYM_UV ||
   [path.join(CACHE, "bin", "uv"), which("uv"), path.join(os.homedir(), ".local", "bin", "uv"), path.join(os.homedir(), ".cargo", "bin", "uv")].find((u) => u && exists(u) && runs(u));
 if (!uv) uv = installUv();
-const first = !fs.existsSync(path.join(ROOT, ".venv"));  // first run: show uv's download progress
-say(first ? `first run: setting up Python 3.11 (downloaded only if missing) and the pinned packages (usually under a minute, up to 3 on a slow network; ` +
-            `later runs start in about 1 s), then: auditgym ${args.join(" ")}`
-          : `auditgym ${args.join(" ")}`);
+say(first ? `setting up Python 3.11 and the packages, then: auditgym ${args.join(" ")}` : `auditgym ${args.join(" ")}`);
 const r = spawnSync(uv, ["run", ...(first ? [] : ["--quiet"]), "--frozen", "--extra", "gym", "--project", ROOT, "auditgym", ...args], {
   stdio: "inherit",
   env: { ...process.env, AUDITGYM_LAUNCHER: LAUNCHER },

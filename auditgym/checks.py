@@ -173,16 +173,16 @@ def run_check(quick: bool = False, as_json: bool = False, out: Path | None = Non
         t0 = time.time()
         bad = []
         for k, (_, ep) in enumerate(episodes):
-            say(stage, "", k, len(episodes))
             pub2, truth2, m = perturb(ep.public, ep.truth, seed=1000 + k)
             ep2 = Episode(pub2, truth2, ep.provenance, {})
             a, b = run_episode("oracle", ep2, "eval").result, run_episode("expert", ep, "eval", isolate=False).result
             b2 = run_episode("expert", ep2, "eval", isolate=False).result
             if a["reward"] != 1.0 or (b["tp"], b["fp"], b["fn"], b["reward"]) != (b2["tp"], b2["fp"], b2["fn"], b2["reward"]):
                 bad.append(ep.episode_id)
+            say(stage, "", k + 1, len(episodes))  # after the item: a finished stage reads 20/20, never 19/20
         rep.add("repro.paired_permutation_rename", not bad, f"{20 - len(bad)}/20 paired checks preserve oracle & expert outcomes", time.time() - t0)
 
-        say("Regenerating the episodes and replaying the recorded runs")
+        say("Replaying the recorded runs on regenerated episodes")
         t0 = time.time()
         regen = split_episodes("train") + split_episodes("dev")
         same = all(dumps([a.public, a.truth]) == dumps([b.public, b.truth]) for (_, a), (_, b) in zip(episodes, regen))

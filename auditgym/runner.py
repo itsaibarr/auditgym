@@ -408,8 +408,9 @@ def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root
               "kill(-1); for closed or --allow-forks evaluation use `docker run ... auditgym:1.0.0 run ...`", file=sys.stderr)
     exposed = salt_exposures() if (isolate or custom) else []
     if exposed:
-        raise RuntimeError(f"AUDITGYM_SALT is readable in the environment or command line of other process(es) {exposed[:5]} (e.g. docker --init, "
-                           "an sh -c / uv run wrapper); a policy could read it. Start the runner directly: "
+        raise RuntimeError(f"refusing to start: the secret salt (AUDITGYM_SALT) is visible to another process in this container "
+                           f"(process id {', '.join(map(str, exposed[:5]))}, for example the init process added by docker --init, or a "
+                           "shell or uv wrapper), so a policy could read it too. Start the runner directly: "
                            "docker run --rm -e AUDITGYM_SALT=... auditgym:1.0.0 run ...")
     done: dict[str, list[EpisodeRun]] = {}
     for spec in order:
