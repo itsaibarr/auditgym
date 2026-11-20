@@ -52,7 +52,7 @@ function installUv() {
       res.pipe(fs.createWriteStream(process.argv[2])).on("finish", () => process.exit(0));
     }).on("timeout", function () { console.error("download stalled (no data for 30 s)"); this.destroy(); process.exit(1); })
       .on("error", (e) => { console.error(String(e)); process.exit(1); });
-    get(process.argv[1], 0);`, url, tgz], { stdio: ["ignore", "inherit", "inherit"] });
+    get(process.argv[1], 0);`, url, tgz], { stdio: ["ignore", "inherit", "inherit"], env: { ...process.env, NODE_USE_ENV_PROXY: "1" } });  // Node >= 22.21 / 24.5: honour HTTPS_PROXY
   let dl = fetch1();
   for (let k = 2; k <= 3 && dl.status !== 0; k++) { say(`download interrupted, attempt ${k}/3 ...`); dl = fetch1(); }
   let sum = "";
