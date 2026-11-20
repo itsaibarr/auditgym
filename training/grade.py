@@ -128,6 +128,7 @@ def main():
         metrics["by_group"][arm] = {g: summary([r for r in rows if r["group"] == g]) for g in ("clean", "single", "multi")}
     base = "base" if which == "A" else "base_b"
     pairs = [(b, a) for a in arm_names if a not in ("base", "base_b") for b in (base, "ref_empty")]
+    pairs.append(("c3" if which == "A" else "c3_b", "c4" if which == "A" else "c4_b"))
     for b_arm, a_arm in pairs:
         if b_arm not in arms or a_arm not in arms:
             continue

@@ -1,0 +1,35 @@
+{
+ "model": "unsloth/Qwen3-14B-bnb-4bit",
+ "model_revision": "b455922269e4678c84f854fe38a6993d73614a1e",
+ "keep_types": [
+  "duplicate_invoice",
+  "period_cutoff"
+ ],
+ "sft4_sha256": "f70b08aa72fd292e34b4924abe69dde9de0f6f4e90b785f62cdc728683ebf492",
+ "n_sft4": 640,
+ "groups": {
+  "cutoff": 214,
+  "dup_only": 213,
+  "empty": 213
+ },
+ "target_findings_by_type": {
+  "period_cutoff": 284,
+  "duplicate_invoice": 379
+ },
+ "sft4_seed_range": [
+  100000,
+  101776
+ ],
+ "empty_group_profiles": {
+  "clean": 97,
+  "payment_allocation": 50,
+  "fx_conversion": 47,
+  "duplicate_invoice": 2,
+  "mixed": 17
+ },
+ "sft4_seq_tokens_mean": 4843,
+ "stats": {
+  "skipped_long": 587,
+  "surplus": 550
+ }
+}

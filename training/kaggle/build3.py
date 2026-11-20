@@ -20,6 +20,11 @@ KERNELS = {
                   "GAG_TRAIN_SECONDS": "28800", "GAG_LOSS_NORM": "token_sum"}, []),
     "gag3-eval": ({"GAG_MODE": "gen", "GAG_SFT_FILE": "sft3.jsonl", "GAG_GEN": "heldout.jsonl:c3:adapter,heldout_b.jsonl:c3_b:adapter,heldout_b.jsonl:base_b:none"},
                   [f"{USER}/gag3-sft"]),
+    # config 4 (disclosed follow-up): duplicate_invoice + period_cutoff targets, otherwise identical to config 3
+    "gag4-sft": ({"GAG_MODE": "sft", "GAG_SFT_FILE": "sft4.jsonl", "GAG_TRAIN_DEVICES": "balanced", "GAG_TRAIN_SAMPLES": "640",
+                  "GAG_TRAIN_SECONDS": "28800", "GAG_LOSS_NORM": "token_sum"}, []),
+    "gag4-eval": ({"GAG_MODE": "gen", "GAG_SFT_FILE": "sft4.jsonl", "GAG_GEN": "heldout.jsonl:c4:adapter,heldout_b.jsonl:c4_b:adapter"},
+                  [f"{USER}/gag4-sft"]),
 }
 
 
@@ -28,7 +33,7 @@ def main():
     pkg = B / "pkg"
     pkg.mkdir(parents=True)
     data = HERE.parent / "data"
-    for f in (data / "heldout.jsonl", data / "heldout_b.jsonl", data / "sft3.jsonl", HERE / "gag_kaggle.py"):
+    for f in (data / "heldout.jsonl", data / "heldout_b.jsonl", data / "sft3.jsonl", data / "sft4.jsonl", HERE / "gag_kaggle.py"):
         shutil.copy(f, pkg / f.name)
     (pkg / "dataset-metadata.json").write_text(json.dumps(
         {"title": "gag3-pkg", "id": DATASET, "licenses": [{"name": "CC0-1.0"}]}, indent=1))
