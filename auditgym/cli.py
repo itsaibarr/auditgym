@@ -142,7 +142,13 @@ def cmd_generate(a) -> int:
 
 
 def cmd_run(a) -> int:
-    from .runner import run_policies, summarize
+    from .runner import harden_runner, run_policies, salt_exposures, summarize
+    harden_runner()  # first: same-user children (incl. the pre-flight probe) must not read /proc/<runner>/environ|mem
+    exposed = salt_exposures()  # [] unless Linux and AUDITGYM_SALT is set
+    if exposed:
+        raise RuntimeError(f"AUDITGYM_SALT is readable in the environment or command line of other process(es) {exposed[:5]} "
+                           "(e.g. docker --init, an sh -c / uv run wrapper); a policy could read it. Start the runner directly: "
+                           "docker run --rm -e AUDITGYM_SALT=... auditgym:1.0.0 run ...")
     episodes = _episodes(a)
     specs = a.policy.split(",")
     if any(x.startswith("-") or "=" not in x for x in (a.policy_arg or [])):

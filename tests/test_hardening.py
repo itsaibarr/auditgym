@@ -972,3 +972,22 @@ def test_tour_next_steps_powershell_variant(monkeypatch):
     cmds = [c for _, c in next_steps()]
     assert not any("$(id -u)" in c or "mkdir -p" in c or " < " in c for c in cmds)
     assert any(c.startswith("Get-Content my_split.json | ") for c in cmds)
+
+
+
+@pytest.mark.parametrize("profile", ["all_clean", "no_clean"])
+def test_tour_on_unusual_juror_splits(tmp_path, monkeypatch, profile):
+    import auditgym.checks as C
+    from auditgym.tour import run_tour
+
+    def fake_check(quick=False, as_json=False, out=None):
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "summary.json").write_text(json.dumps({"checks": [{"id": "tests.test_contract::x", "ok": True, "detail": ""}]}))
+        return 0
+    monkeypatch.setattr(C, "run_check", fake_check)
+    off = {t: {"on": False} for t in ("duplicate_invoice", "payment_allocation", "fx_conversion", "period_cutoff")}
+    cfg = {"errors": off} if profile == "all_clean" else {"errors": {"duplicate_invoice": {"on": True, "count": [1, 1]}}}
+    split = {"split": "j", "episodes": [{"seed": f"j-{k}", "config": cfg} for k in range(3)]}
+    assert run_tour(str(tmp_path / "rep"), quick=True, split=split) == 0
+    rep = tmp_path / "rep"
+    assert (rep / "report.md").exists() and not (rep / "closed" / "SALT").exists()

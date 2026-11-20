@@ -154,8 +154,13 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     # 1. official check -------------------------------------------------------------------------------------------
     con.rule("[bold]1/4  Официальная проверка[/]  (auditgym check: pytest, базовые политики, порядки наград, leakscan, парные проверки, replay)")
     t0 = time.time()
-    with con.status("идёт auditgym check …"), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+    cap_out, cap_err = io.StringIO(), io.StringIO()
+    with con.status("идёт auditgym check …"), contextlib.redirect_stdout(cap_out), contextlib.redirect_stderr(cap_err):
         rc = run_check(quick=quick, out=outdir / "check")
+    if not (outdir / "check" / "summary.json").exists():
+        tail = "\n".join((cap_out.getvalue() + cap_err.getvalue()).strip().splitlines()[-8:])
+        con.print(f"auditgym check не смог выполниться (код {rc}):\n{tail}", style="red", markup=False, soft_wrap=True)
+        return 2
     summary = json.loads((outdir / "check" / "summary.json").read_text())
     by_c = {k: [0, 0] for k, _, _ in CRITERIA}
     for it in summary["checks"]:
@@ -186,8 +191,9 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
         eps, redrawn, used_split, salt = _closed_episodes(split)
         closed = outdir / "closed"
         closed.mkdir(parents=True, exist_ok=True)
-        (closed / "split.json").write_text(json.dumps(used_split, indent=1, ensure_ascii=False) + "\n")
-        (closed / "SALT").write_text(salt + "\n")  # single-use tour salt, saved only so `replay` can re-check this run
+        if split is None:  # only the tour's own single-use seeds/salt are saved (for `replay`); never a juror's
+            (closed / "split.json").write_text(json.dumps(used_split, indent=1, ensure_ascii=False) + "\n")
+            (closed / "SALT").write_text(salt + "\n")
         old = os.environ.get("AUDITGYM_SALT")
         os.environ["AUDITGYM_SALT"] = salt
         try:
@@ -227,7 +233,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     dirty = {sp: [r["reward"] for r in res[sp] if not r["clean"]] for sp in POLICIES}  # the ordering check/README assert: books with errors
     dm = {sp: sum(v) / len(v) if v else 0.0 for sp, v in dirty.items()}
     order_ok = (not any(term_bad.values()) and oracle_one == len(res["oracle"]) and flag_clean
-                and dm["expert"] > dm["reconcile"] > max(dm["flag_all"], dm["random"]) - 1e-9)
+                and (not dirty["expert"] or dm["expert"] > dm["reconcile"] > max(dm["flag_all"], dm["random"]) - 1e-9))
     con.print("[dim]* oracle видит эталон (только для оценщика) · ** expert — наш решатель по видимым записям, без эталона · "
               "P и R — по всем выводам (micro), F1 — среднее по эпизодам (пустой ответ на чистых книгах даёт F1 = 1) · "
               + ("сиды и соль новые при каждом запуске" + (f", {redrawn} сидов перевыбрано генератором" if redrawn else "")
@@ -295,8 +301,9 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     tb.add_column("Макс. баллов")
     tb.add_column("Статус")
     tb.add_column("Доказательство")
+    status = {}
     for k, name, pts in CRITERIA:
-        ok_k = {"contract": by_c[k][0] == by_c[k][1] and not leaks and not integ and not any(term_bad.values()),
+        ok_k = status[k] = {"contract": by_c[k][0] == by_c[k][1] and not leaks and not integ and not any(term_bad.values()),
                 "data": by_c[k][0] == by_c[k][1] and data_ok_n == n_eps,
                 "reward": by_c[k][0] == by_c[k][1] and order_ok,
                 "repro": by_c[k][0] == by_c[k][1] and paired_ok and rep_ok == rep_n,
@@ -305,12 +312,12 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     con.print(tb)
     con.print(f"[bold]{'[green]ВСЁ ПРОЙДЕНО[/]' if all_ok else '[red]ЕСТЬ ПРОВАЛЫ[/]'}[/] за {time.time() - t_all:.0f} с · "
               f"отчёт: {_shown(outdir / 'report.md')}")
-    report.update({"ok": all_ok, "seconds": round(time.time() - t_all, 1), "evidence": evidence})
+    report.update({"ok": all_ok, "seconds": round(time.time() - t_all, 1), "evidence": evidence, "status": status})
     _write_report(outdir, report, rows)
 
     steps = next_steps()
     ag0 = os.environ.get("AUDITGYM_LAUNCHER", "auditgym")
-    if not ag0.startswith("docker run"):
+    if not ag0.startswith("docker run") and split is None:
         steps.insert(0, ("Повторить и перепроверить закрытый прогон этого тура (его split и одноразовая соль сохранены в отчёте)",
                          f"AUDITGYM_SALT=$(cat {outdir / 'closed' / 'SALT'}) {ag0} replay {outdir / 'closed' / 'reconcile'} "
                          f"--split - < {outdir / 'closed' / 'split.json'}"))
@@ -327,12 +334,15 @@ def _write_report(outdir: Path, report: dict, rows: dict) -> None:
     (outdir / "report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
     md = [f"# AuditGym {report['auditgym_version']} — отчёт тура жюри: {'PASS' if report['ok'] else 'FAIL'}", "",
           f"Python {report['python']} · {report['platform']} · код {report['code_hash']} · {report['seconds']} с", "",
-          "## Итог по критериям кейса", "", "| Критерий | Баллы | Доказательство |", "|---|---|---|"]
-    md += [f"| {name} | {pts} | {report['evidence'][k]} |" for k, name, pts in CRITERIA]
-    md += ["", "## Закрытая проверка (20 новых эпизодов, 5 чистых, 5 связанных)", "",
+          "## Итог по критериям кейса", "", "| Критерий | Макс. баллов | Статус | Доказательство |", "|---|---|---|---|"]
+    sym = {True: "✓", False: "✗", None: "—"}
+    md += [f"| {name} | {pts} | {sym[report['status'][k]]} | {report['evidence'][k]} |" for k, name, pts in CRITERIA]
+    ce = report["steps"]["closed_eval"]
+    md += ["", f"## Закрытая проверка ({ce['episodes']} эпизодов, {'ваш split' if ce.get('source') == 'juror split' else 'новые случайные сиды'})", "",
            "| Политика | P | R | F1 | Награда | На чистых | Шаги | с/эпизод |", "|---|---|---|---|---|---|---|---|"]
     md += [f"| {POLICY_RU[s]} | {r['micro_precision']:.3f} | {r['micro_recall']:.3f} | {r['mean_f1']:.3f} | {r['mean_return']:+.3f} | "
-           f"{r['clean_return']:+.3f} | {r['mean_steps']:.1f} | {r['mean_wall_s']:.3f} |" for s, r in rows.items()]
+           f"{'—' if r['clean_return'] is None else format(r['clean_return'], '+.3f')} | {r['mean_steps']:.1f} | {r['mean_wall_s']:.3f} |"
+           for s, r in rows.items()]
     st = report["steps"]
     md += ["", "## Шаги", "", f"- Официальная проверка: {st['check']['passed']}/{st['check']['total']}",
            f"- Парные проверки: {st['paired']['passed']}/{st['paired']['total']}",
