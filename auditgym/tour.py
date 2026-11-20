@@ -60,9 +60,9 @@ def _past(stage: str) -> str:
 def _left(frac: float, elapsed: float, total: float, count: str | None) -> str:
     """"~N s left". Early on, a bar weighted by measured seconds (count given) trusts its total of expected seconds;
     a plain count extrapolates once something finished; with nothing to go on, no estimate."""
-    if frac <= 0.05 or elapsed < 2:
+    if frac <= 0.15 or elapsed < 4:  # too early to extrapolate: machines differ 2-3x
         if count:
-            return f"~{max(total - elapsed, 1.0):.0f} s left"
+            return "usually 30-90 s in total"
         return f"~{elapsed * (1 - frac) / frac:.0f} s left" if frac > 0 else ""
     return f"~{elapsed * (1 - frac) / frac:.0f} s left"
 
@@ -129,7 +129,7 @@ def working(con: Console, first: str | None = None):
             kw: dict = {"detail": detail}
             if total:
                 frac, el = min((done or 0) / total, 1.0), time.monotonic() - cur["t0"]
-                kw.update(total=total, completed=min(done or 0, total), left=_left(frac, el, total, count))
+                kw.update(total=total, completed=min(done or 0, total * 0.999), left=_left(frac, el, total, count))  # ✓ only on close
                 cur["count"] = count or f"{int(done or 0)}/{int(total)}"
                 kw["count"] = cur["count"]
             prog.update(cur["id"], **kw)
@@ -275,7 +275,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
            "Creates 20 new episodes from secret random seeds and a secret salt (a random key mixed into every seed, so an "
            "agent cannot rebuild the answers with the open generator), never written down: 5 with clean books, 5 with "
            "errors that interact. ")
-          + "Checks each episode's data independently, then runs the 4 organizer policies and our expert policy on them, "
+          + "Checks each episode's data independently, then runs our adapters of the case's 4 reference policies and our expert policy on them, "
             "each in its own isolated process. Usually under 10 s.")
     t0 = time.time()
     if split is not None and os.environ.get("AUDITGYM_SALT"):
@@ -403,7 +403,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     # 4. official check (the longest step, so it runs last: results first) -------------------------------------------------------------------------------------------
     _step(con, "Step 4/4 · Official check", "the same as running `auditgym check` yourself",
           "Runs the full test suite, then the 5 baseline policies on the 20 open episodes, then checks that rewards come out in "
-          "the required order, scans for leaked answers, and replays the runs. Usually 30-60 s.")
+          "the required order, scans for leaked answers, and replays the runs. Usually 30-90 s, longer on a slow machine.")
     t0 = time.time()
     cap_out, cap_err = io.StringIO(), io.StringIO()
     juror_salt = os.environ.pop("AUDITGYM_SALT", None)  # the official check uses its own open data, never the juror's salt
@@ -482,11 +482,23 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
                          f"AUDITGYM_SALT=$(cat {_rel(c / 'SALT')}) {ag0} replay {_rel(c / 'reconcile')} --split - < {_rel(c / 'split.json')}"))
     con.rule("[bold]Next steps[/]  (copy any command as is)")
     top = steps[:1] if steps[0][0].startswith("Re-check") else []
-    top += [st for st in steps if st[0].startswith(("Test your own agent, written as a Python", "Make your own hidden split", "Run this whole tour"))]
+    top += [st for st in steps if st[0].startswith("Test your own agent, written as a Python")]
+    spl = [st for st in steps if st[0].startswith(("Make your own hidden split", "Run this whole tour"))]
+    shell = not ag0.startswith("docker run") and os.environ.get("AUDITGYM_SHELL") != "powershell"
+    if shell and len(spl) == 2:  # one line: a new hidden split, then the tour on it
+        top.append(("Run this whole tour on your own hidden split (new random seeds in the organizers' format)",
+                    f"{spl[0][1]} && {spl[1][1]}"))
+    else:
+        top += spl
+    short = (lambda c: c.replace(ag0, "auditgym")) if shell and ag0 != "auditgym" else (lambda c: c)
+    if shell and ag0 != "auditgym":
+        con.print("[bold cyan]»[/] [bold]A shortcut for the commands below[/]")
+        q = f'"{ag0}"' if not any(c in ag0 for c in '"$`\\') else shlex.quote(ag0)  # readable when the launcher has single quotes
+        con.print(f"  alias auditgym={q}", soft_wrap=True, markup=False)
     for label, cmd in top:
         con.print(f"[bold cyan]»[/] [bold]{label}[/]")
-        con.print("  " + cmd, soft_wrap=True, markup=False)
-    con.print(f"More commands, each with when to use it: {ag0 if not ag0.startswith('docker run') else 'docker run --rm auditgym:1.0.0'} --help"
+        con.print("  " + short(cmd), soft_wrap=True, markup=False)
+    con.print(f"More commands, each with when to use it: {short(ag0) if not ag0.startswith('docker run') else 'docker run --rm auditgym:1.0.0'} --help"
               " · the full list is also in report.md", style="dim", markup=False, soft_wrap=True)
     con.print()
     con.print(verdict)  # the verdict is the last line on screen
@@ -528,9 +540,9 @@ def next_steps() -> list[tuple[str, str]]:
         ("Make your own hidden split: new random seeds in the organizers' format", f"{ag} split > my_split.json" if not ag.startswith("mkdir")
          else "docker run --rm auditgym:1.0.0 split > my_split.json"),
         ("Run this whole tour on your own split", f"{ag} tour --split - --out {out}/tour < my_split.json"),
-        ("Score the 4 organizer policies on your split", f"{ag} run --policy random,reconcile,flag_all,oracle --split - --public-salt --out {out} < my_split.json"),
+        ("Score our adapters of the case's 4 reference policies on your split", f"{ag} run --policy random,reconcile,flag_all,oracle --split - --public-salt --out {out} < my_split.json"),
         ("Test your own agent, written as a Python class with reset/step: init copies an example into ./my-agent to edit"
-         + (" (--trust-policies: you vouch for this code, it runs with your user's rights outside Docker)" if trust else ""),
+         + (" (--trust-policies: it is your own code and runs with your user's rights)" if trust else ""),
          f"{ag} init my-agent && {ag} run --policy my_policy:LookAround --policy-path my-agent --split dev --out {out}{trust}"
          if trust else f"{ag} run --policy my_policy:LookAround --policy-path /app/examples --split dev --out {out}"),
         ("Test your own agent, written as any program that reads and writes JSON lines on stdin/stdout", f"{ag} run --policy \"cmd:python3 {shlex.quote(str(ex / 'stdio_policy.py'))}\" --split dev --out {out}{trust}"),

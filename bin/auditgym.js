@@ -99,13 +99,27 @@ if (isWin) {
 }
 
 const first = !fs.existsSync(path.join(ROOT, ".venv"));  // first run: say the plan before any download, show uv's progress
-if (first) say("first run, one time: downloads uv, a Python installer (~20 MB, unless installed), Python 3.11 (~30 MB, unless installed) and 19 pinned packages, then runs the tour. Usually 20-60 s before the tour starts, up to 3 min on a slow network. Ctrl-C is safe: running the same command again resumes. Later runs start in about 1 s.");
+if (first) { say("first run: one-time setup before the tour, usually 20-60 s (up to 3 min on a slow network):"); say("  uv, a Python installer (~20 MB), and Python 3.11 (~30 MB), each only if missing; then 19 pinned packages."); say("  Ctrl-C is safe: running the same command again resumes. Later runs start in about 1 s."); }
 const runs = (u) => spawnSync(u, ["--version"], { timeout: 15000 }).status === 0;  // a cached/system uv must actually start
 let uv = process.env.AUDITGYM_UV ||
   [path.join(CACHE, "bin", "uv"), which("uv"), path.join(os.homedir(), ".local", "bin", "uv"), path.join(os.homedir(), ".cargo", "bin", "uv")].find((u) => u && exists(u) && runs(u));
 if (!uv) uv = installUv();
-say(first ? `setting up Python 3.11 and the packages, then: auditgym ${args.join(" ")}` : `auditgym ${args.join(" ")}`);
-const r = spawnSync(uv, ["run", ...(first ? [] : ["--quiet"]), "--frozen", "--extra", "gym", "--project", ROOT, "auditgym", ...args], {
+if (first) {  // visible Python download only if missing, quiet package install, then one receipt line
+  const t0 = Date.now();
+  if (spawnSync(uv, ["python", "find", "3.11"], { stdio: "ignore" }).status !== 0) {
+    say("downloading Python 3.11 (~30 MB, one time) ...");
+    if (spawnSync(uv, ["python", "install", "--no-bin", "3.11"], { stdio: ["ignore", 2, "inherit"] }).status !== 0) {
+      say("Python download failed: run the same command again (finished downloads are kept)"); process.exit(2);
+    }
+  }
+  say("installing the 19 pinned packages ...");
+  if (spawnSync(uv, ["sync", "--quiet", "--frozen", "--extra", "gym", "--project", ROOT], { stdio: ["ignore", 2, "inherit"] }).status !== 0) {
+    say("package install failed: run the same command again (finished downloads are kept)"); process.exit(2);
+  }
+  say(`✓ ready in ${Math.round((Date.now() - t0) / 1000)} s: Python 3.11 and the packages (later runs start in about 1 s)`);
+}
+say(`auditgym ${args.join(" ")}`);
+const r = spawnSync(uv, ["run", "--quiet", "--frozen", "--extra", "gym", "--project", ROOT, "auditgym", ...args], {
   stdio: "inherit",
   env: { ...process.env, AUDITGYM_LAUNCHER: LAUNCHER },
 });

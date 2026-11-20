@@ -1,10 +1,10 @@
 # AuditGym demo (VHS): the jury tour, then the case's own checking process (section 06) step by step, then your own agent.
 # Render: cd <repo> && vhs submission/demo.tape   -> submission/demo.mp4
-# Needs: node (npx), docker image auditgym:1.0.0 (docker build -t auditgym:1.0.0 .), openssl.
+# Needs: curl, docker image auditgym:1.0.0 (docker build -t auditgym:1.0.0 .), openssl.
 # The uv/Python cache (~/.cache/auditgym) is warmed before recording; a first run adds up to a minute of downloads.
 Output submission/demo.mp4
 
-Require npx
+Require curl
 Require docker
 Require openssl
 
@@ -25,10 +25,10 @@ Show
 
 Type "# AuditGym: an RL environment and grader for AI financial auditors. Genesis Hackathon FinTech 2026, team tryHard"
 Enter
-Type "# 1) The jury tour: one line from the README, offline, no keys or GPU. It checks all five case criteria and ends with a scorecard."
+Type "# 1) The jury tour: one line from the README (it downloads only itself; every check runs offline), no keys or GPU. Ends with a scorecard."
 Enter
 Sleep 2s
-Type "npx -y --no-update-notifier https://codeload.github.com/itsaibarr/auditgym/tar.gz/master"
+Type "curl -fsSL https://raw.githubusercontent.com/itsaibarr/auditgym/master/run.sh | sh"
 Enter
 Wait
 Sleep 12s
@@ -44,7 +44,7 @@ Enter
 Wait
 Type `D="docker run -i --rm --network none --cpus 2 --memory 4g -e AUDITGYM_SALT=$SALT"`
 Enter
-Type "# The case's four policies on 20 hidden episodes: random explorer (fixed seed), simple reconciliation, flag everything, oracle"
+Type "# Our adapters of the case's four policies on 20 hidden episodes: random (fixed seed), simple reconciliation, flag everything, oracle"
 Enter
 Type "$D -v $PWD/out:/out auditgym:1.0.0 run --policy random,reconcile,flag_all,oracle --policy-arg seed=7 --split - --out /out < my_split.json"
 Enter
@@ -92,7 +92,7 @@ Type "# 3) Your own agent: init copies an example to edit. This toy one accuses 
 Enter
 Type "# From here on, auditgym means the same one-line launch command"
 Enter
-Type "alias auditgym='npx -y --no-update-notifier --prefer-offline https://codeload.github.com/itsaibarr/auditgym/tar.gz/master'"
+Type "alias auditgym='sh ~/.cache/auditgym/src-master/run.sh'"
 Enter
 Type "auditgym init my-agent && auditgym run --policy my_policy:LookAround --policy-path my-agent --split dev --out out2 --trust-policies"
 Enter

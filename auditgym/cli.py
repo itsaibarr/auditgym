@@ -33,7 +33,7 @@ def rich_table(title: str, headers: list[str], rows: list[list[str]], legend: st
     from rich.table import Table
     t = Table(title=title or None, title_justify="left", title_style="bold")
     for i, h in enumerate(headers):
-        t.add_column(h, justify="left" if i < left else "right")
+        t.add_column(h, justify="left" if i < left else "right", no_wrap=i == 0)  # IDs and policy names stay whole
     for r in rows:
         t.add_row(*r)
     con = _console()
@@ -172,6 +172,8 @@ def cmd_run(a) -> int:
                            "docker run --rm -e AUDITGYM_SALT=... auditgym:1.0.0 run ...")
     episodes = _episodes(a)
     specs = a.policy.split(",")
+    print(f"  ... starting {len(specs)} {'policy' if len(specs) == 1 else 'policies'} on {len(episodes)} episodes "
+          "(first checking that each one starts)", file=sys.stderr, flush=True)
     if any(x.startswith("-") or "=" not in x for x in (a.policy_arg or [])):
         raise ValueError(f"--policy-arg takes key=value pairs, got {a.policy_arg!r}")
     from .policies import BUILTIN
@@ -225,7 +227,8 @@ def cmd_run(a) -> int:
                   f"see the stderr lines above)", file=sys.stderr)
         if failed == len(res):
             dead.append(spec)
-    print_table(rows, f"Results ({a.mode} mode, {len(next(iter(results.values()), []))} episodes per policy)", a.format)
+    mode = "evaluation: rewards stay hidden from the policy until the end" if a.mode == "eval" else "training: the policy sees its final reward"
+    print_table(rows, f"Results ({mode}; {len(next(iter(results.values()), []))} episodes per policy)", a.format)
     if dead:
         print(f"FAIL: {', '.join(dead)} crashed or timed out on every episode: these rows are not a score", file=sys.stderr)
         return 1
@@ -288,6 +291,7 @@ def cmd_replay(a) -> int:
     from .policies import OraclePolicy
     from .runner import WITHHELD
     run = Path(a.run)
+    print(f"  ... replaying {run}: checking its files, regenerating its episodes, re-running every action", file=sys.stderr, flush=True)
     if not _verified([run]):
         return 1
     meta = json.loads((run / "run.json").read_text())
@@ -372,6 +376,10 @@ def cmd_schema(a) -> int:
     return 0
 
 
+KINDS = ("Kind: interacting X1 = a partial foreign-currency payment across the period end, posted late at the wrong rate "
+         "(3 linked errors); X2 = a duplicate invoice whose credit note is posted at the invoice's rate (2 linked errors).")
+
+
 def _yes(v) -> str:
     return "n/a" if v is None else "yes" if v else "NO"
 
@@ -401,7 +409,7 @@ def cmd_datacheck(a) -> int:
                "I1 each journal entry balances · I2 trial balance nets to zero · I3 AR control account = subledger · I4 invoice "
                "lines add up to the total · I5 FX conversion follows the policy · I6 period cut-off · I7 payments are allocated "
                "in full · I8 each delivery is billed once. Code: auditgym/datacheck.py, auditgym/invariants.py, "
-               "auditgym/recheck.py; none of it imports the generator.")
+               "auditgym/recheck.py; none of it imports the generator. " + KINDS)
     print(f"{len(rows) - bad}/{len(rows)} episodes pass all data checks ({kind_counts(eps)})")
     return 1 if bad else 0
 
@@ -436,19 +444,22 @@ def cmd_paired(a) -> int:
         cells, same_all = [], True
         for spec in specs:
             r1, r2 = (run_episode(spec, e, "eval", a.policy_arg, a.policy_path, isolate=spec not in BUILTIN).result for e in (ep, ep2))
-            same = all(r1[f] == r2[f] for f in ("tp", "fp", "fn", "reward"))
+            same = all(r1[f] == r2[f] for f in ("tp", "fp", "fn"))  # the answer, mapped through the renaming by the grader
             same_all &= same
-            cells.append(f"{r1['reward']:+.3f} → {r2['reward']:+.3f}{'' if same else ' CHANGED'}")
+            note = "" if r1["reward"] == r2["reward"] else f" (reward {r1['reward']:+.3f} → {r2['reward']:+.3f}: different step count)"
+            cells.append(f"{r1['tp']}/{r1['fp']}/{r1['fn']} {'=' if same else '≠ CHANGED'} {r2['tp']}/{r2['fp']}/{r2['fn']}{note}")
         ok = o2["reward"] == 1.0 and same_all
         bad += not ok
         rows.append([ep.episode_id, kind(ep), str(len(mapping)), f"{o2['reward']:+.3f}", *cells, "✓ PASS" if ok else "✗ FAIL"])
         say(stage, f"now: {ep.episode_id}", k + 1, len(eps))
     ctx.__exit__(None, None, None)
     rich_table("Paired checks (case sections 06 and 10, 'Reproducibility and generalization')",
-               ["Episode", "Kind", "IDs renamed", "Oracle reward on the copy", *[f"{s}: original → copy" for s in specs], "Result"], rows,
+               ["Episode", "Kind", "IDs renamed", "Oracle reward on the copy", *[f"{s}: found/false alarms/missed, original → copy" for s in specs],
+                "Result"], rows,
                "Each copy has its rows shuffled and its document and line IDs renamed (auditgym/perturb.py). Oracle must stay at "
-               "+1.000 under the new IDs; every other policy must find exactly the same errors (TP, FP, FN and reward) on the "
-               "copy as on the original.")
+               "+1.000 under the new IDs (the case's paired check); every other policy must give the same answer on the copy: the "
+               "same errors found, the same false alarms, the same misses. A reward difference that comes only from a different "
+               "step count is shown as information, not a failure. " + KINDS)
     print(f"{len(rows) - bad}/{len(rows)} paired checks pass ({kind_counts(eps)})")
     return 1 if bad else 0
 
@@ -747,6 +758,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return a.fn(a)
     except KeyboardInterrupt:
+        print("\nstopped. Nothing is lost: run the same command again (downloads and setup are cached).", file=sys.stderr)
         return 130
     except (OSError, RuntimeError, KeyError, json.JSONDecodeError, ValueError) as e:
         print(f"error: {e}", file=sys.stderr)

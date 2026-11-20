@@ -12,10 +12,12 @@ from __future__ import annotations
 
 import json
 import os
+import queue
 import re
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import xml.etree.ElementTree as ET
 from collections import defaultdict
@@ -79,17 +81,46 @@ def _pytest(rep: Report, quick: bool, say) -> None:
             per_test = {}
         lines, total, done, failed, spent = [], 0, 0, 0, 0.0
         weight = sum(per_test.values()) or 1.0
-        for line in proc.stdout:  # pytest -v prints one line per test as it finishes: count them and name the topic
+        longest: dict[str, float] = {}  # per test file: its slowest test's expected seconds
+        for k, v in per_test.items():
+            longest[k.split("::")[0]] = max(longest.get(k.split("::")[0], 0.0), v)
+        q: queue.Queue = queue.Queue()  # read pytest on a thread, so the line can move while a slow test runs
+
+        def pump() -> None:
+            for ln in proc.stdout:
+                q.put(ln)
+            q.put(None)
+        threading.Thread(target=pump, daemon=True).start()
+        cur, t_last = Path(_test_files()[0]).stem, time.monotonic()
+
+        def show(running: float = 0.0, note: str = "") -> None:
+            # finished tests count with their measured seconds; the running one moves the bar at most up to its expected time
+            shown = min(spent + running, weight * 0.99)
+            say(STAGE_TESTS, f"now testing {TEST_TOPIC.get(cur, cur)}{note}" + (f" · {failed} failed" if failed else ""),
+                shown, weight, f"{int(100 * shown / weight)}% · {done}/{total} tests" if total else f"{done} tests")
+        while True:
+            try:
+                line = q.get(timeout=1.0)
+            except queue.Empty:
+                if total:
+                    el, nxt = time.monotonic() - t_last, longest.get(cur, 0.5)
+                    show(min(el, nxt), " (slower than usual on this machine)" if el > 2 * nxt + 3 else "")
+                continue
+            if line is None:
+                break
             lines.append(line)
             if not total and (m := _COLLECTED.search(line)):
                 total = int(m.group(1))
+                show()
             elif m := _RESULT.match(line):
                 done += 1
                 failed += m.group(3) in ("FAILED", "ERROR")
                 spent += per_test.get(f"{m.group(1)}::{m.group(2)}", 0.02)
-                say(STAGE_TESTS, f"now testing {TEST_TOPIC.get(m.group(1), m.group(1))}" + (f" · {failed} failed" if failed else ""),
-                    min(spent, weight), weight, f"{done}/{total} tests" if total else f"{done} tests")
+                cur, t_last = m.group(1), time.monotonic()
+                show()
         proc.wait()
+        if total:
+            say(STAGE_TESTS, "", weight, weight, f"100% · {done}/{total} tests")
         if not xml.exists():
             rep.add("tests.collect", False, "".join(lines)[-1000:], time.time() - t0)
             return

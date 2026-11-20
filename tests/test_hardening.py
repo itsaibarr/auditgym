@@ -1046,3 +1046,22 @@ def test_organizer_datacheck_and_paired_commands(capsys):
     assert "10/10 episodes pass all data checks (" in capsys.readouterr().out
     assert main(["paired", "--split", "dev", "--seed", "5"]) == 0
     assert "10/10 paired checks pass (" in capsys.readouterr().out
+
+
+def test_paired_judges_the_answer_not_the_step_count(monkeypatch, capsys):
+    """A policy that finds exactly the same errors on the shuffled copy but takes a different number of steps (so its reward
+    differs slightly) passes the paired check: the case defines it by the answer; the reward difference is information."""
+    import auditgym.runner as R
+    from types import SimpleNamespace
+    from auditgym.cli import main
+    calls = {"n": 0}
+
+    def fake(spec, ep, mode="eval", *a, **k):
+        calls["n"] += 1
+        if spec == "oracle":
+            return SimpleNamespace(result={"tp": 1, "fp": 0, "fn": 0, "reward": 1.0})
+        return SimpleNamespace(result={"tp": 2, "fp": 1, "fn": 0, "reward": 0.5 - 0.002 * (calls["n"] % 3)})
+    monkeypatch.setattr(R, "run_episode", fake)
+    assert main(["paired", "--split", "dev", "--policy", "reconcile"]) == 0
+    out = capsys.readouterr().out
+    assert "10/10 paired checks pass" in out and "different step count" in out
