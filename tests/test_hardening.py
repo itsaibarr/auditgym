@@ -910,3 +910,33 @@ def test_no_isolate_does_not_skip_the_salt_guard(evil, dirty, tmp_path, monkeypa
 def test_historic_time_discontinuities_fail_closed(seed, extra):
     with pytest.raises(ValueError, match="pick another year/timezone"):
         generate(seed, {"year": 1994, "months": [12], "timezones": ["Pacific/Kiritimati"], **extra})
+
+
+# ---------------------------------------------------------------------------------------- jury UX
+def test_split_command_makes_a_valid_organizer_shaped_split(capsys):
+    from auditgym.cli import main
+    from auditgym.splits import split_episodes
+    assert main(["split"]) == 0
+    cfg = json.loads(capsys.readouterr().out)
+    eps = split_episodes("-", cfg)
+    assert len(eps) == 20 and sum(1 for _, e in eps if not e.truth["issues"]) == 5
+
+
+def test_run_refuses_a_policy_that_does_not_start(tmp_path):
+    from auditgym.cli import main
+    pol = tmp_path / "pol"
+    pol.mkdir()
+    base = ["run", "--split", "dev", "--out", str(tmp_path / "o"), "--trust-policies", "--policy-path", str(pol)]
+    assert main(base[:1] + ["--policy", "nope:Agent"] + base[1:]) == 2
+    assert main(base[:1] + ["--policy", "cmd:/definitely/not/here"] + base[1:]) == 2
+    (pol / "boom.py").write_text("class Boom:\n    def reset(self, o, i):\n        raise RuntimeError('boom')\n")
+    assert main(base[:1] + ["--policy", "boom:Boom"] + base[1:]) == 1          # crashed on every episode: not a score
+
+
+def test_tour_next_steps_are_copy_pasteable_for_docker(monkeypatch):
+    from auditgym.tour import next_steps
+    monkeypatch.setenv("AUDITGYM_LAUNCHER", "docker run --rm -i --network none auditgym:1.0.0")
+    cmds = [c for _, c in next_steps()]
+    runs = [c for c in cmds if " run --policy " in c]
+    assert runs and all("--out /out" in c and '-v "$PWD/out:/out"' in c and "--user" in c for c in runs)
+    assert all("\n" not in c for c in cmds)

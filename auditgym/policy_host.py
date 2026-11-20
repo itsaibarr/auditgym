@@ -65,7 +65,8 @@ def _coerce(v: str):
 
 def main(argv: list[str]) -> None:
     allow = "--allow-forks" in argv
-    argv = [a for a in argv if a != "--allow-forks"]
+    probe = "--probe" in argv
+    argv = [a for a in argv if a not in ("--allow-forks", "--probe")]
     if argv and argv[0] == "--exec":
         prog = argv[argv.index("--") + 1:] if "--" in argv else argv[1:]
         apply_limits(allow)
@@ -82,6 +83,10 @@ def main(argv: list[str]) -> None:
     os.dup2(2, 1)                         # the policy's own prints (Python or C level) go to stderr, never into the protocol
     sys.stdout = sys.stderr
     policy = load_policy(spec, kwargs)
+    if probe:  # the runner's pre-flight: the policy imports and constructs inside the same sandbox
+        out.write("ok\n")
+        out.flush()
+        return
     for line in sys.stdin:
         msg = json.loads(line)
         if msg["type"] == "close":

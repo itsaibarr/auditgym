@@ -152,6 +152,36 @@ def reap_leftovers(keep: set[int] = frozenset()) -> int:
                 pass
 
 
+def probe_policy(spec: str, args=None, policy_path=None, allow_forks: bool = False) -> str | None:
+    """Pre-flight for a custom policy: import + construct it in the sandbox (Python specs) or find the program
+    (cmd: specs). Returns None if it starts, else a human-readable reason."""
+    if spec in BUILTIN or spec == "oracle":
+        return None
+    if spec.startswith("cmd:"):
+        prog = shlex.split(spec[4:])
+        if not prog:
+            return "empty cmd: spec"
+        exe = prog[0]
+        if os.sep in exe:
+            return None if os.access(exe, os.X_OK) else f"program not found or not executable: {exe}"
+        import shutil as _sh
+        return None if _sh.which(exe) else f"program not found on PATH: {exe}"
+    argv = [sys.executable, "-I", "-m", "auditgym.policy_host", "--probe"] + (["--allow-forks"] if allow_forks else []) + [spec, *(args or [])]
+    if policy_path:
+        argv.append(f"--path={os.path.abspath(policy_path)}")
+    with tempfile.TemporaryDirectory(prefix="auditgym-probe-") as td:
+        try:
+            r = subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, text=True, cwd=td, timeout=60,
+                               env={"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": td, "LANG": "C.UTF-8", "PYTHONHASHSEED": "0"})
+        except subprocess.TimeoutExpired:
+            return "the policy did not finish importing within 60 s"
+    if r.returncode == 0 and r.stdout.strip() == "ok":
+        return None
+    tail = "\n".join((r.stderr or "").strip().splitlines()[-6:])
+    tail = "".join(c if c == "\n" or c.isprintable() else f"\\x{ord(c):02x}" for c in tail)
+    return tail or f"exit code {r.returncode}"
+
+
 def code_hash() -> str:
     h = hashlib.sha256()
     for p in sorted(_PKG.rglob("*.py")):
@@ -394,6 +424,9 @@ def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root
             tail = "\n".join(crashed.stderr_tail.strip().splitlines()[-20:])
             tail = "".join(c if c == "\n" or c.isprintable() else f"\\x{ord(c):02x}" for c in tail)  # no terminal escapes
             print(f"policy {spec} ({crashed.result['termination']} on {crashed.result['episode_id']}), last stderr lines:\n{tail}", file=sys.stderr)
+            if not allow_forks and any(w in tail.lower() for w in ("thread", "fork", "eagain", "resource temporarily unavailable")):
+                print("hint: the policy needs threads or subprocesses (RLIMIT_NPROC=1 blocks them on Linux): add --allow-forks "
+                      "(trusted policies only)", file=sys.stderr)
     # Every child is dead now. A child could still have planted symlinks/dirs under out_root (it may know the
     # path from our argv), so never write through existing paths: build each run dir fresh, then swap it in.
     reap_leftovers(keep)

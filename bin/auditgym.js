@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// AuditGym one-command launcher:  npx -y github:itsaibarr/auditgym [command ...]   (default command: tour)
-// Needs only Node >= 16 (and git, which npx uses to fetch from GitHub). It finds or downloads `uv`
+// AuditGym one-command launcher:  npx -y https://codeload.github.com/itsaibarr/auditgym/tar.gz/master [command ...]   (default command: tour)
+// Needs only Node >= 16 (the tarball URL needs no git; `npx github:...` would). It finds or downloads `uv`
 // (a single static binary), which brings its own Python 3.11 and the locked dependencies. No API keys, no GPU.
 "use strict";
 const { spawnSync } = require("child_process");
@@ -9,7 +9,7 @@ const os = require("os");
 const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..");
-const LAUNCHER = "npx -y github:itsaibarr/auditgym";
+const LAUNCHER = "npx -y https://codeload.github.com/itsaibarr/auditgym/tar.gz/master";  // tarball URL: npm needs no git for it
 const CACHE = process.env.AUDITGYM_HOME || path.join(os.homedir(), ".cache", "auditgym");
 const args = process.argv.slice(2).length ? process.argv.slice(2) : ["tour"];
 const isWin = process.platform === "win32";
@@ -77,4 +77,5 @@ const r = spawnSync(uv, ["run", "--quiet", "--frozen", "--extra", "gym", "--proj
   env: { ...process.env, AUDITGYM_LAUNCHER: LAUNCHER },
 });
 if (r.error) { say(String(r.error)); process.exit(2); }
+if (r.status !== 0 && r.status !== 1) say("if this was a download error: just run the same command again (finished downloads are kept), or use Docker (see README)");
 process.exit(r.status === null ? 1 : r.status);

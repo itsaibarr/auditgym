@@ -15,7 +15,7 @@ from .splits import ROOT, dir_episode, load_split_config, parse_seeds, split_epi
 
 COLUMNS = [("policy", "policy"), ("episodes", "episodes"), ("micro_precision", "P"), ("micro_recall", "R"), ("mean_f1", "F1"),
            ("mean_return", "return"), ("mean_return_experimental", "return_exp"), ("mean_steps", "steps"),
-           ("clean_fp_rate", "clean-FP"), ("mean_wall_s", "s/ep")]
+           ("clean_fp_rate", "clean-FP"), ("mean_wall_s", "s/ep"), ("failed", "crash/timeout")]
 
 
 def _tty() -> bool:
@@ -163,19 +163,30 @@ def cmd_run(a) -> int:
     if len({name(s) for s in specs}) < len(specs):
         raise ValueError(f"policy specs must be distinct (run dirs: {[name(s) for s in specs]})")
     source = a.split if not (a.episodes or a.seeds or a.config) else {"episodes": a.episodes, "seeds": a.seeds, "config": a.config}
+    from .runner import probe_policy
+    for spec in specs:
+        why = probe_policy(spec, a.policy_arg, a.policy_path, a.allow_forks)
+        if why:
+            hint = (f" (put your module in {a.policy_path}; example: examples/my_policy.py)" if a.policy_path else
+                    " (pass --policy-path DIR with your module; example: examples/my_policy.py)") if not spec.startswith("cmd:") else ""
+            raise ValueError(f"policy {spec!r} does not start{hint}:\n{why}")
     results = run_policies(specs, episodes, Path(a.out), mode=a.mode, args=a.policy_arg, policy_path=a.policy_path,
                            isolate=not a.no_isolate, allow_forks=a.allow_forks, meta={"sources": source}, dir_name=name)
-    rows = []
+    rows, dead = [], []
     for spec in specs:
         res = results[spec]
-        rows.append({"policy": spec, **summarize(res)["all"]})
-        bad = [r for r in res if r["termination"] in ("timeout", "policy_crash")]
+        failed = sum(1 for r in res if r["termination"] in ("timeout", "policy_crash"))
+        rows.append({"policy": spec, **summarize(res)["all"], "failed": failed})
         print(f"{spec}: {len(res)} episodes -> {Path(a.out) / name(spec)}", file=sys.stderr)
-        if bad:
-            print(f"warning: {spec}: {len(bad)}/{len(res)} episodes ended by {sorted({r['termination'] for r in bad})} "
-                  f"(policy failed to start, crashed or timed out; graded as empty answers). Only if the policy itself needs "
-                  f"threads or subprocesses: --allow-forks lifts RLIMIT_NPROC=1 (trusted policies only; see README, Isolation)", file=sys.stderr)
+        if failed:
+            print(f"warning: {spec}: {failed}/{len(res)} episodes ended by crash or timeout (graded as empty answers; "
+                  f"see the stderr lines above)", file=sys.stderr)
+        if failed == len(res):
+            dead.append(spec)
     print_table(rows, f"AuditGym {a.mode} run", a.format)
+    if dead:
+        print(f"FAIL: {', '.join(dead)} crashed or timed out on every episode: these rows are not a score", file=sys.stderr)
+        return 1
     return 0
 
 
@@ -330,7 +341,7 @@ class PlayShell(cmd.Cmd):
         if term or trunc:
             print(f"\nepisode over: reward={r} terminated={term} truncated={trunc}")
             g = self.env.result()
-            print(json.dumps({k: g[k] for k in ("tp", "fp", "fn", "precision", "recall", "f1", "reward")}, indent=1))
+            print(json.dumps({k: g[k] for k in ("valid", "error", "tp", "fp", "fn", "precision", "recall", "f1", "reward") if k in g}, indent=1, ensure_ascii=False))
             return True
         return False
 
@@ -393,7 +404,11 @@ def build_parser() -> argparse.ArgumentParser:
     t = sub.add_parser("tour", help="the jury's whole flow in ~1 minute with a scorecard per case criterion (start here)")
     t.add_argument("--out", help="report directory (default: ./auditgym-report)")
     t.add_argument("--quick", action="store_true", help="fewer fresh seeds in the test step")
+    t.add_argument("--split", help="'-' = run steps 2-4 on YOUR split from stdin (AUDITGYM_SALT if set, else a random salt)")
     t.set_defaults(fn=cmd_tour)
+
+    spl = sub.add_parser("split", help="print a new closed split (organizers' shape, fresh random seeds): auditgym split > my_split.json")
+    spl.set_defaults(fn=cmd_split)
 
     def source(sp, default="dev"):
         sp.add_argument("--split", default=default, help="split name(s) from configs/, comma separated (default: %(default)s)")
@@ -473,6 +488,8 @@ def build_parser() -> argparse.ArgumentParser:
 START = """AuditGym {v} — RL-среда и оценщик для ИИ-аудиторов (офлайн, без ключей и GPU)
 
   auditgym tour       весь путь жюри за ~1 минуту + итог по критериям кейса   <- начните отсюда
+  auditgym split      новый закрытый split со случайными сидами: auditgym split > my_split.json
+  auditgym tour --split - < my_split.json    тот же тур на ваших сидах
   auditgym check      единая официальная проверка (exit 0 = всё пройдено)
   auditgym run        прогнать политику(и): --policy reconcile,flag_all,random,oracle --split dev
   auditgym compare    таблица P, R, F1, награда, шаги, время по прогонам
@@ -483,7 +500,27 @@ START = """AuditGym {v} — RL-среда и оценщик для ИИ-ауди
 
 def cmd_tour(a) -> int:
     from .tour import run_tour
-    return run_tour(a.out, a.quick)
+    split = None
+    if a.split:
+        if a.split != "-":
+            raise ValueError("tour --split takes '-' (the split JSON on stdin), e.g. auditgym tour --split - < my_split.json")
+        text = sys.stdin.read()
+        if not text.strip():
+            raise ValueError("no split on stdin: auditgym tour --split - < my_split.json  (make one: auditgym split > my_split.json)")
+        split = loads_strict(text)
+    return run_tour(a.out, a.quick, split)
+
+
+def cmd_split(a) -> int:
+    """A new closed-split file in the organizers' shape (5 clean, 5 interacting, 10 other) with fresh random seeds."""
+    import secrets
+    cfg = load_split_config(str(ROOT / "configs" / "closed_example.json"))
+    cfg["split"] = "jury"
+    cfg["note"] = "Generated by `auditgym split`: fresh random seeds in the shape of configs/closed_example.json. Edit freely."
+    for e in cfg["episodes"]:
+        e["seed"] = f"jury-{secrets.token_hex(8)}"
+    print(json.dumps(cfg, indent=1, ensure_ascii=False))
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -22,20 +22,8 @@ def test_invariants_hold_before_injection(ep):
 
 
 def _expected(ep):
-    inv = {d["doc_id"]: d for d in ep.public["invoices"]}
-    exp = set()
-    for t in ep.truth["issues"]:
-        a = t["affected_ids"]
-        if t["type"] == "duplicate_invoice":
-            dup = max((inv[i] for i in a), key=lambda d: parse(d["issued_at"]))
-            exp.add(("I8", dup["doc_id"], t["expected_amount_minor"]))
-        elif t["type"] == "payment_allocation":
-            exp.add(("I7", "|".join(sorted(a)), t["expected_amount_minor"]))
-        elif t["type"] == "fx_conversion":
-            exp.add(("I5", a[0], t["expected_amount_minor"]))
-        else:
-            exp.add(("I6", a[0], t["expected_amount_minor"]))
-    return exp
+    from auditgym.datacheck import expected_violations
+    return expected_violations(ep)
 
 
 @pytest.mark.parametrize("ep", EPS, ids=IDS)

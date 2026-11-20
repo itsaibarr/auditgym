@@ -8,23 +8,73 @@
 
 ## Для жюри: старт одной командой
 
-Ничего ставить заранее не нужно: ни Python, ни ключей, ни аккаунтов, ни GPU. Выберите то, что есть на компьютере:
+Ничего ставить заранее не нужно: ни Python, ни git, ни ключей, ни аккаунтов, ни GPU. Выберите то, что есть на компьютере:
 
 | Что есть на компьютере | Команда |
 |---|---|
-| Node.js (`npx`) | `npx -y github:itsaibarr/auditgym` |
+| Node.js 16+ (`npx`) | `npx -y https://codeload.github.com/itsaibarr/auditgym/tar.gz/master` |
 | macOS / Linux (только `curl`) | `curl -fsSL https://raw.githubusercontent.com/itsaibarr/auditgym/master/run.sh \| sh` |
-| Docker (в т.ч. Windows) | `docker build -t auditgym:1.0.0 https://github.com/itsaibarr/auditgym.git && docker run --rm --network none auditgym:1.0.0 tour` (отчёт на диск: добавьте `-v "$PWD/auditgym-report:/report"` и `--out /report`) |
+| Docker (в т.ч. Windows) | `docker build -t auditgym:1.0.0 https://github.com/itsaibarr/auditgym.git`, затем `mkdir -p auditgym-report && docker run --rm --network none --user "$(id -u):$(id -g)" -v "$PWD/auditgym-report:/report" auditgym:1.0.0 tour --out /report` (в PowerShell без `--user`, `${PWD}` вместо `$PWD`) |
 
-Команда сама скачивает `uv` (один статичный файл, закреплённая версия) в `~/.cache/auditgym`, а он — Python 3.11 и зависимости из `uv.lock`; систему она не меняет. Первый запуск — 1–2 минуты (загрузка), дальше старт около секунды. Проверено на «чистых» контейнерах `node:22-slim` (нет curl, git, Python) и `debian:bookworm-slim` (только curl).
+Команда сама скачивает `uv` (один статичный файл закреплённой версии) в `~/.cache/auditgym`, а он — Python 3.11 и зависимости из `uv.lock`; ничего вне `~/.cache/auditgym` не меняется. Первый запуск — 1–3 минуты (загрузка), дальше тур идёт около минуты, а команды стартуют за секунду. Если загрузка оборвалась — повторите ту же команду: скачанное сохраняется. Проверено на «чистых» контейнерах `node:22-slim` (нет git, curl и Python) и `debian:bookworm-slim` (только curl).
 
 По умолчанию запускается **`auditgym tour`** — весь путь проверки жюри примерно за минуту:
 1. официальная проверка `auditgym check` (тесты, базовые политики, порядки наград, leakscan, парные проверки, replay), сгруппированная по критериям кейса;
-2. закрытая проверка как у организаторов: новые секретные сиды и соль, 20 эпизодов (5 чистых, 5 со связанными ошибками), политики random / reconcile / flag_all / oracle и наш expert — таблица P, R, F1, награда, награда на чистых, шаги, время;
+2. закрытая проверка как у организаторов: новые секретные сиды и соль, 20 эпизодов (5 чистых, 5 со связанными ошибками), независимая проверка данных каждого эпизода (инварианты I1–I8 до ошибок, нарушения ровно объявленные, доказательства воспроизводят суммы), политики random / reconcile / flag_all / oracle и наш expert — таблица P, R, F1, награда, награда на чистых, шаги, время;
 3. 20 парных проверок (перестановка строк и смена всех ID);
 4. побайтный replay с перепроверкой оценки, целостность папок прогона, leakscan;
 
-и в конце — **итог по пяти критериям кейса** и готовые команды, чтобы подключить свою политику. Отчёт сохраняется в `./auditgym-report/report.md` и `report.json`. Любую другую команду можно передать так же: `npx -y github:itsaibarr/auditgym check`, `… | sh -s -- check`, `docker run … auditgym:1.0.0 check`.
+и в конце — **итог по пяти критериям кейса** и готовые команды для следующих шагов (уже с вашей командой запуска). Отчёт: `auditgym-report/report.md` и `report.json`.
+
+### Что дальше: сценарии жюри
+
+Ниже `auditgym` — ваша команда запуска: `npx -y https://codeload.github.com/itsaibarr/auditgym/tar.gz/master`, `sh ~/.cache/auditgym/src-master/run.sh` или `docker run --rm -i --network none -v "$PWD/out:/out" auditgym:1.0.0` (тур печатает их уже готовыми).
+
+| Задача | Команда |
+|---|---|
+| Свой закрытый split: новые случайные сиды в форме организаторов (5 чистых, 5 связанных, 10 прочих); сиды и параметры можно править, ключи — в таблице ниже | `auditgym split > my_split.json` |
+| Итог по критериям на **ваших** сидах | `auditgym tour --split - < my_split.json` |
+| Четыре политики организаторов на вашем split, таблица P, R, F1, награда, шаги, время, падения | `auditgym run --policy random,reconcile,flag_all,oracle --split - --public-salt --out out < my_split.json` |
+| Сравнить прогоны, разбивка по типам ошибок | `auditgym compare out/random out/reconcile out/flag_all out/oracle --per-type` |
+| Своя политика: класс Python с `reset/step` (пример `examples/my_policy.py`) | `auditgym run --policy my_policy:LookAround --policy-path examples --split dev --out out --trust-policies` |
+| Своя политика: любая программа, JSON-строки через stdin/stdout (пример `examples/stdio_policy.py`) | `auditgym run --policy "cmd:python3 /abs/path/stdio_policy.py" --split dev --out out --trust-policies` |
+| Сыграть эпизод вручную / JSON Schema для LLM | `auditgym play` · `auditgym schema --out out/schema` |
+
+Если политика не импортируется или программа не найдена, `run` сразу останавливается с понятной ошибкой (код 2); если политика упала или вышла по тайм-ауту во всех эпизодах, строка помечается в колонке `crash/timeout`, а код выхода — 1. `--trust-policies` нужен только вне Docker (установка доступна вам на запись, а оценщик работает в том же процессе). Аргументы политик: `--policy-arg key=value`, например `--policy-arg seed=7` для `random`. Программы на Node.js, Go или JVM создают потоки: на Linux им нужен `--allow-forks` (лимит процессов), на macOS — нет. В образе Docker есть только Python; для другого языка: `FROM auditgym:1.0.0` + `USER root` + `RUN apt-get update && apt-get install -y nodejs` + `USER auditor`.
+
+**Ключи конфигурации** (в split: `base_config` и `config` у эпизода; неизвестный ключ — ошибка):
+
+| Ключ | По умолчанию | Допустимо |
+|---|---|---|
+| `errors.<тип>.on`, `errors.<тип>.count` | `true`, `[0, 2]` | типы `duplicate_invoice`, `payment_allocation`, `fx_conversion`, `period_cutoff`; `count` = `[min, max]` |
+| `interacting.X1`, `interacting.X2` | `0.0` | вероятность 0–1 связанного сценария |
+| `max_errors` | 12 | 0–25 |
+| `base_currencies` / `foreign_currencies` | `[KZT, USD, EUR]` / `[USD, EUR, KZT, JPY, KWD, CNY, GBP]` | ISO-коды среды |
+| `timezones` | `[Asia/Almaty, Asia/Tashkent, Europe/Berlin, Asia/Dubai, UTC]` | любые IANA-зоны |
+| `year`, `months` | 2026, 1–12 | 1971–2200, подмножество 1–12 |
+| `cutoff_window_days` | 5 | 4–60 |
+| `customers`, `invoices`, `opening_invoices`, `on_account`, `expenses` | `[6,16]`, `[20,70]`, `[2,6]`, `[1,3]`, `[60,260]` | `[min, max]`, до 200 / 2000 / 200 / 200 / 5000 |
+
+## Закрытая проверка
+
+Строгий вариант для настоящих скрытых сидов: секретная соль (≥ 32 символов) видна только раннеру, split подаётся через stdin, поэтому сидов нет ни в argv раннера, ни в смонтированных файлах. Все политики — одним вызовом, папка результатов — новая и пустая.
+
+```bash
+SALT=$(openssl rand -hex 32)   # сохраните: нужна для replay и перегенерации эпизодов; не кладите в смонтированные папки
+mkdir -p out eps               # образ работает от пользователя auditor: на Linux передайте свой uid
+docker run -i --rm --network none --user "$(id -u):$(id -g)" -e AUDITGYM_SALT=$SALT -v $PWD/out:/out \
+    auditgym:1.0.0 run --policy random,reconcile,flag_all,oracle,my_policy:LookAround --policy-path /app/examples \
+    --split - --out /out < my_split.json
+# свои политики: положите модуль в ./policies и добавьте -v $PWD/policies:/policies:ro и --policy-path /policies
+docker run --rm --network none -e AUDITGYM_SALT=$SALT -v $PWD/out:/out:ro auditgym:1.0.0 compare /out/random /out/reconcile /out/flag_all /out/oracle --per-type
+# повтор закрытого прогона (включая oracle: его ответ восстанавливается из перегенерированного эталона)
+docker run -i --rm --network none -e AUDITGYM_SALT=$SALT -v $PWD/out:/out:ro auditgym:1.0.0 replay /out/reconcile --split - < my_split.json
+# эпизоды закрытого split на диск — для независимой проверки после прогона (не давайте их политике)
+docker run --rm --network none --user "$(id -u):$(id -g)" -e AUDITGYM_SALT=$SALT -v $PWD/my_split.json:/s.json:ro -v $PWD/eps:/eps \
+    auditgym:1.0.0 generate --split /s.json --out /eps
+```
+
+Раннер запускается напрямую: с `--init`, обёртками `sh -c` / `uv run` или солью в командной строке он откажется стартовать (соль читаема другим процессом). Закрытый eval без соли, с короткой солью, с `--seeds`/`--config` или split-файлом по пути, а также с `--episodes`, где лежит `_grader/`, завершается с кодом 2.
 
 ## Единая команда проверки
 
@@ -44,7 +94,7 @@ docker run --rm --network none --cpus 2 --memory 4g auditgym:1.0.0 check
 5. **20 парных проверок** с перестановкой строк и переименованием ID.
 6. **Детерминизм:** повторная генерация побайтно совпадает, replay траекторий совпадает.
 
-## Как жюри подключает свою политику
+## Как подключить свою политику
 
 ```bash
 # встроенные: random | reconcile | flag_all | expert | oracle (oracle только внутри раннера)
@@ -53,26 +103,11 @@ auditgym run --policy random,reconcile,flag_all,oracle --split dev
 auditgym run --policy my_policy:LookAround --policy-path examples --split dev --trust-policies
 # любая программа на любом языке, протокол JSON-строк через stdin/stdout
 auditgym run --policy "cmd:python3 /abs/path/examples/stdio_policy.py" --split dev --trust-policies
-# (--trust-policies: своя политика на своей копии репозитория; без Docker установка доступна на запись, поэтому чужие политики запускайте в образе)
-# закрытая проверка: свой split (сиды и сочетания параметров, формат как в configs/closed_example.json)
-# подаётся через stdin (`--split -`), поэтому сидов нет ни в argv раннера, ни в смонтированных файлах;
-# соль (≥ 32 символов) видит только раннер. Все политики — одним вызовом, папка результатов — новая и пустая.
-SALT=$(openssl rand -hex 32)          # сохраните: нужна для replay и для перегенерации эпизодов; не кладите в смонтированные папки
-mkdir -p out eps                       # образ работает от пользователя auditor: на Linux передайте свой uid
-docker run -i --rm --network none --user "$(id -u):$(id -g)" -e AUDITGYM_SALT=$SALT \
-    -v $PWD/policies:/policies:ro -v $PWD/out:/out \
-    auditgym:1.0.0 run --policy reconcile,my_policy:LookAround,oracle --policy-path /policies --split - --out /out < closed_split.json
-# повтор закрытого прогона (включая oracle: его ответ восстанавливается из перегенерированного эталона)
-docker run -i --rm --network none -e AUDITGYM_SALT=$SALT -v $PWD/out:/out:ro auditgym:1.0.0 replay /out/reconcile --split - < closed_split.json
-# эпизоды закрытого split на диск — для независимой проверки после прогона (не давайте их политике)
-docker run --rm --network none --user "$(id -u):$(id -g)" -e AUDITGYM_SALT=$SALT -v $PWD/closed_split.json:/s.json:ro -v $PWD/eps:/eps \
-    auditgym:1.0.0 generate --split /s.json --out /eps
-# раннер запускается напрямую: с `--init`, обёртками `sh -c` / `uv run` или солью в командной строке он откажется
-# стартовать (соль читаема другим процессом). Закрытый eval без соли, с короткой солью, с `--seeds`/`--config`
-# или split-файлом по пути, а также с `--episodes`, где лежит `_grader/`, завершается с кодом 2.
-# таблица сравнения: P, R, F1, возврат, экспериментальная награда, шаги, доля FP на чистых, время
+# таблица сравнения: P, R, F1, возврат, экспериментальная награда, шаги, доля FP на чистых, время, падения
 auditgym compare runs/oracle runs/reconcile runs/flag_all runs/random --per-type
 ```
+
+Строгий закрытый прогон со своими сидами — в разделе «Закрытая проверка» выше.
 
 Python-интерфейс политики: `reset(observation, info) -> action`, `step(observation, reward, terminated, truncated, info) -> action` и необязательный `end(observation, reward, terminated, truncated, info)`. Через `end` в train-режиме приходит терминальная награда.
 Протокол JSON-строк:

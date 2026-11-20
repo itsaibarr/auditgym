@@ -4,7 +4,7 @@ line can be a policy. Run with:  auditgym run --policy "cmd:python3 /abs/path/ex
 
 Runner -> policy: {"type": "reset", "observation": ..., "info": ...}
                   {"type": "step", "observation": ..., "reward": ..., "terminated": ..., "truncated": ..., "info": ...}
-                  {"type": "close"}
+                  {"type": "close", "observation": ..., "reward": ..., ...}   (the final transition; then exit)
 Policy -> runner: {"name": "<action>", "arguments": {...}}
 """
 import json
