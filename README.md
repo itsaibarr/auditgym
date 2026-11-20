@@ -29,7 +29,7 @@
 
 ### Что дальше: сценарии жюри
 
-Ниже `auditgym` — ваша команда запуска: `npx -y https://codeload.github.com/itsaibarr/auditgym/tar.gz/master`, `sh ~/.cache/auditgym/src-master/run.sh` или `docker run --rm -i --network none -v "$PWD/out:/out" auditgym:1.0.0` (тур печатает их уже готовыми).
+Ниже `auditgym` — ваша команда запуска: `npx -y https://codeload.github.com/itsaibarr/auditgym/tar.gz/master`, `sh ~/.cache/auditgym/src-master/run.sh` или `docker run --rm -i --network none -v "$PWD/out:/out" auditgym:1.0.0` (тур печатает их уже готовыми). В Docker сначала `mkdir -p out`, добавьте `--user "$(id -u):$(id -g)"` (на Linux) и пишите результаты в `/out/...` вместо `out/...`.
 
 | Задача | Команда |
 |---|---|

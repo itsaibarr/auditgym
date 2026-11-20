@@ -49,7 +49,8 @@ def _pytest(rep: Report, quick: bool) -> None:
     t0 = time.time()
     with tempfile.TemporaryDirectory() as td:
         xml = Path(td) / "junit.xml"
-        env = {**{k: v for k, v in os.environ.items() if k != "AUDITGYM_SALT"}, "AUDITGYM_FRESH_SEEDS": "15" if quick else "40", "PYTHONHASHSEED": "0"}
+        drop = {"AUDITGYM_SALT", "AUDITGYM_SHELL", "AUDITGYM_LAUNCHER", "AUDITGYM_REPORT_HOST"}
+        env = {**{k: v for k, v in os.environ.items() if k not in drop}, "AUDITGYM_FRESH_SEEDS": "15" if quick else "40", "PYTHONHASHSEED": "0"}
         proc = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", str(ROOT / "tests"), f"--junitxml={xml}"],
                               cwd=ROOT, env=env, capture_output=True, text=True)
         if not xml.exists():

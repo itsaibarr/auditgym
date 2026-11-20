@@ -80,7 +80,15 @@ def _closed_episodes(split: dict | None = None) -> tuple[list[tuple[str, Episode
     seeds and configs, salted with AUDITGYM_SALT if set, else a random salt. Returns (episodes, seeds redrawn)."""
     from .splits import split_episodes
     if split is not None:
-        salt = os.environ.get("AUDITGYM_SALT") or secrets.token_hex(32)
+        salt = os.environ.get("AUDITGYM_SALT")
+        if salt:
+            from .runner import salt_exposures
+            if salt_exposures():  # npx / run.sh wrappers hold it: a policy could read it, so do not use it here
+                print("note: AUDITGYM_SALT is visible to a wrapper process (npx / run.sh); the tour uses a fresh random salt "
+                      "instead. Strict closed evaluation with your salt: the Docker recipe in the README.", file=sys.stderr)
+                os.environ.pop("AUDITGYM_SALT", None)
+                salt = None
+        salt = salt or secrets.token_hex(32)
         old = os.environ.get("AUDITGYM_SALT")
         os.environ["AUDITGYM_SALT"] = salt  # split_episodes salts non-open splits from the environment
         try:
@@ -155,8 +163,13 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     con.rule("[bold]1/4  Официальная проверка[/]  (auditgym check: pytest, базовые политики, порядки наград, leakscan, парные проверки, replay)")
     t0 = time.time()
     cap_out, cap_err = io.StringIO(), io.StringIO()
-    with con.status("идёт auditgym check …"), contextlib.redirect_stdout(cap_out), contextlib.redirect_stderr(cap_err):
-        rc = run_check(quick=quick, out=outdir / "check")
+    juror_salt = os.environ.pop("AUDITGYM_SALT", None)  # the official check uses its own open data, never the juror's salt
+    try:
+        with con.status("идёт auditgym check …"), contextlib.redirect_stdout(cap_out), contextlib.redirect_stderr(cap_err):
+            rc = run_check(quick=quick, out=outdir / "check")
+    finally:
+        if juror_salt is not None:
+            os.environ["AUDITGYM_SALT"] = juror_salt
     if not (outdir / "check" / "summary.json").exists():
         tail = "\n".join((cap_out.getvalue() + cap_err.getvalue()).strip().splitlines()[-8:])
         con.print(f"auditgym check не смог выполниться (код {rc}):\n{tail}", style="red", markup=False, soft_wrap=True)

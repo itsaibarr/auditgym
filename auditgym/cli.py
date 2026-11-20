@@ -13,7 +13,7 @@ from .canon import loads_strict
 from .episode import generate, load_public, write_episode
 from .splits import ROOT, dir_episode, load_split_config, parse_seeds, split_episodes
 
-COLUMNS = [("policy", "policy"), ("episodes", "episodes"), ("micro_precision", "P"), ("micro_recall", "R"), ("mean_f1", "F1"),
+COLUMNS = [("policy", "policy"), ("episodes", "episodes"), ("micro_precision", "P(micro)"), ("micro_recall", "R(micro)"), ("mean_f1", "F1(avg)"),
            ("mean_return", "return"), ("mean_return_experimental", "return_exp"), ("mean_steps", "steps"),
            ("clean_fp_rate", "clean-FP"), ("mean_wall_s", "s/ep"), ("failed", "crash/timeout")]
 
@@ -155,6 +155,12 @@ def cmd_run(a) -> int:
         raise ValueError(f"--policy-arg takes key=value pairs, got {a.policy_arg!r}")
     from .policies import BUILTIN
     from .runner import install_writable
+    if a.policy_arg and all(s in BUILTIN or s == "oracle" for s in specs):
+        import inspect
+        known = {p for s in specs if s in BUILTIN for p in inspect.signature(BUILTIN[s]).parameters}
+        unknown = sorted({x.split("=", 1)[0] for x in a.policy_arg} - known)
+        if unknown:
+            raise ValueError(f"--policy-arg key(s) {unknown} are not accepted by {specs}; known: {sorted(known) or 'none'}")
     custom = [s for s in specs if s != "oracle" and s not in BUILTIN]
     if custom and not a.trust_policies and install_writable():
         raise ValueError("this Python environment is writable by your user (the auditgym package, an import root on "

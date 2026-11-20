@@ -1,7 +1,7 @@
 {
   "name": "auditgym",
   "version": "1.0.0",
-  "description": "AuditGym: reproducible RL environment and grader for AI financial auditors. One-command launcher: npx -y github:itsaibarr/auditgym",
+  "description": "AuditGym: reproducible RL environment and grader for AI financial auditors. One-command launcher: npx -y https://codeload.github.com/itsaibarr/auditgym/tar.gz/master",
   "license": "MIT",
   "private": true,
   "bin": {

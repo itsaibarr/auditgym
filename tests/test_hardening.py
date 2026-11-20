@@ -991,3 +991,9 @@ def test_tour_on_unusual_juror_splits(tmp_path, monkeypatch, profile):
     assert run_tour(str(tmp_path / "rep"), quick=True, split=split) == 0
     rep = tmp_path / "rep"
     assert (rep / "report.md").exists() and not (rep / "closed" / "SALT").exists()
+
+
+
+def test_unknown_policy_arg_for_builtins_is_an_error(tmp_path):
+    from auditgym.cli import main
+    assert main(["run", "--policy", "random", "--policy-arg", "sed=7", "--split", "dev", "--out", str(tmp_path)]) == 2
