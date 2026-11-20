@@ -24,7 +24,7 @@ LEGEND = ("Precision and recall: pooled over all findings · F1: mean per episod
 def _console():
     from rich.console import Console
     import os
-    return Console(highlight=False, width=None if _tty() or os.environ.get("COLUMNS") else 200)  # piped/Docker: no 80-column squeeze
+    return Console(highlight=False, width=None if _tty() or os.environ.get("COLUMNS") else 160)  # piped/Docker: no 80-column squeeze
 
 
 def rich_table(title: str, headers: list[str], rows: list[list[str]], legend: str = "", left: int = 1) -> None:
