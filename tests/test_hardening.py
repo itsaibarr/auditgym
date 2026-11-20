@@ -1,6 +1,7 @@
 """Regression tests for council round-1 findings (attacks on isolation, robustness and data tells)."""
 import json
 import os
+import shlex
 import sys
 import time
 from collections import Counter
@@ -204,7 +205,7 @@ for line in sys.stdin:
 
 def raw(evil, cls):
     """Hostile *protocol* lines need a `cmd:` program: the policy host keeps stdout private (prints go to stderr)."""
-    return f"cmd:{sys.executable} {evil}/stdio_evil.py {cls}"
+    return f"cmd:{shlex.quote(sys.executable)} {shlex.quote(evil + '/stdio_evil.py')} {cls}"
 
 
 def _ask_reset(evil, cls, env=None):
@@ -919,7 +920,10 @@ def test_split_command_makes_a_valid_organizer_shaped_split(capsys):
     assert main(["split"]) == 0
     cfg = json.loads(capsys.readouterr().out)
     eps = split_episodes("-", cfg)
-    assert len(eps) == 20 and sum(1 for _, e in eps if not e.truth["issues"]) == 5
+    clean_cfg = sum(1 for e in cfg["episodes"] if not any(v.get("on") for v in e["config"].get("errors", {}).values())
+                    and not any(e["config"].get("interacting", {}).values()))
+    # the shape is in the configs; a non-clean config may still draw 0 errors (count [0, 1]), so realized clean is >= 5
+    assert len(eps) == 20 and clean_cfg == 5 and sum(1 for _, e in eps if not e.truth["issues"]) >= 5
 
 
 def test_run_refuses_a_policy_that_does_not_start(tmp_path):

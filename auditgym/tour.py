@@ -15,6 +15,7 @@ import json
 import os
 import platform
 import secrets
+import shlex
 import sys
 import tempfile
 import time
@@ -65,6 +66,12 @@ def _out_dir(out: str | None) -> Path:
     who = f"uid {os.getuid()}" if hasattr(os, "getuid") else "this user"
     raise OSError(f"no writable output directory for {who} (tried {out or './auditgym-report'}). In Docker on Linux: "
                   "mkdir -p auditgym-report and add --user \"$(id -u):$(id -g)\" -v \"$PWD/auditgym-report:/report\" ... tour --out /report")
+
+
+def _shown(p: Path) -> str:
+    """Path as the user sees it: the Windows launcher mounts the host report folder at /report."""
+    host = os.environ.get("AUDITGYM_REPORT_HOST")
+    return str(p).replace("/report", host, 1) if host and str(p).startswith("/report") else str(p)
 
 
 def _closed_episodes(split: dict | None = None) -> tuple[list[tuple[str, Episode]], int, dict, str]:
@@ -136,7 +143,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     con.print(Panel.fit(
         f"[bold]AuditGym {__version__}[/] — тур жюри: весь путь проверки за 1–1,5 минуты\n"
         f"Python {platform.python_version()} · {platform.system()} {platform.machine()} · код {report['code_hash']}\n"
-        "Сеть, GPU, ключи и платные API не нужны. Отчёт: " + str(outdir),
+        "Сеть, GPU, ключи и платные API не нужны. Отчёт: " + _shown(outdir),
         border_style="cyan"))
     in_docker = os.environ.get("AUDITGYM_LAUNCHER", "").startswith("docker run")
     if in_docker and out is None:
@@ -167,7 +174,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
               f"подробно: {outdir / 'check' / 'summary.md'}")
     failed = [f"{i['id']}: {i['detail']}"[:160] for i in summary["checks"] if not i["ok"]]
     for f in failed[:10]:
-        con.print(f"  FAIL {f}", style="red", markup=False)
+        con.print(f"  FAIL {f}", style="red", markup=False, soft_wrap=True)
     report["steps"]["check"] = {"ok": rc == 0, "passed": n_ok, "total": n_all, "by_criterion": by_c, "failed": failed}
 
     # 2. closed evaluation like the organizers' ---------------------------------------------------------------------
@@ -295,7 +302,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
         tb.add_row(name, str(pts), "—" if ok_k is None else "[green]✓[/]" if ok_k else "[red]✗[/]", evidence[k])
     con.print(tb)
     con.print(f"[bold]{'[green]ВСЁ ПРОЙДЕНО[/]' if all_ok else '[red]ЕСТЬ ПРОВАЛЫ[/]'}[/] за {time.time() - t_all:.0f} с · "
-              f"отчёт: {outdir / 'report.md'}")
+              f"отчёт: {_shown(outdir / 'report.md')}")
     report.update({"ok": all_ok, "seconds": round(time.time() - t_all, 1), "evidence": evidence})
     _write_report(outdir, report, rows)
 
@@ -339,13 +346,26 @@ def next_steps() -> list[tuple[str, str]]:
     if ag.startswith("docker run"):  # results must land on the host: mount a folder, run as the host user
         ag = 'mkdir -p out && docker run --rm -i --network none --user "$(id -u):$(id -g)" -v "$PWD/out:/out" auditgym:1.0.0'
         out, trust = "/out", ""
-    return [
+    steps = [
         ("Новый закрытый split (сиды случайные, формат как у организаторов)", f"{ag} split > my_split.json" if not ag.startswith("mkdir")
          else "docker run --rm auditgym:1.0.0 split > my_split.json"),
         ("Тот же тур на ваших сидах", f"{ag} tour --split - < my_split.json"),
         ("Четыре политики организаторов на вашем split", f"{ag} run --policy random,reconcile,flag_all,oracle --split - --public-salt --out {out} < my_split.json"),
         ("Своя политика: класс Python с reset/step", f"{ag} run --policy my_policy:LookAround --policy-path {ex} --split dev --out {out}{trust}"),
-        ("Своя политика: любая программа (JSON-строки через stdin/stdout)", f"{ag} run --policy \"cmd:python3 {ex / 'stdio_policy.py'}\" --split dev --out {out}{trust}"),
+        ("Своя политика: любая программа (JSON-строки через stdin/stdout)", f"{ag} run --policy \"cmd:python3 {shlex.quote(str(ex / 'stdio_policy.py'))}\" --split dev --out {out}{trust}"),
         ("Сравнить прогоны (P, R, F1, награда, шаги, время, падения)", f"{ag} compare {out}/random {out}/reconcile {out}/flag_all {out}/oracle --per-type"),
         ("Сыграть эпизод вручную / JSON Schema для LLM", f"{ag} play   |   {ag} schema --out {out}/schema"),
     ]
+    if os.environ.get("AUDITGYM_SHELL") == "powershell":  # Windows launcher: PowerShell syntax
+        steps = [(label, _powershell(cmd)) for label, cmd in steps]
+    return steps
+
+
+def _powershell(cmd: str) -> str:
+    cmd = cmd.replace("mkdir -p out && ", "").replace('--user "$(id -u):$(id -g)" ', "").replace('"$PWD/out:/out"', '"${PWD}/out:/out"')
+    if " > my_split.json" in cmd:
+        cmd = cmd.replace(" > my_split.json", " | Out-File -Encoding utf8 my_split.json")
+    if " < " in cmd:
+        base, src = cmd.rsplit(" < ", 1)
+        cmd = f"Get-Content {src} | {base}"
+    return cmd

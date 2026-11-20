@@ -88,7 +88,7 @@ def _episodes(a) -> list:
     for s in a.split.split(","):
         if s == "-":  # closed split on stdin: never in argv or on a path the policy could read
             _closed_guard(a, "stdin")
-            text = sys.stdin.read()
+            text = sys.stdin.read().lstrip("\ufeff")
             if not text.strip():
                 raise ValueError("no split on stdin: docker run -i ... --split - < closed_split.json")
             cfg_in = loads_strict(text)
@@ -505,7 +505,7 @@ def cmd_tour(a) -> int:
     if a.split:
         if a.split != "-":
             raise ValueError("tour --split takes '-' (the split JSON on stdin), e.g. auditgym tour --split - < my_split.json")
-        text = sys.stdin.read()
+        text = sys.stdin.read().lstrip("\ufeff")
         if not text.strip():
             raise ValueError("no split on stdin: auditgym tour --split - < my_split.json  (make one: auditgym split > my_split.json)")
         split = loads_strict(text)
