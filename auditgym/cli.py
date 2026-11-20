@@ -388,7 +388,12 @@ def cmd_play(a) -> int:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="auditgym", description="Reproducible RL environment for AI financial auditors.")
     p.add_argument("--version", action="version", version=f"auditgym {__version__}")
-    sub = p.add_subparsers(dest="cmd", required=True)
+    sub = p.add_subparsers(dest="cmd")
+
+    t = sub.add_parser("tour", help="the jury's whole flow in ~1 minute with a scorecard per case criterion (start here)")
+    t.add_argument("--out", help="report directory (default: ./auditgym-report)")
+    t.add_argument("--quick", action="store_true", help="fewer fresh seeds in the test step")
+    t.set_defaults(fn=cmd_tour)
 
     def source(sp, default="dev"):
         sp.add_argument("--split", default=default, help="split name(s) from configs/, comma separated (default: %(default)s)")
@@ -465,8 +470,27 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+START = """AuditGym {v} — RL-среда и оценщик для ИИ-аудиторов (офлайн, без ключей и GPU)
+
+  auditgym tour       весь путь жюри за ~1 минуту + итог по критериям кейса   <- начните отсюда
+  auditgym check      единая официальная проверка (exit 0 = всё пройдено)
+  auditgym run        прогнать политику(и): --policy reconcile,flag_all,random,oracle --split dev
+  auditgym compare    таблица P, R, F1, награда, шаги, время по прогонам
+  auditgym play       сыграть эпизод вручную
+  auditgym --help     все команды
+"""
+
+
+def cmd_tour(a) -> int:
+    from .tour import run_tour
+    return run_tour(a.out, a.quick)
+
+
 def main(argv: list[str] | None = None) -> int:
     a = build_parser().parse_args(argv)
+    if not getattr(a, "fn", None):
+        print(START.format(v=__version__))
+        return 0
     try:
         return a.fn(a)
     except KeyboardInterrupt:

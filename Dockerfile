@@ -14,6 +14,6 @@ COPY schema ./schema
 COPY examples ./examples
 RUN useradd --create-home auditor && mkdir -p /app/runs && chown -R auditor /app/runs
 USER auditor
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/app/.venv/bin:$PATH" AUDITGYM_LAUNCHER="docker run --rm -i --network none auditgym:1.0.0"
 ENTRYPOINT ["auditgym"]
 CMD ["check"]

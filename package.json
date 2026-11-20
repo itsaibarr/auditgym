@@ -1,0 +1,30 @@
+{
+  "name": "auditgym",
+  "version": "1.0.0",
+  "description": "AuditGym: reproducible RL environment and grader for AI financial auditors. One-command launcher: npx -y github:itsaibarr/auditgym",
+  "license": "MIT",
+  "private": true,
+  "bin": {
+    "auditgym": "bin/auditgym.js"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "files": [
+    "bin/",
+    "auditgym/",
+    "configs/",
+    "data/",
+    "examples/",
+    "schema/",
+    "tests/",
+    "docs/",
+    "pyproject.toml",
+    "uv.lock",
+    "README.md",
+    "LICENSE",
+    "Dockerfile",
+    ".dockerignore",
+    "run.sh"
+  ]
+}
