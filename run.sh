@@ -22,7 +22,9 @@ fetch_to() {  # fetch URL $1 to file $2: 3 attempts, a progress bar on a termina
     if command -v curl >/dev/null 2>&1; then
       if [ -t 2 ]; then B="-#"; else B="-sS"; fi
       curl -fL "$B" -C - --connect-timeout 20 --speed-limit 1000 --speed-time 60 -o "$2" "$1" && return 0
-    elif command -v wget >/dev/null 2>&1; then wget -q -c -T 30 -t 1 -O "$2" "$1" && return 0
+    elif command -v wget >/dev/null 2>&1; then
+      if [ -t 2 ]; then Q=""; else Q="-q"; fi   # GNU and BusyBox wget both draw a bar without -q
+      wget $Q -c -T 30 -t 1 -O "$2" "$1" && return 0
     else say "need curl or wget"; exit 2; fi
   done
   return 1

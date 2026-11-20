@@ -41,18 +41,20 @@ function installUv() {
   // curl honours HTTPS_PROXY; Node https (no proxy support) is the fallback
   const bar = process.stderr.isTTY ? "-#" : "-sS";
   const fetch1 = () => which("curl") ? spawnSync("curl", ["-fL", bar, "-C", "-", "--retry", "3", "--connect-timeout", "20", "--speed-limit", "1000", "--speed-time", "60", "-o", tgz, url], { stdio: ["ignore", "inherit", "inherit"] })
-    : which("wget") ? spawnSync("wget", ["-q", "-c", "-T", "30", "-t", "3", "-O", tgz, url], { stdio: ["ignore", "inherit", "inherit"] })
+    : which("wget") ? spawnSync("wget", [...(process.stderr.isTTY ? [] : ["-q"]), "-c", "-T", "30", "-t", "3", "-O", tgz, url], { stdio: ["ignore", "inherit", "inherit"] })
     : spawnSync(process.execPath, ["-e", `
     const https = require("https"), fs = require("fs");
     const get = (u, n) => https.get(u, { headers: { "user-agent": "auditgym-launcher" }, timeout: 30000 }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && n < 8) { res.resume(); return get(res.headers.location, n + 1); }
       if (res.statusCode !== 200) { console.error("HTTP " + res.statusCode + " for " + u); process.exit(1); }
+      const total = +res.headers["content-length"] || 0; let got = 0, last = Date.now();
+      res.on("data", (c) => { got += c.length; if (Date.now() - last > 5000) { last = Date.now(); process.stderr.write("[auditgym] uv: " + (got / 1e6).toFixed(1) + "/" + (total / 1e6).toFixed(1) + " MB\\n"); } });
       res.pipe(fs.createWriteStream(process.argv[2])).on("finish", () => process.exit(0));
     }).on("timeout", function () { console.error("download stalled (no data for 30 s)"); this.destroy(); process.exit(1); })
       .on("error", (e) => { console.error(String(e)); process.exit(1); });
     get(process.argv[1], 0);`, url, tgz], { stdio: ["ignore", "inherit", "inherit"] });
   let dl = fetch1();
-  for (let k = 2; k <= 3 && dl.status !== 0; k++) { say(`download interrupted, attempt ${k}/3 (resuming) ...`); dl = fetch1(); }
+  for (let k = 2; k <= 3 && dl.status !== 0; k++) { say(`download interrupted, attempt ${k}/3 ...`); dl = fetch1(); }
   let sum = "";
   try { sum = require("crypto").createHash("sha256").update(fs.readFileSync(tgz)).digest("hex"); } catch {}
   if (dl.status !== 0 || sum !== UV_SHA256[target]) {

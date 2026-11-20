@@ -244,7 +244,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     flag_clean = all(r["reward"] == -1.0 for r in res["flag_all"] if r["clean"])
     dirty = {sp: [r["reward"] for r in res[sp] if not r["clean"]] for sp in POLICIES}  # the ordering check/README assert: books with errors
     dm = {sp: sum(v) / len(v) if v else 0.0 for sp, v in dirty.items()}
-    order_txt = (f"на книгах с ошибками expert {dm['expert']:+.3f} > reconcile {dm['reconcile']:+.3f} > "
+    order_txt = (f"на книгах с ошибками expert {dm['expert']:+.3f} > reconcile {dm['reconcile']:+.3f} ≥ "
                  f"max(flag_all {dm['flag_all']:+.3f}, random {dm['random']:+.3f})" if dirty["expert"]
                  else "порядок не проверялся: в split нет книг с ошибками")
     order_ok = (not any(term_bad.values()) and oracle_one == len(res["oracle"]) and flag_clean
@@ -358,6 +358,8 @@ def _write_report(outdir: Path, report: dict, rows: dict) -> None:
     md += [f"| {POLICY_RU[s]} | {r['micro_precision']:.3f} | {r['micro_recall']:.3f} | {r['mean_f1']:.3f} | {r['mean_return']:+.3f} | "
            f"{'—' if r['clean_return'] is None else format(r['clean_return'], '+.3f')} | {r['mean_steps']:.1f} | {r['mean_wall_s']:.3f} |"
            for s, r in rows.items()]
+    md += ["", "\\* oracle видит эталон (только для оценщика) · \\*\\* expert — наш решатель по видимым записям, без эталона · "
+           "P и R — по всем выводам (micro), F1 — среднее по эпизодам"]
     st = report["steps"]
     md += ["", "## Шаги", "", f"- Официальная проверка: {st['check']['passed']}/{st['check']['total']}",
            f"- Парные проверки: {st['paired']['passed']}/{st['paired']['total']}",
