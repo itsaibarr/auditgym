@@ -849,6 +849,7 @@ def test_reaper_sees_processes_with_non_utf8_comm():
 
 
 # ---------------------------------------------------------------------------------------- council round 6
+@pytest.mark.skipif(hasattr(os, "geteuid") and os.geteuid() == 0, reason="root bypasses permission bits")
 def test_install_guard_covers_import_roots_and_no_isolate(tmp_path, monkeypatch):
     import site
     import auditgym.runner as R
