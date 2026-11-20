@@ -77,6 +77,46 @@
    "hit_max_new_tokens": 0,
    "missing_generations": 0
   },
+  "after2": {
+   "n": 60,
+   "mean_reward": -0.591,
+   "mean_f1": 0.2064,
+   "micro_f1": 0.1572,
+   "tp": 18,
+   "fp": 109,
+   "fn": 84,
+   "schema_error_rate": 0.0167,
+   "unparseable_rate": 0.0167,
+   "mean_steps": 6.9,
+   "fp_reasons": {
+    "amount": 7,
+    "no_issue": 102
+   },
+   "clean_books_false_accusation_rate": 0.75,
+   "mean_new_tokens": 222.2,
+   "hit_max_new_tokens": 1,
+   "missing_generations": 0
+  },
+  "explore_after2_lenient_explanation": {
+   "n": 60,
+   "mean_reward": -0.591,
+   "mean_f1": 0.2064,
+   "micro_f1": 0.1572,
+   "tp": 18,
+   "fp": 109,
+   "fn": 84,
+   "schema_error_rate": 0.0167,
+   "unparseable_rate": 0.0167,
+   "mean_steps": 6.9,
+   "fp_reasons": {
+    "amount": 7,
+    "no_issue": 102
+   },
+   "clean_books_false_accusation_rate": 0.75,
+   "mean_new_tokens": 222.2,
+   "hit_max_new_tokens": 1,
+   "missing_generations": 0
+  },
   "ref_expert": {
    "n": 60,
    "mean_reward": 0.9882,
@@ -339,6 +379,128 @@
     "missing_generations": 0
    }
   },
+  "after2": {
+   "clean": {
+    "n": 12,
+    "mean_reward": -0.5028,
+    "mean_f1": 0.25,
+    "micro_f1": 0.0,
+    "tp": 0,
+    "fp": 22,
+    "fn": 0,
+    "schema_error_rate": 0.0833,
+    "unparseable_rate": 0.0833,
+    "mean_steps": 6.75,
+    "fp_reasons": {
+     "no_issue": 22
+    },
+    "clean_books_false_accusation_rate": 0.6667,
+    "mean_new_tokens": 262.8,
+    "hit_max_new_tokens": 1,
+    "missing_generations": 0
+   },
+   "single": {
+    "n": 24,
+    "mean_reward": -0.6964,
+    "mean_f1": 0.1528,
+    "micro_f1": 0.1013,
+    "tp": 4,
+    "fp": 48,
+    "fn": 23,
+    "schema_error_rate": 0.0,
+    "unparseable_rate": 0.0,
+    "mean_steps": 6.96,
+    "fp_reasons": {
+     "amount": 1,
+     "no_issue": 47
+    },
+    "clean_books_false_accusation_rate": 1.0,
+    "mean_new_tokens": 208.6,
+    "hit_max_new_tokens": 0,
+    "missing_generations": 0
+   },
+   "multi": {
+    "n": 24,
+    "mean_reward": -0.5296,
+    "mean_f1": 0.2382,
+    "micro_f1": 0.2188,
+    "tp": 14,
+    "fp": 39,
+    "fn": 61,
+    "schema_error_rate": 0.0,
+    "unparseable_rate": 0.0,
+    "mean_steps": 6.92,
+    "fp_reasons": {
+     "amount": 6,
+     "no_issue": 33
+    },
+    "clean_books_false_accusation_rate": 1.0,
+    "mean_new_tokens": 215.6,
+    "hit_max_new_tokens": 0,
+    "missing_generations": 0
+   }
+  },
+  "explore_after2_lenient_explanation": {
+   "clean": {
+    "n": 12,
+    "mean_reward": -0.5028,
+    "mean_f1": 0.25,
+    "micro_f1": 0.0,
+    "tp": 0,
+    "fp": 22,
+    "fn": 0,
+    "schema_error_rate": 0.0833,
+    "unparseable_rate": 0.0833,
+    "mean_steps": 6.75,
+    "fp_reasons": {
+     "no_issue": 22
+    },
+    "clean_books_false_accusation_rate": 0.6667,
+    "mean_new_tokens": 262.8,
+    "hit_max_new_tokens": 1,
+    "missing_generations": 0
+   },
+   "single": {
+    "n": 24,
+    "mean_reward": -0.6964,
+    "mean_f1": 0.1528,
+    "micro_f1": 0.1013,
+    "tp": 4,
+    "fp": 48,
+    "fn": 23,
+    "schema_error_rate": 0.0,
+    "unparseable_rate": 0.0,
+    "mean_steps": 6.96,
+    "fp_reasons": {
+     "amount": 1,
+     "no_issue": 47
+    },
+    "clean_books_false_accusation_rate": 1.0,
+    "mean_new_tokens": 208.6,
+    "hit_max_new_tokens": 0,
+    "missing_generations": 0
+   },
+   "multi": {
+    "n": 24,
+    "mean_reward": -0.5296,
+    "mean_f1": 0.2382,
+    "micro_f1": 0.2188,
+    "tp": 14,
+    "fp": 39,
+    "fn": 61,
+    "schema_error_rate": 0.0,
+    "unparseable_rate": 0.0,
+    "mean_steps": 6.92,
+    "fp_reasons": {
+     "amount": 6,
+     "no_issue": 33
+    },
+    "clean_books_false_accusation_rate": 1.0,
+    "mean_new_tokens": 215.6,
+    "hit_max_new_tokens": 0,
+    "missing_generations": 0
+   }
+  },
   "ref_expert": {
    "clean": {
     "n": 12,
@@ -492,6 +654,144 @@
    "wins": 1,
    "ties": 21,
    "losses": 2,
+   "n": 24,
+   "resamples": 10000,
+   "seed": 20261121
+  }
+ },
+ "paired_after2_minus_base": {
+  "reward": {
+   "delta_mean": 0.3922,
+   "ci95": [
+    0.2357,
+    0.5669
+   ],
+   "wins": 19,
+   "ties": 41,
+   "losses": 0,
+   "n": 60,
+   "resamples": 10000,
+   "seed": 20261121
+  },
+  "f1": {
+   "delta_mean": 0.1978,
+   "ci95": [
+    0.1189,
+    0.2857
+   ],
+   "wins": 19,
+   "ties": 41,
+   "losses": 0,
+   "n": 60,
+   "resamples": 10000,
+   "seed": 20261121
+  }
+ },
+ "paired_after2_minus_base_by_group": {
+  "clean": {
+   "delta_mean": 0.4972,
+   "ci95": [
+    0.0,
+    0.9945
+   ],
+   "wins": 3,
+   "ties": 9,
+   "losses": 0,
+   "n": 12,
+   "resamples": 10000,
+   "seed": 20261121
+  },
+  "single": {
+   "delta_mean": 0.3036,
+   "ci95": [
+    0.0551,
+    0.6071
+   ],
+   "wins": 4,
+   "ties": 20,
+   "losses": 0,
+   "n": 24,
+   "resamples": 10000,
+   "seed": 20261121
+  },
+  "multi": {
+   "delta_mean": 0.4285,
+   "ci95": [
+    0.2478,
+    0.6188
+   ],
+   "wins": 12,
+   "ties": 12,
+   "losses": 0,
+   "n": 24,
+   "resamples": 10000,
+   "seed": 20261121
+  }
+ },
+ "paired_after2_minus_ref_empty": {
+  "reward": {
+   "delta_mean": -0.1212,
+   "ci95": [
+    -0.41,
+    0.1549
+   ],
+   "wins": 16,
+   "ties": 31,
+   "losses": 13,
+   "n": 60,
+   "resamples": 10000,
+   "seed": 20261121
+  },
+  "f1": {
+   "delta_mean": -0.0603,
+   "ci95": [
+    -0.2056,
+    0.0788
+   ],
+   "wins": 16,
+   "ties": 31,
+   "losses": 13,
+   "n": 60,
+   "resamples": 10000,
+   "seed": 20261121
+  }
+ },
+ "paired_after2_minus_ref_empty_by_group": {
+  "clean": {
+   "delta_mean": -1.4913,
+   "ci95": [
+    -1.9882,
+    -0.9942
+   ],
+   "wins": 0,
+   "ties": 3,
+   "losses": 9,
+   "n": 12,
+   "resamples": 10000,
+   "seed": 20261121
+  },
+  "single": {
+   "delta_mean": 0.0551,
+   "ci95": [
+    -0.3591,
+    0.4692
+   ],
+   "wins": 4,
+   "ties": 17,
+   "losses": 3,
+   "n": 24,
+   "resamples": 10000,
+   "seed": 20261121
+  },
+  "multi": {
+   "delta_mean": 0.3876,
+   "ci95": [
+    0.0924,
+    0.6482
+   ],
+   "wins": 12,
+   "ties": 11,
+   "losses": 1,
    "n": 24,
    "resamples": 10000,
    "seed": 20261121

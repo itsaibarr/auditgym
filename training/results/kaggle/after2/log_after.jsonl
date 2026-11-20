@@ -1,0 +1,34 @@
+{"event": "downloaded", "s": 52, "t": 1795152214.1}
+{"event": "start", "mode": "after", "n_held": 60, "n_sft": 400, "t": 1795152214.3}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 99.1, "peak_gb": {"0": 13.02}, "in_tokens": 5588, "done": 2, "total": 30, "t": 1795152360.6}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 143.8, "peak_gb": {"0": 13.01}, "in_tokens": 5574, "done": 2, "total": 30, "t": 1795152405.2}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 153.5, "peak_gb": {"0": 13.02}, "in_tokens": 5570, "done": 4, "total": 30, "t": 1795152514.1}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 129.2, "peak_gb": {"0": 13.01}, "in_tokens": 5475, "done": 4, "total": 30, "t": 1795152534.4}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 105.3, "peak_gb": {"0": 13.01}, "in_tokens": 5365, "done": 6, "total": 30, "t": 1795152639.8}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 74.4, "peak_gb": {"0": 13.01}, "in_tokens": 5118, "done": 8, "total": 30, "t": 1795152714.2}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 312.8, "peak_gb": {"0": 13.02}, "in_tokens": 5523, "done": 6, "total": 30, "t": 1795152826.9}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 121.6, "peak_gb": {"0": 13.01}, "in_tokens": 4989, "done": 10, "total": 30, "t": 1795152835.8}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 125.2, "peak_gb": {"0": 13.02}, "in_tokens": 5333, "done": 8, "total": 30, "t": 1795152952.1}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 150.1, "peak_gb": {"0": 13.01}, "in_tokens": 4900, "done": 12, "total": 30, "t": 1795152985.9}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 77.0, "peak_gb": {"0": 13.01}, "in_tokens": 4766, "done": 14, "total": 30, "t": 1795153063.0}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 151.3, "peak_gb": {"0": 13.02}, "in_tokens": 5279, "done": 10, "total": 30, "t": 1795153103.4}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 47.0, "peak_gb": {"0": 13.01}, "in_tokens": 4719, "done": 16, "total": 30, "t": 1795153110.0}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 45.8, "peak_gb": {"0": 13.01}, "in_tokens": 4583, "done": 18, "total": 30, "t": 1795153155.8}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 68.0, "peak_gb": {"0": 13.01}, "in_tokens": 4561, "done": 20, "total": 30, "t": 1795153223.8}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 127.5, "peak_gb": {"0": 13.02}, "in_tokens": 5079, "done": 12, "total": 30, "t": 1795153230.9}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 89.7, "peak_gb": {"0": 13.01}, "in_tokens": 4416, "done": 22, "total": 30, "t": 1795153313.5}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 110.9, "peak_gb": {"0": 13.02}, "in_tokens": 4885, "done": 14, "total": 30, "t": 1795153341.8}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 48.7, "peak_gb": {"0": 13.02}, "in_tokens": 4877, "done": 16, "total": 30, "t": 1795153390.5}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 133.9, "peak_gb": {"0": 13.01}, "in_tokens": 4388, "done": 24, "total": 30, "t": 1795153447.4}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 90.3, "peak_gb": {"0": 13.02}, "in_tokens": 4829, "done": 18, "total": 30, "t": 1795153480.9}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 43.7, "peak_gb": {"0": 13.01}, "in_tokens": 4338, "done": 26, "total": 30, "t": 1795153491.1}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 20.8, "peak_gb": {"0": 13.01}, "in_tokens": 4122, "done": 28, "total": 30, "t": 1795153511.9}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 123.1, "peak_gb": {"0": 13.02}, "in_tokens": 4664, "done": 20, "total": 30, "t": 1795153604.0}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 103.3, "peak_gb": {"0": 13.01}, "in_tokens": 3684, "done": 30, "total": 30, "t": 1795153615.3}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 67.0, "peak_gb": {"0": 13.02}, "in_tokens": 4506, "done": 22, "total": 30, "t": 1795153671.0}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 69.0, "peak_gb": {"0": 13.02}, "in_tokens": 4486, "done": 24, "total": 30, "t": 1795153740.1}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 94.6, "peak_gb": {"0": 13.02}, "in_tokens": 4426, "done": 26, "total": 30, "t": 1795153834.7}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 63.9, "peak_gb": {"0": 13.02}, "in_tokens": 4105, "done": 28, "total": 30, "t": 1795153898.6}
+{"event": "gen_batch", "tag": "after", "n": 2, "s": 88.6, "peak_gb": {"0": 13.02}, "in_tokens": 3903, "done": 30, "total": 30, "t": 1795153987.2}
+{"event": "gen_done", "tag": "after", "codes": [0, 0], "t": 1795153988.8}
+{"event": "end", "mode": "after", "t": 1795153988.8}
