@@ -17,9 +17,9 @@
 | Linux только с `wget` (например, Ubuntu Desktop) | `wget -qO- https://raw.githubusercontent.com/itsaibarr/auditgym/master/run.sh \| sh` |
 | Docker (в т.ч. Windows) | `docker build -t auditgym:1.0.0 https://github.com/itsaibarr/auditgym.git`, затем `mkdir -p auditgym-report && docker run --rm --network none --user "$(id -u):$(id -g)" -v "$PWD/auditgym-report:/report" auditgym:1.0.0 tour --out /report` <br>Windows PowerShell: `mkdir auditgym-report; docker run --rm --network none -v "${PWD}/auditgym-report:/report" auditgym:1.0.0 tour --out /report` |
 
-Команда сама скачивает `uv` (один статичный файл закреплённой версии) в `~/.cache/auditgym`, а он — Python 3.11 и зависимости из `uv.lock`; кроме неё пишутся только кеши самого uv (`~/.cache/uv`, `~/.local/share/uv`); системный Python, PATH и профиль оболочки не трогаются. Первый запуск — 1–3 минуты при обычной сети (загрузка), дальше тур идёт 1–1,5 минуты, а команды стартуют за секунду. Если загрузка оборвалась — повторите ту же команду: скачанное сохраняется. Без сети после первого запуска: `npx -y --offline https://codeload.github.com/itsaibarr/auditgym/tar.gz/master <команда>`, `sh ~/.cache/auditgym/src-master/run.sh <команда>` (путь curl/wget) или собранный образ Docker. Загрузка uv проверяется по SHA-256, а оборванная загрузка ничего не оставляет — достаточно повторить команду. Проверено на «чистых» контейнерах `node:22-slim` (нет git, curl и Python) и `debian:bookworm-slim` (только curl).
+Команда сама скачивает `uv` (один статичный файл закреплённой версии) в `~/.cache/auditgym`, а он — Python 3.11 и зависимости из `uv.lock`; кроме неё пишутся только кеши самого uv (`~/.cache/uv`, `~/.local/share/uv`); системный Python, PATH и профиль оболочки не трогаются. Первый запуск — 1–3 минуты при обычной сети (загрузка), дальше тур идёт 1–2,5 минуты, а команды стартуют за секунду. Если загрузка оборвалась — повторите ту же команду: скачанное сохраняется. Без сети после первого запуска: `npx -y --offline https://codeload.github.com/itsaibarr/auditgym/tar.gz/master <команда>`, `sh ~/.cache/auditgym/src-master/run.sh <команда>` (путь curl/wget) или собранный образ Docker. Загрузка uv проверяется по SHA-256, а оборванная загрузка ничего не оставляет — достаточно повторить команду. Проверено на «чистых» контейнерах `node:22-slim` (нет git, curl и Python) и `debian:bookworm-slim` (только curl).
 
-По умолчанию запускается **`auditgym tour`** — весь путь проверки жюри примерно за минуту:
+По умолчанию запускается **`auditgym tour`** — весь путь проверки жюри за 1–2,5 минуты:
 1. официальная проверка `auditgym check` (тесты, базовые политики, порядки наград, leakscan, парные проверки, replay), сгруппированная по критериям кейса;
 2. закрытая проверка как у организаторов: новые секретные сиды и соль, 20 эпизодов (5 чистых, 5 со связанными ошибками), независимая проверка данных каждого эпизода (инварианты I1–I8 до ошибок, нарушения ровно объявленные, доказательства воспроизводят суммы), политики random / reconcile / flag_all / oracle и наш expert — таблица P, R, F1, награда, награда на чистых, шаги, время;
 3. 20 парных проверок (перестановка строк и смена ID документов и строк);
@@ -63,15 +63,15 @@
 ```bash
 SALT=$(openssl rand -hex 32)   # сохраните: нужна для replay и перегенерации эпизодов; не кладите в смонтированные папки
 mkdir -p out eps               # образ работает от пользователя auditor: на Linux передайте свой uid
-docker run -i --rm --network none --user "$(id -u):$(id -g)" -e AUDITGYM_SALT=$SALT -v $PWD/out:/out \
+docker run -i --rm --network none --user "$(id -u):$(id -g)" -e AUDITGYM_SALT=$SALT -v "$PWD/out:/out" \
     auditgym:1.0.0 run --policy random,reconcile,flag_all,oracle,my_policy:LookAround --policy-path /app/examples \
     --split - --out /out < my_split.json
-# свои политики: положите модуль в ./policies и добавьте -v $PWD/policies:/policies:ro и --policy-path /policies
-docker run --rm --network none -e AUDITGYM_SALT=$SALT -v $PWD/out:/out:ro auditgym:1.0.0 compare /out/random /out/reconcile /out/flag_all /out/oracle --per-type
+# свои политики: положите модуль в ./policies и добавьте -v "$PWD/policies:/policies:ro" и --policy-path /policies
+docker run --rm --network none -e AUDITGYM_SALT=$SALT -v "$PWD/out:/out:ro" auditgym:1.0.0 compare /out/random /out/reconcile /out/flag_all /out/oracle --per-type
 # повтор закрытого прогона (включая oracle: его ответ восстанавливается из перегенерированного эталона)
-docker run -i --rm --network none -e AUDITGYM_SALT=$SALT -v $PWD/out:/out:ro auditgym:1.0.0 replay /out/reconcile --split - < my_split.json
+docker run -i --rm --network none -e AUDITGYM_SALT=$SALT -v "$PWD/out:/out:ro" auditgym:1.0.0 replay /out/reconcile --split - < my_split.json
 # эпизоды закрытого split на диск — для независимой проверки после прогона (не давайте их политике)
-docker run --rm --network none --user "$(id -u):$(id -g)" -e AUDITGYM_SALT=$SALT -v $PWD/my_split.json:/s.json:ro -v $PWD/eps:/eps \
+docker run --rm --network none --user "$(id -u):$(id -g)" -e AUDITGYM_SALT=$SALT -v "$PWD/my_split.json:/s.json:ro" -v "$PWD/eps:/eps" \
     auditgym:1.0.0 generate --split /s.json --out /eps
 ```
 
@@ -305,7 +305,7 @@ Python-интерфейс политики: `reset(observation, info) -> action`
 - **Для открытых train/dev эталон лежит на диске** (`_grader/`), и политика того же пользователя может его прочитать. Закрытую проверку запускайте в Docker с `-e AUDITGYM_SALT` и split через stdin: эпизоды генерируются в памяти раннера в порядке `episode_id`, эталон на диск не пишется, а траектория oracle сохраняется без его ответа. Не используйте `--episodes` с `_grader/`, не делайте `export` соли в общей оболочке и не давайте политике следующего вызова папку с результатами предыдущего (подмену результатов поймают хеши и HMAC в `run.json` при проверке с солью, но чтение они не запрещают).
 - **Чужие политики — только в Docker.** На хосте политика может навсегда изменить установку `auditgym`, доступную пользователю на запись (например, симлинком в `__pycache__`); поэтому при доступной на запись установке `run` с пользовательской политикой отказывается стартовать без явного `--trust-policies` (для своего кода). В образе пакет принадлежит root, а раннер — PID 1 (оставшиеся процессы убиваются атомарно через `kill(-1)`).
 - **Изоляция процессом того же пользователя — не песочница ядра.** Защита окружения раннера (`PR_SET_DUMPABLE`) работает только на Linux; на macOS дочерний процесс может прочитать начальное окружение родителя через `sysctl`, поэтому закрытую проверку запускайте в Docker. Читаемые пользователем файлы политика читать может. Сеть отключается флагом Docker `--network none`.
-- **Обучение весов (необязательно) — честный нулевой результат.** Qwen3-14B, SFT (LoRA) на ответах `ExpertPolicy`, Kaggle T4×2, 10,9 GPU-часа, 60 отложенных эпизодов, парный бутстрап. После дообучения награда выше базовой модели (Δ = +0,39…+0,51, ДИ выше нуля), но не выше политики «всегда пустой ответ» (Δ = −0,12, ДИ [−0,41; +0,15]): рост идёт от исправления невалидных и ложных ответов базы, а не от умения находить ошибки (находит дубли, но не курсовые и не отсечку). Это и есть проверка среды: награду нельзя «набрать», не решив задачу. Протокол, логи и все числа — `training/README.md`, `training/PROTOCOL.md`; официальная проверка от этого не зависит.
+- **Обучение весов (необязательно) — честный нулевой результат.** Qwen3-14B, SFT (LoRA) на ответах `ExpertPolicy`, Kaggle T4×2, 10,9 GPU-часа, 60 отложенных эпизодов, парный бутстрап. После дообучения награда выше базовой модели (Δ = +0,39…+0,51, ДИ выше нуля), но не выше политики «всегда пустой ответ» (Δ = −0,12, ДИ [−0,41; +0,15]): рост идёт от исправления невалидных и ложных ответов базы, а не от умения находить ошибки (находит дубли, но не курсовые и не отсечку). В этом прогоне награда не «набиралась» без решения задачи; это один прогон, а не доказательство. Протокол, логи и все числа — `training/README.md`, `training/PROTOCOL.md`; официальная проверка от этого не зависит.
 
 ## Структура
 

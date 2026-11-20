@@ -3,7 +3,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/itsaibarr/auditgym/master/run.sh | sh              # the jury tour
 #   curl -fsSL https://raw.githubusercontent.com/itsaibarr/auditgym/master/run.sh | sh -s -- check  # any command
 # Downloads the repository and `uv` (a single static binary) into ~/.cache/auditgym; uv brings Python 3.11 and the
-# locked dependencies. No API keys, no GPU, no sudo; nothing outside ~/.cache/auditgym is changed.
+# locked dependencies. No API keys, no GPU, no sudo; nothing outside ~/.cache/auditgym and uv's own caches (~/.cache/uv, ~/.local/share/uv) is changed.
 set -eu
 REF="${AUDITGYM_REF:-master}"
 HOME_DIR="${AUDITGYM_HOME:-$HOME/.cache/auditgym}"

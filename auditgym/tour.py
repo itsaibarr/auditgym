@@ -141,7 +141,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     report: dict = {"auditgym_version": __version__, "code_hash": code_hash(), "python": platform.python_version(),
                     "platform": platform.platform(), "steps": {}}
     con.print(Panel.fit(
-        f"[bold]AuditGym {__version__}[/] — тур жюри: весь путь проверки за 1–1,5 минуты\n"
+        f"[bold]AuditGym {__version__}[/] — тур жюри: весь путь проверки за 1–2,5 минуты\n"
         f"Python {platform.python_version()} · {platform.system()} {platform.machine()} · код {report['code_hash']}\n"
         "Сеть, GPU, ключи и платные API не нужны. Отчёт: " + _shown(outdir),
         border_style="cyan"))
@@ -244,6 +244,9 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     flag_clean = all(r["reward"] == -1.0 for r in res["flag_all"] if r["clean"])
     dirty = {sp: [r["reward"] for r in res[sp] if not r["clean"]] for sp in POLICIES}  # the ordering check/README assert: books with errors
     dm = {sp: sum(v) / len(v) if v else 0.0 for sp, v in dirty.items()}
+    order_txt = (f"на книгах с ошибками expert {dm['expert']:+.3f} > reconcile {dm['reconcile']:+.3f} > "
+                 f"max(flag_all {dm['flag_all']:+.3f}, random {dm['random']:+.3f})" if dirty["expert"]
+                 else "порядок не проверялся: в split нет книг с ошибками")
     order_ok = (not any(term_bad.values()) and oracle_one == len(res["oracle"]) and flag_clean
                 and (not dirty["expert"] or dm["expert"] > dm["reconcile"] > max(dm["flag_all"], dm["random"]) - 1e-9))
     con.print("[dim]* oracle видит эталон (только для оценщика) · ** expert — наш решатель по видимым записям, без эталона · "
@@ -251,7 +254,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
               + ("сиды и соль новые при каждом запуске" + (f", {redrawn} сидов перевыбрано генератором" if redrawn else "")
                  if split is None else "ваши сиды") + "[/]")
     con.print(f"{'[green]✓[/]' if order_ok else '[red]✗[/]'} oracle = 1.0 на {oracle_one}/{n_eps}; flag_all = −1 на чистых: "
-              f"{'да' if flag_clean else 'нет'}; expert > reconcile ≥ атаки на книгах с ошибками; сбоев/тайм-аутов: {sum(term_bad.values())} · {time.time() - t0:.0f} с")
+              f"{'да' if flag_clean else 'нет'}; {order_txt}; сбоев/тайм-аутов: {sum(term_bad.values())} · {time.time() - t0:.0f} с")
     report["steps"]["closed_eval"] = {"ok": order_ok and data_ok_n == n_eps, "policies": rows, "episodes": n_eps,
                                       "source": "juror split" if split is not None else "random", "seeds_redrawn": redrawn,
                                       "data_checks": {"ok": data_ok_n, "total": n_eps}, "bad_terminations": term_bad}
@@ -302,10 +305,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
                     f"целостность {sum(not v for v in integ_by.values())}/{len(POLICIES)}",
         "data": f"{by_c['data'][0]}/{by_c['data'][1]} проверок; {data_ok_n}/{n_eps} закрытых эпизодов: I1–I8, объявленные, доказательства",
         "reward": f"{by_c['reward'][0]}/{by_c['reward'][1]} проверок; oracle 1.0 на {oracle_one}/{n_eps}; "
-                  f"flag_all −1 на чистых: {'да' if flag_clean else 'нет'}; "
-                  + (f"на книгах с ошибками expert {dm['expert']:+.3f} > reconcile {dm['reconcile']:+.3f} > "
-                     f"max(flag_all {dm['flag_all']:+.3f}, random {dm['random']:+.3f})" if dirty["expert"]
-                     else "порядок не проверялся: в split нет книг с ошибками"),
+                  f"flag_all −1 на чистых: {'да' if flag_clean else 'нет'}; {order_txt}",
         "repro": f"парные {len(eps) - len(bad)}/{len(eps)}; replay {rep_ok}/{rep_n}",
         "eng": "туром не измеряется: версии и хеши — run.json, траектории — closed/*/trajectories.jsonl, "
                "разбор сбоев — docs/FAILURE_ANALYSIS.md, ограничения — README",
@@ -334,8 +334,8 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     ag0 = os.environ.get("AUDITGYM_LAUNCHER", "auditgym")
     if not ag0.startswith("docker run") and split is None:
         steps.insert(0, ("Повторить и перепроверить закрытый прогон этого тура (его split и одноразовая соль сохранены в отчёте)",
-                         f"AUDITGYM_SALT=$(cat {outdir / 'closed' / 'SALT'}) {ag0} replay {outdir / 'closed' / 'reconcile'} "
-                         f"--split - < {outdir / 'closed' / 'split.json'}"))
+                         f"AUDITGYM_SALT=$(cat {shlex.quote(str(outdir / 'closed' / 'SALT'))}) {ag0} replay "
+                         f"{shlex.quote(str(outdir / 'closed' / 'reconcile'))} --split - < {shlex.quote(str(outdir / 'closed' / 'split.json'))}"))
     con.rule("[bold]Что дальше[/]  (команды можно копировать как есть)")
     for label, cmd in steps:
         con.print(f"[bold]{label}[/]")

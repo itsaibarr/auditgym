@@ -37,7 +37,7 @@ function installUv() {
   const bin = path.join(CACHE, "bin");
   fs.mkdirSync(bin, { recursive: true });
   const tgz = path.join(bin, `uv-${process.pid}.tar.gz`);
-  say(`uv not found: downloading uv ${UV_VERSION} (~20 MB, one time) into ${bin}; nothing else on your system changes ...`);
+  say(`uv not found: downloading uv ${UV_VERSION} (~20 MB, one time) into ${bin}; besides uv's own caches (~/.cache/uv, ~/.local/share/uv) nothing on your system changes ...`);
   // curl honours HTTPS_PROXY; Node https (no proxy support) is the fallback
   const bar = process.stderr.isTTY ? "-#" : "-sS";
   const fetch1 = () => which("curl") ? spawnSync("curl", ["-fL", bar, "-C", "-", "--retry", "3", "--connect-timeout", "20", "--speed-limit", "1000", "--speed-time", "60", "-o", tgz, url], { stdio: ["ignore", "inherit", "inherit"] })
@@ -77,10 +77,10 @@ if (isWin) {
     process.exit(2);
   }
   say("Windows detected: building the Docker image from this package (first time only, needs network) ...");
-  let r = spawnSync("docker", ["build", "-q", "-t", "auditgym:1.0.0", ROOT], { stdio: "inherit" });
+  let r = spawnSync("docker", ["build", "-q", "-t", "auditgym:1.0.0", ROOT], { stdio: ["ignore", 2, "inherit"] });
   if (r.status !== 0) {
     const have = spawnSync("docker", ["image", "inspect", "auditgym:1.0.0"], { stdio: "ignore" }).status === 0;
-    if (!have) process.exit(r.status || 1);
+    if (!have) { say("docker build failed (the first run needs the network to pull python:3.11-slim); start Docker Desktop and run the same command again"); process.exit(r.status || 1); }
     say("rebuild failed (offline?): using the existing auditgym:1.0.0 image");
   }
   const run = ["run", "--rm", "-i", "--network", "none"];

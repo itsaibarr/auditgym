@@ -1026,3 +1026,14 @@ def test_policy_path_resolves_against_the_package(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     assert main(["run", "--policy", "my_policy:LookAround", "--policy-path", "examples", "--split", "dev",
                  "--out", str(tmp_path / "o"), "--trust-policies"]) == 0
+
+
+
+def test_direct_check_ignores_juror_salt(monkeypatch, tmp_path):
+    import auditgym.checks as C
+    monkeypatch.setenv("AUDITGYM_SALT", "x" * 40)
+    import auditgym.runner as Rn
+    monkeypatch.setattr(Rn, "harden_runner", lambda: (_ for _ in ()).throw(SystemExit(0)))
+    with pytest.raises(SystemExit):
+        C.run_check(quick=True, out=tmp_path)
+    assert "AUDITGYM_SALT" not in os.environ

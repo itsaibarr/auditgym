@@ -77,6 +77,7 @@ def _pytest(rep: Report, quick: bool) -> None:
 
 def run_check(quick: bool = False, as_json: bool = False, out: Path | None = None) -> int:
     out = out or ROOT / "runs" / "check"
+    os.environ.pop("AUDITGYM_SALT", None)  # the official check uses open data and its own salts, never a juror's
     from .runner import harden_runner
     harden_runner()  # non-dumpable: tests that scan /proc for the salt must not find it in this process
     rep = Report(as_json)

@@ -422,7 +422,7 @@ def build_parser() -> argparse.ArgumentParser:
     t = sub.add_parser("tour", help="the jury's whole flow in ~1 minute with a scorecard per case criterion (start here)")
     t.add_argument("--out", help="report directory (default: ./auditgym-report)")
     t.add_argument("--quick", action="store_true", help="fewer fresh seeds in the test step")
-    t.add_argument("--split", help="'-' = run steps 2-4 on YOUR split from stdin (AUDITGYM_SALT if set, else a random salt)")
+    t.add_argument("--split", help="'-' = run steps 2-4 on YOUR split from stdin (AUDITGYM_SALT if set and not visible to a wrapper process such as npx/run.sh, else a random salt)")
     t.set_defaults(fn=cmd_tour)
 
     spl = sub.add_parser("split", help="print a new closed split (organizers' shape, fresh random seeds): auditgym split > my_split.json")
