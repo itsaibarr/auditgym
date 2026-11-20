@@ -10,9 +10,9 @@ HOME_DIR="${AUDITGYM_HOME:-$HOME/.cache/auditgym}"
 SRC="$HOME_DIR/src-$REF"
 URL="${AUDITGYM_TARBALL:-https://codeload.github.com/itsaibarr/auditgym/tar.gz/$REF}"
 say() { printf '[auditgym] %s\n' "$*" >&2; }
-fetch() {  # fetch URL to stdout
-  if command -v curl >/dev/null 2>&1; then curl -fsSL "$1"
-  elif command -v wget >/dev/null 2>&1; then wget -qO- "$1"
+fetch() {  # fetch URL to stdout, with timeouts and retries (a stalled download must not hang the jury)
+  if command -v curl >/dev/null 2>&1; then curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 600 "$1"
+  elif command -v wget >/dev/null 2>&1; then wget -q -T 30 -t 3 -O- "$1"
   else say "need curl or wget"; exit 2; fi
 }
 [ $# -eq 0 ] && set -- tour
@@ -42,9 +42,14 @@ UV="${AUDITGYM_UV:-}"
 [ -z "$UV" ] && command -v uv >/dev/null 2>&1 && UV="$(command -v uv)"
 [ -z "$UV" ] && [ -x "$HOME_DIR/bin/uv" ] && UV="$HOME_DIR/bin/uv"
 if [ -z "$UV" ]; then
-  say "downloading uv into $HOME_DIR/bin (one time) ..."
-  fetch https://astral.sh/uv/0.12.17/install.sh | env UV_UNMANAGED_INSTALL="$HOME_DIR/bin" sh >/dev/null
+  case "$(uname -m)" in x86_64|amd64) A=x86_64 ;; arm64|aarch64) A=aarch64 ;; *) say "unsupported CPU $(uname -m); use Docker"; exit 2 ;; esac
+  if [ "$(uname -s)" = "Darwin" ]; then T="$A-apple-darwin"; else T="$A-unknown-linux-musl"; fi
+  say "downloading uv 0.12.17 ($T, static binary, ~20 MB) into $HOME_DIR/bin (one time) ..."
+  if ! fetch "https://github.com/astral-sh/uv/releases/download/0.12.17/uv-$T.tar.gz" | tar -xz --strip-components=1 -C "$HOME_DIR/bin"; then
+    say "could not download uv: run the same command again, or use Docker (see README)"; exit 2
+  fi
   UV="$HOME_DIR/bin/uv"
+  [ -x "$UV" ] || { say "uv download incomplete: run the same command again"; exit 2; }
 fi
 
 say "running: auditgym $*   (first run downloads Python 3.11 + pinned deps; later runs start in ~1 s)"

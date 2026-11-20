@@ -34,13 +34,14 @@ function installUv() {
   say(`uv not found: downloading uv ${UV_VERSION} (~20 MB, one time) into ${bin}; nothing else on your system changes ...`);
   const dl = spawnSync(process.execPath, ["-e", `
     const https = require("https"), fs = require("fs");
-    const get = (u, n) => https.get(u, { headers: { "user-agent": "auditgym-launcher" } }, (res) => {
+    const get = (u, n) => https.get(u, { headers: { "user-agent": "auditgym-launcher" }, timeout: 30000 }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && n < 8) { res.resume(); return get(res.headers.location, n + 1); }
       if (res.statusCode !== 200) { console.error("HTTP " + res.statusCode + " for " + u); process.exit(1); }
       res.pipe(fs.createWriteStream(process.argv[2])).on("finish", () => process.exit(0));
-    }).on("error", (e) => { console.error(String(e)); process.exit(1); });
+    }).on("timeout", function () { console.error("download stalled (no data for 30 s)"); this.destroy(); process.exit(1); })
+      .on("error", (e) => { console.error(String(e)); process.exit(1); });
     get(process.argv[1], 0);`, url, tgz], { stdio: ["ignore", "inherit", "inherit"] });
-  if (dl.status !== 0) { say("could not download uv; see https://docs.astral.sh/uv/getting-started/installation/"); process.exit(2); }
+  if (dl.status !== 0) { say("could not download uv: run the same command again, or use Docker (see README)"); process.exit(2); }
   const tx = spawnSync("tar", ["-xzf", tgz, "-C", bin, "--strip-components=1"], { stdio: "inherit" });
   fs.rmSync(tgz, { force: true });
   const p = path.join(bin, "uv");
