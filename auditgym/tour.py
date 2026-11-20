@@ -47,42 +47,64 @@ FOOTNOTE = ("Reward: the case's score for one episode, from -1 to +1, higher is 
             "findings · F1: mean per episode (an empty answer on clean books scores F1 = 1)")
 
 
+PAST = {"Running": "Ran", "Generating": "Generated", "Checking": "Checked", "Grading": "Graded", "Scanning": "Scanned",
+        "Replaying": "Replayed", "Regenerating": "Regenerated"}
+
+
+def _past(stage: str) -> str:
+    verb, _, rest = stage.partition(" ")
+    return f"{PAST[verb]} {rest}" if verb in PAST else stage
+
+
 @contextlib.contextmanager
 def working(con: Console, first: str | None = None):
     """Show what is running, as a checklist (like Docker BuildKit): each stage gets its own line with a spinner, a moving
-    bar, a count when the total is known, what it is doing right now and its elapsed time; a finished stage turns into a
-    ✓ line that keeps its time. Not a terminal (Docker without -t, CI logs): one plain line per stage.
-    Yields say(stage, detail="", done=None, total=None); a new stage text starts a new line."""
-    if not con.is_terminal:
-        last = [None]
+    bar, a count when the total is known, the elapsed time, an estimate of the time left and what it is doing right now;
+    a finished stage turns into a ✓ line in the past tense that keeps its time. Not a terminal (Docker without -t, CI
+    logs): one plain line per stage. Yields say(stage, detail="", done=None, total=None, count=None); a new stage text
+    starts a new line; count overrides the "done/total" text (e.g. when the bar is weighted by time)."""
+    if not con.is_terminal:  # logs: a line per stage, then a progress line at most every 5 s (jury harnesses log to files)
+        st: dict = {"stage": None, "t0": 0.0, "last": 0.0}
 
-        def say(stage: str, detail: str = "", done: int | None = None, total: int | None = None) -> None:
-            if stage != last[0]:
-                last[0] = stage
+        def say(stage: str, detail: str = "", done: float | None = None, total: float | None = None, count: str | None = None) -> None:
+            now = time.monotonic()
+            if stage != st["stage"]:
+                st.update(stage=stage, t0=now, last=now)
                 con.print(f"  ... {stage}", style="dim", markup=False, soft_wrap=True)
+            elif total and now - st["last"] >= 5:
+                st["last"] = now
+                frac, el = min((done or 0) / total, 1.0), now - st["t0"]
+                left = f" · ~{el * (1 - frac) / frac:.0f} s left" if frac > 0.05 else ""
+                con.print(f"      {count or f'{int(done or 0)}/{int(total)}'} · {el:.0f} s{left}", style="dim", markup=False)
         if first:
             say(first)
         yield say
         return
     from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
     cols = (SpinnerColumn(finished_text="[green]✓[/]"), TextColumn("{task.description}"), BarColumn(bar_width=20),
-            TextColumn("{task.fields[count]}"), TimeElapsedColumn(), TextColumn("[dim]{task.fields[detail]}"))
+            TextColumn("{task.fields[count]}"), TimeElapsedColumn(), TextColumn("[dim]{task.fields[left]}"),
+            TextColumn("[dim]{task.fields[detail]}"))
     with Progress(*cols, console=con) as prog:
-        cur: dict = {"id": None, "stage": None}
+        cur: dict = {"id": None, "stage": None, "t0": 0.0, "count": ""}
 
         def close() -> None:
             if cur["id"] is not None:
                 t = next(t for t in prog.tasks if t.id == cur["id"])
-                prog.update(cur["id"], total=t.total or 1, completed=t.total or 1, detail="",
-                            count=f"{int(t.total)}/{int(t.total)}" if t.total else "")
+                prog.update(cur["id"], description=_past(cur["stage"]), total=t.total or 1, completed=t.total or 1, detail="",
+                            left="", count=cur["count"])
 
-        def say(stage: str, detail: str = "", done: int | None = None, total: int | None = None) -> None:
+        def say(stage: str, detail: str = "", done: float | None = None, total: float | None = None, count: str | None = None) -> None:
             if stage != cur["stage"]:
                 close()
-                cur["stage"], cur["id"] = stage, prog.add_task(stage, total=None, count="", detail="")
+                cur.update(stage=stage, t0=time.monotonic(), count="",
+                           id=prog.add_task(stage, total=None, count="", detail="", left=""))
             kw: dict = {"detail": detail}
             if total:
-                kw.update(total=total, completed=min(done or 0, total), count=f"{done}/{total}")
+                frac, el = min((done or 0) / total, 1.0), time.monotonic() - cur["t0"]
+                kw.update(total=total, completed=min(done or 0, total),
+                          left=f"~{el * (1 - frac) / frac:.0f} s left" if frac > 0.05 and el > 2 else "")
+                cur["count"] = count or f"{int(done or 0)}/{int(total)}"
+                kw["count"] = cur["count"]
             prog.update(cur["id"], **kw)
         if first:
             say(first)
@@ -99,7 +121,7 @@ def _criterion(check_id: str) -> str:
         return "reward"
     if check_id.startswith(("tests.test_repro", "repro.")):
         return "repro"
-    if check_id.startswith(("tests.test_contract", "tests.test_isolation", "tests.test_hardening", "tests.test_gymnasium",
+    if check_id.startswith(("tests.test_contract", "tests.test_isolation", "tests.test_hardening", "tests.test_gymnasium", "tests.test_preflight_leak",
                             "isolation.", "contract.", "tests.test_units", "tests.exit_code", "tests.collect")):
         return "contract"
     return "eng"
@@ -123,6 +145,14 @@ def _shown(p: Path) -> str:
     """Path as the user sees it: the Windows launcher mounts the host report folder at /report."""
     host = os.environ.get("AUDITGYM_REPORT_HOST")
     return str(p).replace("/report", host, 1) if host and str(p).startswith("/report") else str(p)
+
+
+def _rel(p: Path) -> str:
+    """A path for a copy-paste command: relative to the current folder when it is inside it, shell-quoted."""
+    try:
+        return shlex.quote(str(p.relative_to(Path.cwd())))
+    except ValueError:
+        return shlex.quote(_shown(p))
 
 
 def _step(con: Console, title: str, question: str, what: str) -> None:
@@ -240,7 +270,8 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     tb.add_column("Checks passed", justify="right")
     for k, name, _ in CRITERIA:
         p, n = by_c[k]
-        tb.add_row(name, f"[{'green' if p == n else 'red'}]{p}/{n}[/]")
+        if n:  # engineering and explanation is judged from the docs, not by checks
+            tb.add_row(name, f"[{'green' if p == n else 'red'}]{p}/{n}[/]")
     con.print(tb)
     n_ok, n_all = sum(i["ok"] for i in summary["checks"]), len(summary["checks"])
     con.print(f"{'[green]✓ Step 1 of 4 passed[/]' if rc == 0 else '[red]✗ Step 1 of 4 failed[/]'}: {n_ok}/{n_all} checks passed "
@@ -253,8 +284,9 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     # 2. closed evaluation like the organizers' ---------------------------------------------------------------------
     _step(con, "Step 2/4 · Hidden-episode evaluation", "how the organizers will test agents",
           ("Uses the episodes from your split (read from stdin). " if split is not None else
-           "Creates 20 new episodes from secret random seeds and a secret salt that are never written down "
-           "(5 with clean books, 5 with errors that interact). ")
+           "Creates 20 new episodes from secret random seeds and a secret salt (a random key mixed into every seed, so an "
+           "agent cannot rebuild the answers with the open generator), never written down: 5 with clean books, 5 with "
+           "errors that interact. ")
           + "Checks each episode's data independently, then runs the 4 organizer policies and our expert policy on them, "
             "each in its own isolated process. Usually under 10 s.")
     t0 = time.time()
@@ -297,7 +329,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     con.print(f"{'[green]✓[/]' if data_ok_n == n_eps else '[red]✗[/]'} Data, checked on each of the {n_eps} episodes by code that "
               f"does not use the generator ({sum(c['issues'] for c in checks)} errors injected, "
               f"{sum(1 for c in checks if not c['issues'])} clean books):")
-    con.print(f"    books are consistent before errors are injected (invariants I1-I8): {sum(c['invariants_before'] is not False for c in checks)}/{n_eps}\n"
+    con.print(f"    the books balance before errors are injected (8 accounting equalities, e.g. every entry balances): {sum(c['invariants_before'] is not False for c in checks)}/{n_eps}\n"
               f"    the problems found in the books are exactly the declared errors: {sum(c['declared_after'] for c in checks)}/{n_eps}\n"
               f"    the evidence in the answer key reproduces the amounts: {sum(c['evidence'] for c in checks)}/{n_eps}")
     rows = {}
@@ -356,8 +388,8 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
 
     # 4. replay, integrity, leakscan ---------------------------------------------------------------------------------
     _step(con, "Step 4/4 · Replay, integrity, leaks", "can anyone reproduce and trust these results?",
-          "Re-runs the recorded actions and grades them again, checks every run folder against the signed hashes in its "
-          "run.json, and scans everything the policies saw for leaked answers. Usually a few seconds.")
+          "Re-runs the recorded actions and grades them again, checks every run folder against the tamper-proof fingerprints "
+          "(HMAC) saved in its run.json, and scans everything the policies saw for leaked answers. Usually a few seconds.")
     t0 = time.time()
     epmap = {ep.episode_id: ep for _, ep in eps}
     with working(con) as say:
@@ -376,7 +408,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     leaks = [p for spec in POLICIES for p in scan_run(outdir / "closed" / spec)]
     tail_ok = rep_ok == rep_n and not integ and not leaks
     con.print(f"{'[green]✓[/]' if rep_ok == rep_n else '[red]✗[/]'} Replay: {rep_ok}/{rep_n} episodes reproduce byte for byte and get the same grade")
-    con.print(f"{'[green]✓[/]' if not integ else '[red]✗[/]'} Integrity: {sum(not v for v in integ_by.values())}/{len(POLICIES)} run folders match the HMAC-signed hashes in run.json")
+    con.print(f"{'[green]✓[/]' if not integ else '[red]✗[/]'} Integrity: {sum(not v for v in integ_by.values())}/{len(POLICIES)} run folders match their tamper-proof fingerprints (HMAC) in run.json")
     con.print(f"{'[green]✓[/]' if not leaks else '[red]✗[/]'} Leak scan: {len(leaks)} leaked answers in what the policies saw · {time.time() - t0:.0f} s")
     report["steps"]["replay_integrity_leaks"] = {"ok": tail_ok, "replay": [rep_ok, rep_n], "integrity_problems": integ[:5], "leaks": leaks[:5]}
 
@@ -418,9 +450,9 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     steps = next_steps()
     ag0 = os.environ.get("AUDITGYM_LAUNCHER", "auditgym")
     if not ag0.startswith("docker run") and split is None:
+        c = outdir / "closed"
         steps.insert(0, ("Re-check this tour's hidden run yourself: replay it and grade it again (its split and one-time salt are saved in the report)",
-                         f"AUDITGYM_SALT=$(cat {shlex.quote(str(outdir / 'closed' / 'SALT'))}) {ag0} replay "
-                         f"{shlex.quote(str(outdir / 'closed' / 'reconcile'))} --split - < {shlex.quote(str(outdir / 'closed' / 'split.json'))}"))
+                         f"AUDITGYM_SALT=$(cat {_rel(c / 'SALT')}) {ag0} replay {_rel(c / 'reconcile')} --split - < {_rel(c / 'split.json')}"))
     con.rule("[bold]Next steps[/]  (copy any command as is)")
     top = steps[:1] if steps[0][0].startswith("Re-check") else []
     top += [st for st in steps if st[0].startswith(("Test your own agent, written as a Python", "Make your own hidden split", "Run this whole tour"))]
@@ -470,7 +502,10 @@ def next_steps() -> list[tuple[str, str]]:
          else "docker run --rm auditgym:1.0.0 split > my_split.json"),
         ("Run this whole tour on your own split", f"{ag} tour --split - --out {out}/tour < my_split.json"),
         ("Score the 4 organizer policies on your split", f"{ag} run --policy random,reconcile,flag_all,oracle --split - --public-salt --out {out} < my_split.json"),
-        ("Test your own agent, written as a Python class with reset/step (example: examples/my_policy.py)", f"{ag} run --policy my_policy:LookAround --policy-path {shlex.quote(str(ex))} --split dev --out {out}{trust}"),
+        ("Test your own agent, written as a Python class with reset/step: init copies an example into ./my-agent to edit"
+         + (" (--trust-policies: you vouch for this code, it runs with your user's rights outside Docker)" if trust else ""),
+         f"{ag} init my-agent && {ag} run --policy my_policy:LookAround --policy-path my-agent --split dev --out {out}{trust}"
+         if trust else f"{ag} run --policy my_policy:LookAround --policy-path /app/examples --split dev --out {out}"),
         ("Test your own agent, written as any program that reads and writes JSON lines on stdin/stdout", f"{ag} run --policy \"cmd:python3 {shlex.quote(str(ex / 'stdio_policy.py'))}\" --split dev --out {out}{trust}"),
         ("Compare runs side by side, broken down by error type", f"{ag} compare {out}/random {out}/reconcile {out}/flag_all {out}/oracle --per-type"),
         ("Play an episode by hand, seeing exactly what an agent sees", f"{ag} play"),

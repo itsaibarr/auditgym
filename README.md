@@ -6,13 +6,28 @@ AuditGym генерирует бухгалтерию вымышленной ко
 
 Мы сделали среду и оценщик. Агента, чат-бота и аудиторского заключения в этом репозитории нет.
 
+## Что сдано: материалы из раздела 09 кейса
+
+| Материал | Где |
+|---|---|
+| Исходный код с лицензией и закреплёнными зависимостями | [`auditgym/`](auditgym), [`LICENSE`](LICENSE), [`pyproject.toml`](pyproject.toml), [`uv.lock`](uv.lock), [`Dockerfile`](Dockerfile) |
+| README: инструкции контейнера и единая команда проверки | этот файл, разделы «Для жюри: одна команда» и «Официальная проверка: `auditgym check`» |
+| Matcher и награда, схемы, политики | [`auditgym/matcher.py`](auditgym/matcher.py), [`auditgym/schemas.py`](auditgym/schemas.py), [`auditgym/policies/`](auditgym/policies), [`schema/`](schema) |
+| 10 открытых train- и 10 dev-эпизодов | [`data/train/`](data/train), [`data/dev/`](data/dev) |
+| Тесты среды, сопоставления и награды | [`tests/`](tests), запускаются через `auditgym check` |
+| Четыре адаптера базовых политик | `random`, `reconcile`, `flag_all`, `oracle` в [`auditgym/policies/`](auditgym/policies) |
+| Траектории с episode_id, step, action, observation, reward, terminated, truncated | [`trajectories/trajectories.jsonl`](trajectories/trajectories.jsonl), по политикам в [`trajectories/train/`](trajectories/train) |
+| Записка о дизайне | [`docs/DESIGN.md`](docs/DESIGN.md) |
+| Разбор сбоев | [`docs/FAILURE_ANALYSIS.md`](docs/FAILURE_ANALYSIS.md) |
+| Демо | [`submission/demo.mp4`](submission/demo.mp4), сценарий записи [`submission/demo.tape`](submission/demo.tape); презентация лежит в папке сдачи на Google Drive |
+
 ## Для жюри: одна команда
 
 Ставить ничего не нужно. Python, git, ключи, аккаунты и GPU не понадобятся. Выберите строку по тому, что есть на компьютере:
 
 | Что есть на компьютере | Команда |
 |---|---|
-| Node.js 16+ (`npx`) | `npx -y https://codeload.github.com/itsaibarr/auditgym/tar.gz/master` |
+| Node.js 16+ (`npx`) | `npx -y --no-update-notifier https://codeload.github.com/itsaibarr/auditgym/tar.gz/master` |
 | macOS / Linux (только `curl`) | `curl -fsSL https://raw.githubusercontent.com/itsaibarr/auditgym/master/run.sh \| sh` |
 | Linux только с `wget` (например, Ubuntu Desktop) | `wget -qO- https://raw.githubusercontent.com/itsaibarr/auditgym/master/run.sh \| sh` |
 | Docker (в т.ч. Windows) | `docker build -t auditgym:1.0.0 https://github.com/itsaibarr/auditgym.git`, затем `mkdir -p auditgym-report && docker run --rm --network none --user "$(id -u):$(id -g)" -v "$PWD/auditgym-report:/report" auditgym:1.0.0 tour --out /report` <br>Windows PowerShell: `mkdir -Force auditgym-report; docker run --rm --network none -v "${PWD}/auditgym-report:/report" auditgym:1.0.0 tour --out /report` |
@@ -26,7 +41,7 @@ AuditGym генерирует бухгалтерию вымышленной ко
 На обычной сети первый запуск занимает 1–3 минуты, почти всё это загрузка. Ход загрузки видно в терминале: полоса curl или wget, счётчик мегабайт на пути через Node и полосы uv при установке пакетов. Каждая загрузка делает до трёх попыток. Если сеть так и не ответила, лаунчер выходит с кодом 2 и не оставляет недокачанных файлов, так что достаточно повторить ту же команду.
 
 Потом команды стартуют за секунду и работают без сети:
-- `npx -y --offline https://codeload.github.com/itsaibarr/auditgym/tar.gz/master <команда>`;
+- `npx -y --no-update-notifier --offline https://codeload.github.com/itsaibarr/auditgym/tar.gz/master <команда>`;
 - `sh ~/.cache/auditgym/src-master/run.sh <команда>`, если ставили через curl или wget;
 - собранный образ Docker.
 
@@ -34,7 +49,7 @@ AuditGym генерирует бухгалтерию вымышленной ко
 
 ### Что показывает тур
 
-Без аргументов запускается `auditgym tour`. Он идёт 1–2,5 минуты, проходит четыре шага и печатает итог по критериям кейса. Весь вывод CLI на английском. Над каждым шагом тур пишет, что он проверяет и сколько это обычно длится. Пока шаг идёт, его стадии видны списком, как в Docker BuildKit: у текущей крутится индикатор, растёт счётчик (например, 463/0 тестов или 70/100 эпизодов) и идёт время, а законченная стадия получает ✓ и своё время. Во время pytest строка ещё называет, что проверяется прямо сейчас.
+Без аргументов запускается `auditgym tour`. Он идёт 1–2,5 минуты, проходит четыре шага и печатает итог по критериям кейса. Весь вывод CLI на английском. Над каждым шагом тур пишет, что он проверяет и сколько это обычно длится. Пока шаг идёт, его стадии видны списком, как в Docker BuildKit: у текущей крутится индикатор, растёт счётчик (например, 463/570 тестов или 70/100 эпизодов) и идёт время, а законченная стадия получает ✓ и своё время. Во время pytest строка ещё называет, что проверяется прямо сейчас.
 
 1. **Официальная проверка.** Тур запускает `auditgym check`, это 148 проверок: pytest, базовые политики, порядки наград, leakscan, парные проверки и replay. Результат сгруппирован по критериям кейса.
 2. **Закрытая проверка в форме организаторов.** Тур берёт новые секретные сиды и соль и генерирует 20 эпизодов, из них 5 чистых и 5 со связанными ошибками. Данные каждого эпизода проверяет код, который не импортирует генератор. Он проверяет три вещи: инварианты I1–I8 на книгах до ошибок, совпадение нарушений с объявленными ошибками и то, что доказательства воспроизводят суммы. Затем на этих эпизодах работают random, reconcile, flag_all, oracle и наш expert. Таблица показывает P, R, F1, награду, награду на чистых книгах, шаги и время на эпизод. Порядок наград тур проверяет так: oracle получает 1.0 везде, flag_all получает −1 на чистых книгах, а на книгах с ошибками expert > reconcile ≥ max(flag_all, random). Строка с порядком печатает измеренные средние. Если в split нет ни одной книги с ошибками, тур так и пишет: «order on books with errors not checked».
@@ -54,7 +69,7 @@ AuditGym генерирует бухгалтерию вымышленной ко
 
 ### Что дальше: сценарии жюри
 
-Ниже `auditgym` означает вашу команду запуска: `npx -y https://codeload.github.com/itsaibarr/auditgym/tar.gz/master`, `sh ~/.cache/auditgym/src-master/run.sh` или `docker run --rm -i --network none -v "$PWD/out:/out" auditgym:1.0.0`. Тур печатает их уже подставленными. В Docker сначала `mkdir -p out`, добавьте `--user "$(id -u):$(id -g)"` на Linux и пишите результаты в `/out/...` вместо `out/...`.
+Ниже `auditgym` означает вашу команду запуска: `npx -y --no-update-notifier https://codeload.github.com/itsaibarr/auditgym/tar.gz/master`, `sh ~/.cache/auditgym/src-master/run.sh` или `docker run --rm -i --network none -v "$PWD/out:/out" auditgym:1.0.0`. Тур печатает их уже подставленными. В Docker сначала `mkdir -p out`, добавьте `--user "$(id -u):$(id -g)"` на Linux и пишите результаты в `/out/...` вместо `out/...`.
 
 | Задача | Команда |
 |---|---|
@@ -62,7 +77,7 @@ AuditGym генерирует бухгалтерию вымышленной ко
 | Итог по критериям на **ваших** сидах | `auditgym tour --split - < my_split.json` |
 | Четыре политики организаторов на вашем split: P, R, F1, награда, шаги, время, падения | `auditgym run --policy random,reconcile,flag_all,oracle --split - --public-salt --out out < my_split.json` |
 | Сравнить прогоны с разбивкой по типам ошибок | `auditgym compare out/random out/reconcile out/flag_all out/oracle --per-type` |
-| Своя политика: класс Python с `reset/step`, пример в `examples/my_policy.py` | `auditgym run --policy my_policy:LookAround --policy-path examples --split dev --out out --trust-policies` |
+| Своя политика: класс Python с `reset/step`. `auditgym init my-agent` кладёт копию примера `examples/my_policy.py` в `./my-agent` для правки и печатает команду запуска | `auditgym run --policy my_policy:LookAround --policy-path examples --split dev --out out --trust-policies` |
 | Своя политика: любая программа, JSON-строки через stdin/stdout, пример в `examples/stdio_policy.py` | `auditgym run --policy "cmd:python3 /abs/path/stdio_policy.py" --split dev --out out --trust-policies` |
 | Сыграть эпизод вручную, получить JSON Schema для LLM | `auditgym play` · `auditgym schema --out out/schema` |
 
@@ -96,7 +111,7 @@ docker run --rm --network none --cpus 2 --memory 4g auditgym:1.0.0 check
 
 # 2. Свои скрытые эпизоды: шаблон split в форме кейса (5 чистых, 5 со связанными ошибками, 10 прочих).
 #    Замените seed на свои; ключи config перечислены ниже в таблице «Ключи конфигурации».
-docker run --rm auditgym:1.0.0 split > my_split.json
+docker run --rm --network none auditgym:1.0.0 split > my_split.json
 SALT=$(openssl rand -hex 32)    # секретная соль: без неё эталон можно восстановить открытым генератором
 
 # 3. Четыре политики на этих эпизодах: P, R, F1, возврат, шаги, время, падения   → диагностика из раздела 10
@@ -105,21 +120,22 @@ mkdir -p out && docker run -i --rm --network none --cpus 2 --memory 4g --user "$
     run --policy random,reconcile,flag_all,oracle --policy-arg seed=7 --split - --out /out < my_split.json
 
 # 4. Данные и эталон, независимо по записям                               → «Данные и эталон», 25
-docker run -i --rm --network none -e AUDITGYM_SALT=$SALT auditgym:1.0.0 datacheck --split - < my_split.json
+docker run -i --rm --network none --cpus 2 --memory 4g -e AUDITGYM_SALT=$SALT auditgym:1.0.0 datacheck --split - < my_split.json
 
 # 5. 20 парных проверок: перестановка строк и смена ID                    → «Воспроизводимость и обобщение», 15
-docker run -i --rm --network none -e AUDITGYM_SALT=$SALT auditgym:1.0.0 paired --split - < my_split.json
+docker run -i --rm --network none --cpus 2 --memory 4g -e AUDITGYM_SALT=$SALT auditgym:1.0.0 paired --split - < my_split.json
 
 # 6. Точный повтор seed и действий, целостность прогонов, утечки          → «Воспроизводимость», «Контракт и изоляция»
-docker run -i --rm --network none -e AUDITGYM_SALT=$SALT -v "$PWD/out:/out:ro" auditgym:1.0.0 \
+docker run -i --rm --network none --cpus 2 --memory 4g -e AUDITGYM_SALT=$SALT -v "$PWD/out:/out:ro" auditgym:1.0.0 \
     replay /out/reconcile --split - < my_split.json
-docker run --rm --network none -v "$PWD/out:/out:ro" auditgym:1.0.0 leakscan /out/random /out/reconcile /out/flag_all /out/oracle
+docker run --rm --network none --cpus 2 --memory 4g -v "$PWD/out:/out:ro" auditgym:1.0.0 leakscan /out/random /out/reconcile /out/flag_all /out/oracle
 ```
 
 Пояснения к шагам:
 - **Шаг 3.** `--policy-arg seed=7` задаёт фиксированный seed случайного исследователя. Вместо наших адаптеров можно подключить свои политики: класс Python с `reset/step` или любую программу с JSON-строками через stdin/stdout, см. раздел «Как подключить свою политику». Модуль монтируется как `-v "$PWD/policies:/policies:ro"` с флагом `--policy-path /policies`.
+- **Шаг 2.** Формат split: `base_config` общий для всех эпизодов, у каждого эпизода `seed` (любое число или строка) и свой `config`. Ключи `config` эпизода заменяют одноимённые ключи `base_config` целиком, ключ, которого нет ни там, ни там, берёт значение по умолчанию из таблицы «Ключи конфигурации». Поле `profile` служит только подписью. `generate` называет папки `ep_00`, `ep_01` и так далее в порядке split.
 - **Шаг 4.** `datacheck` перегенерирует каждый эпизод и проверяет три вещи: равенства I1–I8 на книгах до внесения ошибок, ровно объявленные расхождения после, доказательства воспроизводят суммы. Код проверки не импортирует генератор. Чтобы проверить своим кодом, выгрузите эпизоды вместе с `truth.json` и `provenance.json` командой `generate` из раздела «Закрытая проверка».
-- **Шаг 5.** `paired` копирует каждый эпизод с перестановкой строк и новыми ID документов и строк. Oracle на копии должен получить 1.0 под новыми ID, а expert должен найти ровно то же, что на оригинале.
+- **Шаг 5.** `paired` копирует каждый эпизод с перестановкой строк и новыми ID документов и строк. Oracle на копии должен получить 1.0 под новыми ID, а expert должен найти ровно то же, что на оригинале. Свои политики проверяются так же: `paired --policy expert,reconcile,my_module:MyAgent --policy-path /policies`, для каждой печатается награда на оригинале и на копии.
 - **Контракт** проверяется тестами в шаге 1, а вручную через `AuditEnv` или `gym.make("AuditGym-v1")`, см. раздел «Контракт среды».
 
 ## Закрытая проверка
@@ -176,6 +192,11 @@ auditgym compare runs/oracle runs/reconcile runs/flag_all runs/random --per-type
 ```
 
 Строгий закрытый прогон со своими сидами описан выше, в разделе «Закрытая проверка».
+
+Справка для своей политики:
+- первое наблюдение (`reset`) содержит ключи `task`, `manifest`, `policy`, `tables`, `available_actions`, `action_format`, `finding_types`, `limits`, `steps_remaining`; каждое следующее (`step`) содержит `result`, `error`, `steps_remaining`, в `info` всегда лежат `error_code` и `steps_remaining`;
+- на каждый эпизод раннер запускает новый процесс и создаёт новый экземпляр политики, поэтому состояние между эпизодами не переносится; для воспроизводимой случайности берите seed из аргумента и `episode_id`;
+- `--policy-arg k=v` передаётся в конструктор каждой своей политики как именованный аргумент, значение разбирается как JSON, если получается (`seed=7` станет числом 7), иначе остаётся строкой; встроенные политики берут только известные им аргументы.
 
 Python-политика реализует `reset(observation, info) -> action` и `step(observation, reward, terminated, truncated, info) -> action`. Метод `end(observation, reward, terminated, truncated, info)` необязателен. В train-режиме через него приходит терминальная награда.
 
@@ -397,6 +418,7 @@ configs/    train.json dev.json closed_example.json      data/ 10 train + 10 dev
 tests/      контракт, данные, награда, воспроизводимость, изоляция      schema/ JSON Schema
 examples/   свои политики (Python-класс, протокол stdio)      trajectories/ траектории train
 docs/       DESIGN.md, FAILURE_ANALYSIS.md, SPEC.md, PLAN.md, COUNCIL.md      scripts/ failure_analysis.py
+submission/ demo.mp4 (демо), demo.tape (сценарий записи)
 ```
 
 Как мы проверяли среду и путь жюри, по раундам, описано в [docs/COUNCIL.md](docs/COUNCIL.md).

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// AuditGym one-command launcher:  npx -y https://codeload.github.com/itsaibarr/auditgym/tar.gz/master [command ...]   (default command: tour)
+// AuditGym one-command launcher:  npx -y --no-update-notifier https://codeload.github.com/itsaibarr/auditgym/tar.gz/master [command ...]   (default command: tour)
 // Needs only Node >= 16 (the tarball URL needs no git; `npx github:...` would). It finds or downloads `uv`
 // (a single static binary), which brings its own Python 3.11 and the locked dependencies. No API keys, no GPU.
 "use strict";
@@ -9,7 +9,7 @@ const os = require("os");
 const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..");
-const LAUNCHER = "npx -y --prefer-offline https://codeload.github.com/itsaibarr/auditgym/tar.gz/master";  // tarball URL: no git; --prefer-offline: printed next steps start in ~1 s offline
+const LAUNCHER = "npx -y --no-update-notifier --prefer-offline https://codeload.github.com/itsaibarr/auditgym/tar.gz/master";  // tarball URL: no git; --prefer-offline: printed next steps start in ~1 s offline
 const CACHE = process.env.AUDITGYM_HOME || path.join(os.homedir(), ".cache", "auditgym");
 const args = process.argv.slice(2).length ? process.argv.slice(2) : ["tour"];
 const isWin = process.platform === "win32";

@@ -8,6 +8,21 @@ from .recheck import EvidenceError, recompute
 from .timeutil import parse
 
 
+def kind(ep) -> str:
+    """clean | interacting X1/X2 | errors, from the recorded injections (the case asks for 5 clean + 5 interacting)."""
+    inj = {e["injector"].split(".")[0] for e in ep.provenance.get("events", [])}
+    if not ep.truth["issues"]:
+        return "clean"
+    x = sorted(i for i in inj if i in ("X1", "X2"))
+    return f"interacting {'+'.join(x)}" if x else "errors"
+
+
+def kind_counts(eps) -> str:
+    ks = [kind(ep) for ep in eps]
+    n_x = sum(k.startswith("interacting") for k in ks)
+    return f"{ks.count('clean')} clean, {n_x} interacting, {len(ks) - ks.count('clean') - n_x} other"
+
+
 def expected_violations(ep) -> set:
     inv = {d["doc_id"]: d for d in ep.public["invoices"]}
     exp = set()

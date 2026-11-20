@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import cmd
+import shlex
 import hashlib
 import json
 import sys
@@ -16,8 +17,9 @@ from .splits import ROOT, dir_episode, load_split_config, parse_seeds, split_epi
 COLUMNS = [("policy", "Policy"), ("episodes", "Episodes"), ("micro_precision", "Precision"), ("micro_recall", "Recall"), ("mean_f1", "F1"),
            ("mean_return", "Reward"), ("mean_return_experimental", "Reward (exp.)"), ("mean_steps", "Steps"),
            ("clean_fp_rate", "Clean books flagged"), ("mean_wall_s", "Sec/episode"), ("failed", "Crashed/timed out")]
-LEGEND = ("Precision and recall: pooled over all findings · F1: mean per episode · Reward: the case's terminal reward, "
-          "-1 to 1 (2·F1 - 1 minus a small cost per step) · Reward (exp.): reported separately, gives half credit for the right "
+LEGEND = ("Precision and recall: pooled over all findings · F1: mean per episode (an empty answer on clean books scores F1 = 1, "
+          "so a policy can have F1 > 0 with precision and recall 0) · Reward: the case's terminal reward, -1 to +1, higher is "
+          "better (2·F1 - 1 minus a small cost per step) · Reward (exp.): reported separately, gives half credit for the right "
           "error with a wrong amount · Clean books flagged: share of clean episodes where the policy reported any error")
 
 
@@ -202,9 +204,15 @@ def cmd_run(a) -> int:
             hint = (f" (put your module in {a.policy_path}; example: examples/my_policy.py)" if a.policy_path else
                     " (pass --policy-path DIR with your module; example: examples/my_policy.py)") if not spec.startswith("cmd:") else ""
             raise ValueError(f"policy {spec!r} does not start{hint}:\n{why}")
-    results = run_policies(specs, episodes, Path(a.out), mode=a.mode, args=a.policy_arg, policy_path=a.policy_path,
-                           isolate=not a.no_isolate, allow_forks=a.allow_forks, meta={"sources": source, "isolate": not a.no_isolate, "allow_forks": a.allow_forks,
-                                                     "trust_policies": a.trust_policies}, dir_name=name)
+    from rich.console import Console
+    from .tour import working
+    stage = (f"Running {len(specs)} {'policy' if len(specs) == 1 else 'policies'} on {len(episodes)} episodes"
+             + (", each in an isolated process" if not a.no_isolate else ""))
+    with working(Console(stderr=True, highlight=False), stage) as say:  # progress on stderr: stdout stays the results
+        results = run_policies(specs, episodes, Path(a.out), mode=a.mode, args=a.policy_arg, policy_path=a.policy_path,
+                               isolate=not a.no_isolate, allow_forks=a.allow_forks, meta={"sources": source, "isolate": not a.no_isolate, "allow_forks": a.allow_forks,
+                                                         "trust_policies": a.trust_policies}, dir_name=name,
+                               on_episode=lambda spec, n, tot: say(stage, f"now: {spec}", n, tot))
     rows, dead = [], []
     for spec in specs:
         res = results[spec]
@@ -372,21 +380,21 @@ def cmd_datacheck(a) -> int:
     injected books break exactly the declared errors, and every evidence set reproduces its amount from its own records.
     Uses code that does not import the generator. Episodes from a split are regenerated (so the books before injection
     exist); episode folders on disk only have the injected books, so that column says n/a."""
-    from .datacheck import verify_episode
-    rows, bad = [], 0
-    for _, ep in _episodes(a):
+    from .datacheck import kind, kind_counts, verify_episode
+    rows, bad, eps = [], 0, [ep for _, ep in _episodes(a)]
+    for ep in eps:
         c = verify_episode(ep)
         bad += not c["ok"]
-        rows.append([ep.episode_id, str(c["issues"]), _yes(c["invariants_before"]), _yes(c["declared_after"]),
+        rows.append([ep.episode_id, kind(ep), str(c["issues"]), _yes(c["invariants_before"]), _yes(c["declared_after"]),
                      _yes(c["evidence"]), "✓ PASS" if c["ok"] else "✗ FAIL"])
     rich_table("Independent data check (case section 10, 'Data and answer key')",
-               ["Episode", "Errors injected", "Books balance before injection (I1-I8)", "Problems found = declared errors",
+               ["Episode", "Kind", "Errors injected", "Books balance before injection (I1-I8)", "Problems found = declared errors",
                 "Evidence reproduces the amounts", "Result"], rows,
                "I1 each journal entry balances · I2 trial balance nets to zero · I3 AR control account = subledger · I4 invoice "
                "lines add up to the total · I5 FX conversion follows the policy · I6 period cut-off · I7 payments are allocated "
                "in full · I8 each delivery is billed once. Code: auditgym/datacheck.py, auditgym/invariants.py, "
                "auditgym/recheck.py; none of it imports the generator.")
-    print(f"{len(rows) - bad}/{len(rows)} episodes pass all data checks")
+    print(f"{len(rows) - bad}/{len(rows)} episodes pass all data checks ({kind_counts(eps)})")
     return 1 if bad else 0
 
 
@@ -401,24 +409,51 @@ def cmd_paired(a) -> int:
     if salt_exposures():
         raise RuntimeError("AUDITGYM_SALT is readable by another process (a wrapper such as npx/run.sh or docker --init); "
                            "run paired checks on a closed split with: docker run -i --rm -e AUDITGYM_SALT=... auditgym:1.0.0 paired --split - < split.json")
-    rows, bad = [], 0
-    for k, (_, ep) in enumerate(_episodes(a)):
+    from .datacheck import kind, kind_counts
+    from .policies import BUILTIN
+    specs = [s for s in a.policy.split(",") if s != "oracle"]
+    if a.policy_path and not Path(a.policy_path).exists() and (ROOT / a.policy_path).is_dir():
+        a.policy_path = str(ROOT / a.policy_path)
+    rows, bad, eps = [], 0, [ep for _, ep in _episodes(a)]
+    for k, ep in enumerate(eps):
         pub2, truth2, mapping = perturb(ep.public, ep.truth, seed=a.seed + k)
         ep2 = Episode(pub2, truth2, ep.provenance, {})
         o2 = run_episode("oracle", ep2, "eval").result
-        e1, e2 = (run_episode("expert", e, "eval", isolate=False).result for e in (ep, ep2))
-        same = all(e1[f] == e2[f] for f in ("tp", "fp", "fn", "reward"))
-        ok = o2["reward"] == 1.0 and same
+        cells, same_all = [], True
+        for spec in specs:
+            r1, r2 = (run_episode(spec, e, "eval", a.policy_arg, a.policy_path, isolate=spec not in BUILTIN).result for e in (ep, ep2))
+            same = all(r1[f] == r2[f] for f in ("tp", "fp", "fn", "reward"))
+            same_all &= same
+            cells.append(f"{r1['reward']:+.3f} → {r2['reward']:+.3f}{'' if same else ' CHANGED'}")
+        ok = o2["reward"] == 1.0 and same_all
         bad += not ok
-        rows.append([ep.episode_id, str(len(mapping)), f"{o2['reward']:+.3f}", f"{e1['reward']:+.3f} → {e2['reward']:+.3f}",
-                     "yes" if same else "NO", "✓ PASS" if ok else "✗ FAIL"])
+        rows.append([ep.episode_id, kind(ep), str(len(mapping)), f"{o2['reward']:+.3f}", *cells, "✓ PASS" if ok else "✗ FAIL"])
     rich_table("Paired checks (case sections 06 and 10, 'Reproducibility and generalization')",
-               ["Episode", "IDs renamed", "Oracle reward on the copy", "Expert reward: original → copy", "Expert outcome unchanged",
-                "Result"], rows,
+               ["Episode", "Kind", "IDs renamed", "Oracle reward on the copy", *[f"{s}: original → copy" for s in specs], "Result"], rows,
                "Each copy has its rows shuffled and its document and line IDs renamed (auditgym/perturb.py). Oracle must stay at "
-               "+1.000 under the new IDs; expert must find exactly the same errors (TP, FP, FN and reward).")
-    print(f"{len(rows) - bad}/{len(rows)} paired checks pass")
+               "+1.000 under the new IDs; every other policy must find exactly the same errors (TP, FP, FN and reward) on the "
+               "copy as on the original.")
+    print(f"{len(rows) - bad}/{len(rows)} paired checks pass ({kind_counts(eps)})")
     return 1 if bad else 0
+
+
+def cmd_init(a) -> int:
+    """Copy the example agent into a folder you can edit, and print how to run it."""
+    import os
+    import shutil
+    d = Path(a.dir)
+    d.mkdir(parents=True, exist_ok=True)
+    dst = d / "my_policy.py"
+    if dst.exists():
+        raise ValueError(f"{dst} already exists; pick another folder: auditgym init <folder>")
+    shutil.copyfile(ROOT / "examples" / "my_policy.py", dst)
+    ag = os.environ.get("AUDITGYM_LAUNCHER", "auditgym")
+    print(f"wrote {dst}: a toy agent (class LookAround) that reads a few invoice pages and accuses nobody; edit reset/step.")
+    print("Run it on the 10 open dev episodes (--trust-policies: it is your own code and runs with your user's rights):")
+    print(f"  {ag} run --policy my_policy:LookAround --policy-path {shlex.quote(str(d))} --split dev --out out --trust-policies")
+    print("Expect reward +1 on clean books and -1 where errors exist, since it never reports any: about -0.6 on dev, where "
+          "2 of the 10 books are clean. Our expert scores about +0.95 there; oracle +1.0.")
+    return 0
 
 
 def cmd_check(a) -> int:
@@ -426,7 +461,7 @@ def cmd_check(a) -> int:
     if a.json:
         return run_check(quick=a.quick, as_json=True, out=Path(a.out))
     from .tour import working  # a live status line in a terminal, one line per stage otherwise
-    with working(_console(), "Starting the check") as say:
+    with working(_console()) as say:
         return run_check(quick=a.quick, out=Path(a.out), progress=say)
 
 
@@ -583,6 +618,10 @@ def build_parser() -> argparse.ArgumentParser:
     pt.add_argument("--no-shuffle", action="store_true")
     pt.set_defaults(fn=cmd_perturb)
 
+    ini = cmdp("init", "copy the example agent into a folder you can edit (default ./my-agent) and print the command that runs it")
+    ini.add_argument("dir", nargs="?", default="my-agent")
+    ini.set_defaults(fn=cmd_init)
+
     dc = cmdp("datacheck", "check the data of episodes independently: books balance before injection, the injected books break "
                            "exactly the declared errors, evidence reproduces the amounts (case section 10)")
     source(dc)
@@ -592,6 +631,10 @@ def build_parser() -> argparse.ArgumentParser:
                         "the same outcome (case sections 06 and 10)")
     source(pc)
     pc.add_argument("--seed", type=int, default=1, help="seed of the first shuffle/rename; episode k uses seed + k")
+    pc.add_argument("--policy", default="expert", help="policies whose outcome must not change, comma separated: built-ins, "
+                    "module:Class (with --policy-path) or 'cmd:<command>'; oracle is always checked (default: %(default)s)")
+    pc.add_argument("--policy-path", help="directory with your policy module")
+    pc.add_argument("--policy-arg", action="append", default=[], help="k=v passed to the policy constructor")
     pc.set_defaults(fn=cmd_paired)
 
     pl = cmdp("play", "play one episode by hand, seeing exactly what an agent sees (train mode)")
@@ -626,6 +669,8 @@ CHECK THE GRADER ON SEEDS ONLY YOU KNOW
   (The organizers' full process from the case, step by step: README section "Проверка организаторов по разделу 06 кейса".)
 
 TEST AN AGENT
+  auditgym init my-agent
+      Copies an example agent into ./my-agent for you to edit, and prints the command that runs it.
   auditgym run --policy reconcile,random --split dev --out out
       Runs agents on a set of episodes and grades every answer: precision, recall, F1, reward.
   auditgym compare out/reconcile out/random --per-type
