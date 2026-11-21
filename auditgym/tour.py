@@ -476,29 +476,24 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     tb = Table(show_header=True, header_style="bold")
     tb.add_column("Criterion")
     tb.add_column("Max points", justify="right")
-    tb.add_column("Our estimate", justify="right")
     tb.add_column("Status", justify="center")
     tb.add_column("Evidence from this run")
-    status, est = {}, {}
+    status = {}
     for k, name, pts in CRITERIA:
         ok_k = status[k] = {"contract": by_c[k][0] == by_c[k][1] and not leaks and not integ and not any(term_bad.values()),
                 "data": by_c[k][0] == by_c[k][1] and data_ok_n == n_eps,
                 "reward": by_c[k][0] == by_c[k][1] and order_ok,
                 "repro": by_c[k][0] == by_c[k][1] and paired_ok and rep_ok == rep_n,
                 "eng": None}[k]
-        # the case's formula (section 10) applied to our own measurements; the jury computes its own from its checks
-        est[k] = None if ok_k is None else pts if ok_k else round(pts * by_c[k][0] / max(by_c[k][1], 1) * (0.9 if by_c[k][0] == by_c[k][1] else 1))
-        tb.add_row(name, str(pts), "—" if est[k] is None else str(est[k]), "[dim]not measured[/]" if ok_k is None else "[green]✓ PASS[/]" if ok_k else "[red]✗ FAIL[/]", evidence[k])
+        tb.add_row(name, str(pts), "[dim]not measured[/]" if ok_k is None else "[green]✓ PASS[/]" if ok_k else "[red]✗ FAIL[/]", evidence[k])
     con.print(tb)
-    con.print("Max points: the jury's weight for each criterion (case section 10). Our estimate: that weight when every "
-              "measurement of the criterion passed in this run, otherwise reduced in proportion; the jury computes its own points "
-              "from its own checks. Engineering and explanation is judged from the docs, so the tour does not score it.",
-              style="dim", markup=False)
+    con.print("Max points: the jury's weight for each criterion (case section 10); the jury computes the points from its own "
+              "checks. PASS: every measurement for that criterion passed in this run. Engineering and explanation is judged "
+              "from the docs, so the tour does not score it.", style="dim", markup=False)
     verdict = (f"{'[bold green]✓ ALL PASSED[/]' if all_ok else '[bold red]✗ SOME CHECKS FAILED[/]'} · "
-               f"{sum(v is True for v in status.values())} of {sum(v is not None for v in status.values())} measured criteria passed "
-               f"({sum(v for v in est.values() if v is not None)} of {sum(p for k, _, p in CRITERIA if est[k] is not None)} points, our estimate) · "
+               f"{sum(v is True for v in status.values())} of {sum(v is not None for v in status.values())} measured criteria passed · "
                f"{time.time() - t_all:.0f} s · report: {_shown(outdir / 'report.md')}")
-    report.update({"ok": all_ok, "seconds": round(time.time() - t_all, 1), "evidence": evidence, "status": status, "points_estimate": est})
+    report.update({"ok": all_ok, "seconds": round(time.time() - t_all, 1), "evidence": evidence, "status": status})
     _write_report(outdir, report, rows)
 
     steps = next_steps()
@@ -543,9 +538,8 @@ def _write_report(outdir: Path, report: dict, rows: dict) -> None:
     sym = {True: "✓ PASS", False: "✗ FAIL", None: "not measured"}
     md = [f"# AuditGym {report['auditgym_version']} jury tour: {'ALL PASSED' if report['ok'] else 'SOME CHECKS FAILED'}", "",
           f"Python {report['python']} · {report['platform']} · code hash {report['code_hash']} · {report['seconds']} s", "",
-          "## Scorecard by case criterion", "", "| Criterion | Max points | Our estimate | Status | Evidence from this run |", "|---|---|---|---|---|"]
-    md += [f"| {name} | {pts} | {'—' if report['points_estimate'][k] is None else report['points_estimate'][k]} | {sym[report['status'][k]]} | "
-           f"{report['evidence'][k]} |" for k, name, pts in CRITERIA]
+          "## Scorecard by case criterion", "", "| Criterion | Max points | Status | Evidence from this run |", "|---|---|---|---|"]
+    md += [f"| {name} | {pts} | {sym[report['status'][k]]} | {report['evidence'][k]} |" for k, name, pts in CRITERIA]
     ce = report["steps"]["closed_eval"]
     md += ["", f"## Hidden-episode evaluation ({ce['episodes']} episodes, {'your split' if ce.get('source') == 'juror split' else 'new random seeds'})", "",
            "| Policy | Role | Precision | Recall | F1 | Reward | Reward, clean books | Steps | Sec/episode |", "|---|---|---|---|---|---|---|---|---|"]

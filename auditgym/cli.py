@@ -16,7 +16,7 @@ from .splits import ROOT, dir_episode, load_split_config, parse_seeds, split_epi
 
 COLUMNS = [("policy", "Policy"), ("episodes", "Episodes"), ("micro_precision", "Precision"), ("micro_recall", "Recall"), ("mean_f1", "F1"),
            ("mean_return", "Reward"), ("dirty_return", "Reward, books with errors"), ("mean_return_experimental", "Reward, partial credit"), ("mean_steps", "Steps"),
-           ("clean_fp_rate", "Clean books flagged"), ("invalid", "Invalid answers"), ("mean_wall_s", "Sec/episode"), ("failed", "Crashed/timed out")]
+           ("clean_fp_rate", "Clean books flagged"), ("invalid", "Invalid answers"), ("mean_wall_s", "Sec/episode"), ("failed", "Crashed or timed out")]
 LEGEND = ("Precision and recall: pooled over all findings · F1: mean per episode (an empty answer on clean books scores F1 = 1, "
           "so a policy can have F1 > 0 with precision and recall 0) · Reward: the case's terminal reward, -1 to +1, higher is "
           "better (2·F1 - 1 minus a small cost per step) · Reward, books with errors: the same, only on episodes that have errors (the case's reward ordering is stated there) · Reward, partial credit: an extra variant reported separately, gives half credit for the right "
@@ -215,7 +215,7 @@ def cmd_run(a) -> int:
     from .tour import working
     stage = (f"Running {len(specs)} {'policy' if len(specs) == 1 else 'policies'} on {len(episodes)} episodes"
              + (", each in an isolated process" if not a.no_isolate else ""))
-    with working(_console(stderr=True), stage) as say:  # progress on stderr: stdout stays the results
+    with working(_console(stderr=True)) as say:  # progress on stderr: stdout stays the results
         say(stage, "each episode: up to 60 s and 100 steps", 0, len(specs) * len(episodes))
         results = run_policies(specs, episodes, Path(a.out), mode=a.mode, args=a.policy_arg, policy_path=a.policy_path,
                                isolate=not a.no_isolate, allow_forks=a.allow_forks, meta={"sources": source, "isolate": not a.no_isolate, "allow_forks": a.allow_forks,
@@ -793,7 +793,8 @@ def cmd_split(a) -> int:
     for e in cfg["episodes"]:
         e["seed"] = f"jury-{secrets.token_hex(8)}"
     print(json.dumps(cfg, indent=1, ensure_ascii=False))
-    print(f"wrote a split with {len(cfg['episodes'])} episodes (5 clean, 5 interacting, 10 other; fresh random seeds)", file=sys.stderr)
+    print(f"wrote a split with {len(cfg['episodes'])} episodes: 5 clean, 5 interacting, 10 other, with fresh random seeds "
+          "(datacheck shows the mix each episode really got)", file=sys.stderr)
     return 0
 
 

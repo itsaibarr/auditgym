@@ -111,12 +111,12 @@ const ticked = (label, cmd) => spawnSync("sh", ["-c", `say() { printf '[auditgym
 if (first) {  // quiet installs with a live line every 2 s, then one receipt line
   if (spawnSync(uv, ["python", "find", "3.11"], { stdio: "ignore" }).status !== 0) {
     say("downloading Python 3.11 (~30 MB download, ~55 MB on disk; usually 5-30 s, one time) ...");
-    if (ticked("downloading Python 3.11", [uv, "python", "install", "--quiet", "--no-bin", "3.11"]) !== 0) {
+    if (ticked("Python 3.11 download", [uv, "python", "install", "--quiet", "--no-bin", "3.11"]) !== 0) {
       say("Python download failed: run the same command again (finished downloads are kept)"); process.exit(2);
     }
   }
   say("installing the 19 pinned packages (usually 5-20 s) ...");
-  if (ticked("installing the packages", [uv, "sync", "--quiet", "--frozen", "--extra", "gym", "--project", ROOT]) !== 0) {
+  if (ticked("package install", [uv, "sync", "--quiet", "--frozen", "--extra", "gym", "--project", ROOT]) !== 0) {
     say("package install failed: run the same command again (finished downloads are kept)"); process.exit(2);
   }
   say(`✓ setup done in ${Math.round((Date.now() - T0) / 1000)} s: uv, Python 3.11 and the packages (later runs start in a few seconds)`);

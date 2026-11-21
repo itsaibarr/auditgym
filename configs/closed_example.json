@@ -1,7 +1,7 @@
 {
   "split": "closed_example",
   "config_version": "1.0.0",
-  "note": "Shape of a closed evaluation: jury picks secret seeds and new combinations, sets AUDITGYM_SALT in the runner. 5 clean + 5 interacting + 10 other.",
+  "note": "Shape of a closed evaluation: jury picks secret seeds and new combinations, sets AUDITGYM_SALT in the runner. 5 clean + 5 interacting + 10 other. Interacting entries request both X1 and X2 and 'other' entries at least one duplicate, so the 5 clean / 5 interacting / 10 other mix holds whatever the salt.",
   "base_config": {},
   "episodes": [
     {
@@ -129,7 +129,8 @@
       "profile": "interacting",
       "config": {
         "interacting": {
-          "X1": 1.0
+          "X1": 1.0,
+          "X2": 1.0
         },
         "errors": {
           "duplicate_invoice": {
@@ -168,6 +169,7 @@
       "profile": "interacting",
       "config": {
         "interacting": {
+          "X1": 1.0,
           "X2": 1.0
         },
         "errors": {
@@ -231,7 +233,8 @@
       "profile": "interacting",
       "config": {
         "interacting": {
-          "X1": 1.0
+          "X1": 1.0,
+          "X2": 1.0
         },
         "errors": {
           "duplicate_invoice": {
@@ -270,6 +273,7 @@
       "profile": "interacting",
       "config": {
         "interacting": {
+          "X1": 1.0,
           "X2": 1.0
         },
         "errors": {
@@ -312,7 +316,7 @@
           "duplicate_invoice": {
             "on": true,
             "count": [
-              0,
+              1,
               2
             ]
           },
@@ -351,7 +355,7 @@
           "duplicate_invoice": {
             "on": true,
             "count": [
-              0,
+              1,
               2
             ]
           },
@@ -390,7 +394,7 @@
           "duplicate_invoice": {
             "on": true,
             "count": [
-              0,
+              1,
               2
             ]
           },
@@ -429,7 +433,7 @@
           "duplicate_invoice": {
             "on": true,
             "count": [
-              0,
+              1,
               2
             ]
           },
@@ -468,7 +472,7 @@
           "duplicate_invoice": {
             "on": true,
             "count": [
-              0,
+              1,
               2
             ]
           },
@@ -507,7 +511,7 @@
           "duplicate_invoice": {
             "on": true,
             "count": [
-              0,
+              1,
               2
             ]
           },
@@ -546,7 +550,7 @@
           "duplicate_invoice": {
             "on": true,
             "count": [
-              0,
+              1,
               2
             ]
           },
@@ -585,7 +589,7 @@
           "duplicate_invoice": {
             "on": true,
             "count": [
-              0,
+              1,
               2
             ]
           },
@@ -624,7 +628,7 @@
           "duplicate_invoice": {
             "on": true,
             "count": [
-              0,
+              1,
               2
             ]
           },
@@ -663,7 +667,7 @@
           "duplicate_invoice": {
             "on": true,
             "count": [
-              0,
+              1,
               2
             ]
           },

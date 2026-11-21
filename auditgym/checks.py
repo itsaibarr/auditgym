@@ -245,7 +245,11 @@ def run_check(quick: bool = False, as_json: bool = False, out: Path | None = Non
         rows = []
         for spec in POLICIES:
             s = {k: v for k, v in summaries[spec].items() if k != "_results"}
-            rows.append({"policy": spec, **s, "failed": sum(s.get("termination", {}).get(t, 0) for t in ("timeout", "policy_crash"))})
+            res = summaries[spec]["_results"]
+            dirty = [r["reward"] for r in res if not r["clean"]]
+            rows.append({"policy": spec, **s, "failed": sum(s.get("termination", {}).get(t, 0) for t in ("timeout", "policy_crash")),
+                         "dirty_return": round(sum(dirty) / len(dirty), 4) if dirty else None,
+                         "invalid": sum(1 for r in res if not r.get("valid", True))})
         summary = {"ok": rep.ok, "seconds": round(time.time() - t_all, 1), "checks": rep.items, "baselines": rows}
         out.mkdir(parents=True, exist_ok=True)
         (out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
