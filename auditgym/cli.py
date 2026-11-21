@@ -184,11 +184,14 @@ def cmd_run(a) -> int:
     episodes = _episodes(a)
     _shape_note(a, [ep for _, ep in episodes])
     specs = _specs(a.policy)
+    from .policies import BUILTIN
+    n_runs = len(specs) * len(episodes)  # built-ins measured at well under 0.1 s per episode (2 CPU); others set their own pace
+    pace = (f"usually under {max(5, -(-n_runs * 15 // 100))} s" if all(s in BUILTIN or s == "oracle" for s in specs)
+            else "your own policy sets the pace; each episode is capped at 60 s")
     print(f"  ... starting {len(specs)} {'policy' if len(specs) == 1 else 'policies'} on {len(episodes)} episode{'' if len(episodes) == 1 else 's'} "
-          "(first checking that each one starts)", file=sys.stderr, flush=True)
+          f"(first checking that each one starts; {pace})", file=sys.stderr, flush=True)
     if any(x.startswith("-") or "=" not in x for x in (a.policy_arg or [])):
         raise ValueError(f"--policy-arg takes key=value pairs, got {a.policy_arg!r}")
-    from .policies import BUILTIN
     from .runner import install_writable
     if a.policy_arg and all(s in BUILTIN or s == "oracle" for s in specs):
         import inspect
@@ -584,7 +587,7 @@ def cmd_init(a) -> int:
     ag = os.environ.get("AUDITGYM_LAUNCHER", "auditgym")
     print(f"wrote {dst}: a toy agent (class LookAround) that reads a few invoice pages and accuses nobody; edit reset/step.")
     print("Run it on the 10 open dev episodes (--trust-policies: it is your own code and runs with your user's rights):")
-    print(f"  auditgym run --policy my_policy:LookAround --policy-path {shlex.quote(str(d))} --split dev --out out --trust-policies")
+    print(f"  auditgym run --policy my_policy:LookAround --policy-path {shlex.quote(str(d))} --split dev --out {shlex.quote(str(d / 'runs'))} --trust-policies")
     if ag != "auditgym":
         print(f"  (auditgym = your launch command: {ag})")
     print("Expect reward +1 on clean books and -1 where errors exist, since it never reports any: about -0.6 on dev, where "

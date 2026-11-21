@@ -67,6 +67,8 @@ def _left(frac: float, elapsed: float, total: float, count: str | None) -> str:
         return "usually 30-90 s"
     if not timed and frac * total < 2:
         return ""
+    if frac >= 1:  # finished: the stage turns into a ✓ line, nothing is left
+        return ""
     if timed and frac >= 0.95:  # the fast tests run last; a seconds figure would read ~0 while hundreds remain
         return "almost done"
     return f"~{elapsed * (1 - frac) / frac:.0f} s left" if frac > 0 else ""

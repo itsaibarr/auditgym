@@ -70,15 +70,22 @@ if [ -z "$UV" ]; then
   case "$(uname -m)" in x86_64|amd64) A=x86_64 ;; arm64|aarch64) A=aarch64 ;; *) say "unsupported CPU $(uname -m); use Docker"; exit 2 ;; esac
   if [ "$(uname -s)" = "Darwin" ]; then T="$A-apple-darwin"; else T="$A-unknown-linux-musl"; fi
   case "$T" in  # sha256 of the release assets (as pinned in https://astral.sh/uv/0.12.17/install.sh)
-    aarch64-apple-darwin) S=85f00cbdc6dd3e97eba4c31b4d014375a9fdfe8f570023b84e5102fc3456896b ;;
-    x86_64-apple-darwin) S=8dcf05a8c809bb3c471d2b614788ba27a6e41298fc8c31ac84b5f4339fd468e5 ;;
-    aarch64-unknown-linux-musl) S=a6096da273d548cb9f277d237a01ac7344a39ef0f455c0e148e4dc9737c1596b ;;
-    x86_64-unknown-linux-musl) S=6401c4665d8fa2a9893e087c91f585430738e3170f5398a1141483efb4a93310 ;;
+    aarch64-apple-darwin) S=85f00cbdc6dd3e97eba4c31b4d014375a9fdfe8f570023b84e5102fc3456896b; KB=16533 ;;
+    x86_64-apple-darwin) S=8dcf05a8c809bb3c471d2b614788ba27a6e41298fc8c31ac84b5f4339fd468e5; KB=20111 ;;
+    aarch64-unknown-linux-musl) S=a6096da273d548cb9f277d237a01ac7344a39ef0f455c0e148e4dc9737c1596b; KB=20589 ;;
+    x86_64-unknown-linux-musl) S=6401c4665d8fa2a9893e087c91f585430738e3170f5398a1141483efb4a93310; KB=22102 ;;
   esac
-  say "downloading uv 0.12.17 (~20 MB, usually 3-30 s) into $HOME_DIR/bin (one time) ..."
+  say "downloading uv 0.12.17 (~$(( KB / 1024 )) MB, usually 3-30 s) into $HOME_DIR/bin (one time) ..."
   TMP="$HOME_DIR/bin/.dl.$$"; rm -rf "$TMP"; mkdir -p "$TMP"
-  fetch_to "https://github.com/astral-sh/uv/releases/download/0.12.17/uv-$T.tar.gz" "$TMP/uv.tgz" resume || true
-  GOT=$( (sha256sum "$TMP/uv.tgz" 2>/dev/null || shasum -a 256 "$TMP/uv.tgz") | cut -d' ' -f1)
+  . "$SRC/bin/tick.sh"
+  for BASE in https://releases.astral.sh/github/uv/releases/download https://github.com/astral-sh/uv/releases/download; do
+    TICK_FILE="$TMP/uv.tgz"; TICK_KB=$KB   # Astral's own CDN first (as its install.sh does), GitHub if that fails
+    tick "uv download" fetch_to "$BASE/0.12.17/uv-$T.tar.gz" "$TMP/uv.tgz" resume quiet || true
+    unset TICK_FILE TICK_KB
+    GOT=$( (sha256sum "$TMP/uv.tgz" 2>/dev/null || shasum -a 256 "$TMP/uv.tgz") | cut -d' ' -f1)
+    [ "$GOT" = "$S" ] && break
+    rm -f "$TMP/uv.tgz"
+  done
   if [ "$GOT" != "$S" ] || ! tar -xzf "$TMP/uv.tgz" --strip-components=1 -C "$TMP" 2>/dev/null; then
     rm -rf "$TMP"; say "could not download uv (network drop?); nothing was installed - run the same command again, or use Docker (see README)"; exit 2
   fi
@@ -88,7 +95,7 @@ if [ -z "$UV" ]; then
 fi
 
 rc=0
-. "$SRC/bin/tick.sh"   # tick: a live line every 2 s while a quiet setup step runs
+. "$SRC/bin/tick.sh"   # tick: a live line while a quiet setup step runs (sourced again: uv may have been found, not downloaded)
 if [ ! -d "$SRC/.venv" ]; then   # first run: quiet installs with a live line every 2 s, then one receipt line
   if ! "$UV" python find 3.11 >/dev/null 2>&1; then
     say "downloading Python 3.11 (~30 MB download, ~60 MB on disk; usually 5-30 s, one time) ..."

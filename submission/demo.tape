@@ -95,7 +95,7 @@ Type "# From here on, auditgym means the same one-line launch command"
 Enter
 Type "alias auditgym='sh ~/.cache/auditgym/src-master/run.sh'"
 Enter
-Type "auditgym init my-agent && auditgym run --policy my_policy:LookAround --policy-path my-agent --split dev --out out2 --trust-policies"
+Type "auditgym init my-agent && auditgym run --policy my_policy:LookAround --policy-path my-agent --split dev --out my-agent/runs --trust-policies"
 Enter
 Wait
 Sleep 9s

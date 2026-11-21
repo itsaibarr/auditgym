@@ -33,14 +33,16 @@ function installUv() {
   const arch = { x64: "x86_64", arm64: "aarch64" }[process.arch];
   const target = process.platform === "darwin" ? `${arch}-apple-darwin` : `${arch}-unknown-linux-musl`;
   if (!arch || !["darwin", "linux"].includes(process.platform)) { say(`unsupported platform ${process.platform}/${process.arch}`); process.exit(2); }
-  const url = `https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-${target}.tar.gz`;
+  // Astral's own CDN first (as its install.sh does: often much faster than GitHub), then GitHub
+  const urls = ["https://releases.astral.sh/github/uv/releases/download", "https://github.com/astral-sh/uv/releases/download"]
+    .map((b) => `${b}/${UV_VERSION}/uv-${target}.tar.gz`);
   const bin = path.join(CACHE, "bin");
   fs.mkdirSync(bin, { recursive: true });
   const tgz = path.join(bin, `uv-${process.pid}.tar.gz`);
   say(`downloading uv ${UV_VERSION} into ${bin} (besides uv's own caches ~/.cache/uv and ~/.local/share/uv, nothing else on your system changes) ...`);
   // curl honours HTTPS_PROXY; Node https (no proxy support) is the fallback
   const bar = process.stderr.isTTY ? "-#" : "-sS";
-  const fetch1 = () => which("curl") ? spawnSync("curl", ["-fL", bar, "-C", "-", "--retry", "3", "--connect-timeout", "20", "--speed-limit", "1000", "--speed-time", "60", "-o", tgz, url], { stdio: ["ignore", "inherit", "inherit"] })
+  const fetch1 = (url) => which("curl") ? spawnSync("curl", ["-fL", bar, "-C", "-", "--retry", "3", "--connect-timeout", "20", "--speed-limit", "1000", "--speed-time", "60", "-o", tgz, url], { stdio: ["ignore", "inherit", "inherit"] })
     : which("wget") ? spawnSync("wget", [...(process.stderr.isTTY ? [] : ["-q"]), "-c", "-T", "30", "-t", "3", "-O", tgz, url], { stdio: ["ignore", "inherit", "inherit"] })
     : spawnSync(process.execPath, ["-e", `
     const https = require("https"), fs = require("fs");
@@ -53,10 +55,14 @@ function installUv() {
     }).on("timeout", function () { console.error("download stalled (no data for 30 s)"); this.destroy(); process.exit(1); })
       .on("error", (e) => { console.error(String(e)); process.exit(1); });
     get(process.argv[1], 0);`, url, tgz], { stdio: ["ignore", "inherit", "inherit"], env: { ...process.env, NODE_USE_ENV_PROXY: "1" } });  // Node >= 22.21 / 24.5: honour HTTPS_PROXY
-  let dl = fetch1();
-  for (let k = 2; k <= 3 && dl.status !== 0; k++) { say(`download interrupted, attempt ${k}/3 ...`); dl = fetch1(); }
-  let sum = "";
-  try { sum = require("crypto").createHash("sha256").update(fs.readFileSync(tgz)).digest("hex"); } catch {}
+  let dl, sum = "";
+  for (const url of urls) {
+    dl = fetch1(url);
+    for (let k = 2; k <= 3 && dl.status !== 0; k++) { say(`download interrupted, attempt ${k}/3 ...`); dl = fetch1(url); }
+    try { sum = require("crypto").createHash("sha256").update(fs.readFileSync(tgz)).digest("hex"); } catch {}
+    if (dl.status === 0 && sum === UV_SHA256[target]) break;
+    fs.rmSync(tgz, { force: true });
+  }
   if (dl.status !== 0 || sum !== UV_SHA256[target]) {
     fs.rmSync(tgz, { force: true });
     say("could not download uv (network drop or proxy?); nothing was installed - run the same command again, or use Docker (see README)");
