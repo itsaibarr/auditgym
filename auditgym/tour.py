@@ -60,6 +60,8 @@ def _past(stage: str) -> str:
 def _left(frac: float, elapsed: float, total: float, count: str | None) -> str:
     """"~N s left". The test suite's bar is weighted by measured seconds (its count shows a percent): early on it states
     the usual length. Any other count extrapolates only after at least 2 items finished; before that, no estimate."""
+    if count and "policy runs" in count:  # runs of very different length: the per-run clock is the honest signal
+        return ""
     timed = bool(count) and "%" in count
     if timed and (frac <= 0.15 or elapsed < 4):  # too early to extrapolate: machines differ 2-3x
         return "usually 30-90 s in total"

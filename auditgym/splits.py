@@ -29,8 +29,6 @@ def split_episodes(split_or_path: str, cfg: dict | None = None) -> list[tuple[st
         raise ValueError(f"split {split_or_path!r} must be an object with a non-empty 'episodes' list of objects with a 'seed'")
     bad_seeds = [f"split entry {pos}: seed must be an integer or a string, got {e['seed']!r}" for pos, e in enumerate(cfg["episodes"])
                  if isinstance(e["seed"], bool) or not isinstance(e["seed"], (int, str))]
-    if bad_seeds:
-        raise ValueError(f"the split has {len(bad_seeds)} problem{'' if len(bad_seeds) == 1 else 's'}:\n  " + "\n  ".join(bad_seeds))
     for pos, e in enumerate(cfg["episodes"]):
         if not isinstance(e.get("config", {}), dict):
             raise ValueError("episode 'config' must be an object")
@@ -45,8 +43,11 @@ def split_episodes(split_or_path: str, cfg: dict | None = None) -> list[tuple[st
         dup_error = None
     name = cfg.get("split", Path(split_or_path).stem if split_or_path != "-" else "closed")
     salt = DEFAULT_SALT if split_or_path in OPEN_SPLITS else None
-    out, errors = [], [dup_error] if dup_error else []
+    out, errors = [], bad_seeds + ([dup_error] if dup_error else [])
+    bad_pos = {i for i, e in enumerate(cfg["episodes"]) if isinstance(e["seed"], bool) or not isinstance(e["seed"], (int, str))}
     for pos, e in enumerate(cfg["episodes"]):
+        if pos in bad_pos:
+            continue
         try:
             ep = generate(e["seed"], {**cfg.get("base_config", {}), **e.get("config", {})}, salt=salt,
                           config_version=cfg.get("config_version"))

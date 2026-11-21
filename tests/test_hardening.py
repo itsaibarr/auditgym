@@ -1105,3 +1105,24 @@ def test_paired_same_answer_means_the_same_errors_found(monkeypatch, capsys):
     monkeypatch.setattr(R, "run_episode", fake)
     assert main(["paired", "--split", "dev", "--policy", "idbound"]) == 0
     assert "idbound: answer changed on 10/10 copies" in capsys.readouterr().out
+
+
+def test_paired_same_answer_means_the_same_documents_accused(monkeypatch, capsys):
+    """Equal counts and no true positives are not enough: accusing a different document on the copy (a false alarm that
+    does not map back to the original one) is a changed answer."""
+    import auditgym.runner as R
+    from types import SimpleNamespace
+    from auditgym.cli import main
+    calls = {"n": 0}
+
+    def fake(spec, ep, mode="eval", *a, **k):
+        if spec == "oracle":
+            return SimpleNamespace(result={"tp": 0, "fp": 0, "fn": 0, "reward": 1.0, "matches": []}, trajectory=[])
+        calls["n"] += 1
+        doc = "D-NOT-A-REAL-ID-1" if calls["n"] % 2 else "D-NOT-A-REAL-ID-2"
+        sub = {"name": "submit", "arguments": {"findings": {"episode_id": "x", "findings": [
+            {"type": "duplicate_invoice", "affected_ids": [doc]}]}}}
+        return SimpleNamespace(result={"tp": 0, "fp": 1, "fn": 2, "reward": -1.0, "matches": []}, trajectory=[{"action": sub}])
+    monkeypatch.setattr(R, "run_episode", fake)
+    assert main(["paired", "--split", "dev", "--policy", "falsealarm"]) == 0
+    assert "falsealarm: answer changed on 10/10 copies" in capsys.readouterr().out

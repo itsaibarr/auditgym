@@ -28,7 +28,7 @@ def _console(stderr: bool = False):
     from rich.console import Console
     import os
     tty = sys.stderr.isatty() if stderr else _tty()
-    return Console(stderr=stderr, highlight=False, width=None if tty or os.environ.get("COLUMNS") else 160)  # piped/Docker: no 80-column squeeze
+    return Console(stderr=stderr, highlight=False, width=None if tty or os.environ.get("COLUMNS") else 400)  # logs: never squeeze or cut a table
 
 
 def rich_table(title: str, headers: list[str], rows: list[list[str]], legend: str = "", left: int = 1) -> None:
@@ -397,6 +397,26 @@ KINDS = ("Kind: interacting X1 = a partial foreign-currency payment across the p
          "(3 linked errors); X2 = an invoice with a credit note that is later billed twice; the credit note is posted at the invoice's rate (2 linked errors).")
 
 
+def _accusations(run, back: dict | None = None) -> list:
+    """What a policy accused in its final submission: sorted (type, affected ids), the copy's ids mapped back."""
+    sub = next((t["action"] for t in reversed(getattr(run, "trajectory", None) or [])
+                if isinstance(t.get("action"), dict) and t["action"].get("name") == "submit"), None)
+    f = ((sub or {}).get("arguments") or {}).get("findings")
+    items = f.get("findings") if isinstance(f, dict) else None
+    if not isinstance(items, list):
+        return [("no valid submission",)]
+    out = []
+    for x in items:
+        if isinstance(x, dict):
+            ids = [back.get(i, i) if back else i for i in (x.get("affected_ids") or []) if isinstance(i, str)]
+            out.append((str(x.get("type")), tuple(sorted(ids))))
+    return sorted(out)
+
+
+def _pl(n: int, word: str) -> str:
+    return f"{n} {word}" + ("" if n == 1 else "s")
+
+
 def _shape_note(a, eps) -> None:
     """The case's closed check uses 20 hidden episodes, 5 clean and 5 interacting: say so if a split from stdin differs."""
     from .datacheck import kind
@@ -405,7 +425,7 @@ def _shape_note(a, eps) -> None:
     ks = [kind(e) for e in eps]
     n_clean, n_x = ks.count("clean"), sum(k.startswith("interacting") for k in ks)
     if (len(ks), n_clean >= 5, n_x >= 5) != (20, True, True):
-        print(f"note: this split has {len(ks)} episodes ({n_clean} clean, {n_x} interacting); the case's closed check uses 20 "
+        print(f"note: this split has {_pl(len(ks), 'episode')} ({n_clean} clean, {n_x} interacting); the case's closed check uses 20 "
               "(5 clean, 5 interacting). Fine for exploring.", file=sys.stderr)
 
 
@@ -427,9 +447,9 @@ def cmd_datacheck(a) -> int:
     with working(_console(stderr=True)) as say:
         checks = []
         for ep in eps:
-            say(f"Checking the data of {len(eps)} episodes", "", len(checks), len(eps))
+            say(f"Checking the data of {_pl(len(eps), 'episode')}", "", len(checks), len(eps))
             checks.append(verify_episode(ep))
-        say(f"Checking the data of {len(eps)} episodes", "", len(checks), len(eps))
+        say(f"Checking the data of {_pl(len(eps), 'episode')}", "", len(checks), len(eps))
     for ep, c in zip(eps, checks):
         bad += not c["ok"]
         rows.append([str(getattr(ep, "split_pos", "")), ep.episode_id, kind(ep), str(c["issues"]), _yes(c["invariants_before"]), _yes(c["declared_after"]),
@@ -466,7 +486,7 @@ def cmd_paired(a) -> int:
     from .tour import working
     rows, bad, eps = [], 0, sorted((ep for _, ep in _episodes(a)), key=lambda e: getattr(e, 'split_pos', 0))  # split order
     _shape_note(a, eps)
-    stage = f"Grading shuffled and renamed copies of {len(eps)} episodes (oracle + {', '.join(specs)})"
+    stage = f"Grading shuffled and renamed copies of {_pl(len(eps), 'episode')} (oracle + {', '.join(specs)})"
     ctx = working(_console(stderr=True))
     say = ctx.__enter__()
     units, done_u = len(eps) * (1 + 2 * len(specs)), [0]  # one unit = one policy run on one episode (original or copy)
@@ -484,15 +504,18 @@ def cmd_paired(a) -> int:
         done_u[0] += 1
         changed = []
         for spec in specs:
-            rr = []
+            runs = []
             for e, which in ((ep, "original"), (ep2, "shuffled copy")):
                 step(f"{spec} on the {which}", k)
-                rr.append(run_episode(spec, e, "eval", a.policy_arg, a.policy_path, isolate=spec not in BUILTIN).result)
+                runs.append(run_episode(spec, e, "eval", a.policy_arg, a.policy_path, isolate=spec not in BUILTIN))
                 done_u[0] += 1
-            r1, r2 = rr
+            r1, r2 = (x.result for x in runs)
+            back = {new: old for old, new in mapping.items()}
+            same_accusations = _accusations(runs[0]) == _accusations(runs[1], back)
             per[spec]["crashed"] += any(r.get("termination") in ("timeout", "policy_crash") for r in (r1, r2))
             hit = lambda r: sorted(m["issue_id"] for m in r.get("matches", []) if m.get("result") == "TP")  # issue ids survive renaming
-            if all(r1[f] == r2[f] for f in ("tp", "fp", "fn")) and hit(r1) == hit(r2):  # the same errors found, same counts
+            if all(r1[f] == r2[f] for f in ("tp", "fp", "fn")) and hit(r1) == hit(r2) and same_accusations:
+                # the same errors found, the same false alarms (same documents accused), the same counts
                 per[spec]["same"] += 1
                 per[spec]["steps_only"] += r1["reward"] != r2["reward"]
             else:
@@ -520,9 +543,11 @@ def cmd_paired(a) -> int:
             print(f"{spec}: same answer (errors found, false alarms, misses) on {v['same']}/{len(eps)} copies"
                   + (f"; on {v['steps_only']} of them only the reward differs, from a different step count" if v["steps_only"] else ""))
         else:
-            print(f"{spec}: answer changed on {len(v['changed'])}/{len(eps)} copies (found/false alarms/missed and the errors found, original → copy: "
+            print(f"{spec}: answer changed on {len(v['changed'])}/{len(eps)} copies (it accused different documents or found different errors; "
+                  "found/false alarms/missed and the errors found, original → copy: "
                   f"{'; '.join(v['changed'][:3])}{' ...' if len(v['changed']) > 3 else ''}). This policy depends on row order or IDs; "
-                  "it is a property of the policy, not an environment failure.")
+                  "it is a property of the policy, not an environment failure."
+                  + (f" On {v['steps_only']} other copies only the reward differs, from a different step count." if v["steps_only"] else ""))
     print(f"{len(rows) - bad}/{len(rows)} paired checks pass ({kind_counts(eps)}; case section 10: oracle +1.000 on every copy)")
     return 1 if bad else 0
 
