@@ -320,3 +320,23 @@ def test_closed_reset_never_needs_the_answer_key(eps, tmp_path):
     ep_id = obs["manifest"]["episode_id"]
     o, r, term, _, _ = env.step(act("submit", findings={"episode_id": ep_id, "findings": []}))
     assert term and o["result"] == {"accepted": True} and r == 0
+
+
+@pytest.mark.parametrize("mode", ["missing", "partial"])
+def test_payment_subtype_can_be_requested(mode):
+    """D09-D11 need at least one missing and one partial allocation: the adapter option picks the subtype."""
+    off = {t: {"on": False} for t in TYPES}
+    cfg = {"errors": {**off, "payment_allocation": {"on": True, "count": [1, 1]}}, "payment_allocation_mode": mode}
+    for seed in range(10):
+        assert mode in ja._payment_modes(ja._generate(seed, cfg))
+
+
+def test_published_shapes_on_the_last_step_and_in_errors(eps):
+    env = ja.make_env()
+    closed(env, eps["C"])
+    o = env.step({"name": "calculator", "args": "not an object"})[0]
+    assert "args" in o["error"]["message"] and "arguments" not in o["error"]["message"]
+    for _ in range(98):
+        env.step(act("calculator", expression="1+1"))
+    o, _, term, trunc, _ = env.step(act("list_records", table="ledger", limit=2))
+    assert trunc and set(o["result"]) == {"records", "next_cursor"}

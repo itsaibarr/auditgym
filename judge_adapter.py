@@ -11,6 +11,8 @@ Inside the container (WORKDIR /app, Python 3.11 with the locked dependencies on 
         {"errors": {"fx_conversion": {"on": true, "count": [1, 1]}, "duplicate_invoice": {"on": false},
                     "payment_allocation": {"on": false}, "period_cutoff": {"on": false}}};
         a clean company: all four {"on": false}; interacting scenario X1 or X2: {"interacting": {"X1": 1.0}}.
+        payment_allocation has two subtypes, a missing and a partial allocation (provenance events[].params.mode); the
+        adapter-only key "payment_allocation_mode": "missing" | "partial" picks one (it is not passed to the generator).
         {} = defaults. A requested minimum (count[0] >= 1, or X1/X2 probability 1.0) is always met: if this seed's
         company has no valid target for it, the world is redrawn deterministically from "<seed>/retry1", "/retry2",
         ... (same seed + config -> same episode; provenance.json records "redraws"). The secret salt is
@@ -66,12 +68,20 @@ def _required(config: dict | None) -> set[str]:
     return need | {x for x, p in cfg["interacting"].items() if p >= 1.0}
 
 
+def _payment_modes(ep: Episode) -> set:
+    return {e.get("params", {}).get("mode") for e in ep.provenance.get("events", []) if "unallocated" in e.get("injector", "")}
+
+
 def _generate(seed, config: dict | None) -> Episode:
     """generate(), redrawn deterministically while a requested minimum could not be placed (see the docstring)."""
+    config = dict(config or {})
+    mode = config.pop("payment_allocation_mode", None)
+    if mode not in (None, "missing", "partial"):
+        raise ValueError(f"payment_allocation_mode must be 'missing' or 'partial', got {mode!r}")
     need = _required(config)
     for k in range(_MAX_REDRAWS + 1):
         ep = generate(seed if k == 0 else f"{seed}/retry{k}", config or None)
-        if not need & set(ep.provenance.get("skipped_injectors", [])):
+        if not need & set(ep.provenance.get("skipped_injectors", [])) and (mode is None or mode in _payment_modes(ep)):
             break
     ep.provenance["redraws"] = k
     return ep
@@ -141,7 +151,9 @@ class JudgeEnv:
         name = inner.get("name") if isinstance(inner, dict) else None
         obs, reward, term, trunc, info = self._env.step(inner)
         result, error = obs["result"], obs["error"]
-        if error is None and result is not None:
+        if error is not None and "arguments" in error["message"]:  # the published envelope calls them args
+            error = {**error, "message": error["message"].replace("arguments", "args")}
+        if result is not None:  # also on the 100th step, where the result comes with the step_limit error
             if name == "list_records":
                 result = {"records": result["rows"], "next_cursor": result["next_cursor"]}
             elif name == "get_record":
