@@ -44,7 +44,7 @@ if [ -z "${AUDITGYM_SRC:-}" ] && [ -n "$HERE" ] && [ -f "$HERE/uv.lock" ] && [ -
   AUDITGYM_SRC="$HERE"   # run from a checkout: use it, no download
 fi
 if [ -z "${AUDITGYM_SRC:-}" ]; then
-  say "downloading AuditGym ($REF) into $SRC ..."
+  say "downloading AuditGym ($REF, ~0.6 MB, usually 1-5 s) into $SRC ..."
   TGZ="$SRC.$$.tgz"; NEW="$SRC.new.$$"; rm -rf "$TGZ" "$NEW"
   case "$URL" in http*) fetch_to "$URL" "$TGZ" "" quiet || true ;; *) cp "$URL" "$TGZ" ;; esac   # 0.6 MB: no bar needed
   if [ -f "$SRC/.tarball.cksum" ] && [ "$(cksum < "$TGZ")" = "$(cat "$SRC/.tarball.cksum")" ]; then

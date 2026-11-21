@@ -63,7 +63,7 @@ def _left(frac: float, elapsed: float, total: float, count: str | None) -> str:
     if count and "policy runs" in count:  # runs of very different length: the per-run clock is the honest signal
         return ""
     timed = bool(count) and "%" in count
-    if timed and (frac <= 0.15 or elapsed < 4):  # too early to extrapolate: machines differ 2-3x
+    if timed and (frac < 0.4 or elapsed < 4):  # too early to extrapolate: the slow tests come first, machines differ 2-3x
         return "usually 30-90 s in total"
     if not timed and frac * total < 2:
         return ""
@@ -104,7 +104,7 @@ def working(con: Console, first: str | None = None):
         def beat() -> None:  # runs even while a long step reports nothing (test collection, one slow episode)
             while not stop.wait(1.0):
                 now = time.monotonic()
-                if st["stage"] and now - st["last"] >= 3:
+                if st["stage"] and now - st["last"] >= 2:
                     st["last"] = now
                     el = now - st["t0"]
                     left = (f"current run {now - st['moved']:.0f} s of at most 60 s" if "%" not in (st["weighted"] or "") and now - st["moved"] > 6
@@ -122,10 +122,19 @@ def working(con: Console, first: str | None = None):
             th.join()
             done_line()
         return
-    from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
-    cols = (SpinnerColumn(finished_text="[green]✓[/]"), TextColumn("{task.description}"), BarColumn(bar_width=20),
-            TextColumn("{task.fields[count]}"), TimeElapsedColumn(), TextColumn("[dim]{task.fields[left]}"),
-            TextColumn("[dim]{task.fields[detail]}"))
+    from rich.progress import BarColumn, Progress, ProgressColumn, SpinnerColumn, TextColumn
+    from rich.table import Column
+    from rich.text import Text
+
+    class Elapsed(ProgressColumn):  # tenths under 10 s, so a fast finished step reads 0.4 s, not 0:00:00
+        def render(self, task):
+            t = task.finished_time if task.finished else task.elapsed
+            t = t or 0.0
+            return Text(f"{t:.1f} s" if t < 10 else f"{int(t // 60)}:{int(t % 60):02d}", style="progress.elapsed")
+    cols = (SpinnerColumn(finished_text="[green]✓[/]"), TextColumn("{task.description}"),
+            BarColumn(bar_width=20, table_column=Column(no_wrap=True, min_width=20)),
+            TextColumn("{task.fields[count]}"), Elapsed(), TextColumn("[dim]{task.fields[left]}"),
+            TextColumn("[dim]{task.fields[detail]}", table_column=Column(no_wrap=True, overflow="ellipsis", ratio=1)))
     with Progress(*cols, console=con) as prog:
         cur: dict = {"id": None, "stage": None, "t0": 0.0, "count": "", "done": None, "moved": 0.0}
 
@@ -347,8 +356,9 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     rows = {}
     tb = Table(show_header=True, header_style="bold")
     for h, j in (("Policy", "left"), ("Role", "left"), ("Precision", "right"), ("Recall", "right"), ("F1", "right"), ("Reward", "right"),
-                 ("Reward, clean books", "right"), ("Steps", "right"), ("Sec/episode", "right")):
+                 ("Reward, clean books", "right"), ("Reward, books with errors", "right"), ("Steps", "right"), ("Sec/episode", "right")):
         tb.add_column(h, justify=j, no_wrap=h == "Policy", style="dim" if h == "Role" else None)
+    dirty_rows = {sp: [r["reward"] for r in res[sp] if not r["clean"]] for sp in POLICIES}  # what the ordering line averages
     for spec in POLICIES:
         s = summarize(res[spec])["all"]
         clean = [r["reward"] for r in res[spec] if r["clean"]]
@@ -357,6 +367,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
         r = rows[spec]
         tb.add_row(POLICY_LABEL[spec], ROLE[spec], f"{r['micro_precision']:.3f}", f"{r['micro_recall']:.3f}", f"{r['mean_f1']:.3f}",
                    f"{r['mean_return']:+.3f}", "—" if r["clean_return"] is None else f"{r['clean_return']:+.3f}",
+                   "—" if not dirty_rows[spec] else f"{sum(dirty_rows[spec]) / len(dirty_rows[spec]):+.3f}",
                    f"{r['mean_steps']:.1f}", f"{r['mean_wall_s']:.3f}")
     con.print(tb)
     term_bad = {sp: sum(r["termination"] not in ("submitted", "step_limit") for r in res[sp]) for sp in POLICIES}

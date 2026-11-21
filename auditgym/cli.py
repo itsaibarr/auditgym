@@ -40,9 +40,12 @@ def rich_table(title: str, headers: list[str], rows: list[list[str]], legend: st
     for r in rows:
         t.add_row(*r)
     con = _console()
+    if not con.is_terminal and con.width > 160:  # a log or Docker output: 160 columns, wider only if the table cannot fit
+        from rich.measure import Measurement      # its minimum width (headers wrapped between words) without cutting a cell
+        con.width = max(160, min(Measurement.get(con, con.options, t).minimum, 400))
     con.print(t)
     if legend:
-        con.print(legend, style="dim", markup=False)
+        con.print(legend, style="dim", markup=False, width=min(con.width, 160))
 
 
 def _tty() -> bool:
@@ -840,7 +843,7 @@ def cmd_split(a) -> int:
         e["seed"] = f"jury-{secrets.token_hex(8)}"
     print(json.dumps(cfg, indent=1, ensure_ascii=False))
     print(f"wrote a split with {len(cfg['episodes'])} episodes: 5 clean, 5 interacting, 10 other, with fresh random seeds "
-          "(datacheck shows the mix each episode really got)", file=sys.stderr)
+          "(datacheck confirms the mix)", file=sys.stderr)
     return 0
 
 

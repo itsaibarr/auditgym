@@ -100,7 +100,7 @@ def _pytest(rep: Report, quick: bool, say) -> None:
             shown = max(min(spent + running, weight * 0.99), shown_max[0])  # never moves back
             shown_max[0] = shown
             pct = int(100 * shown / weight)
-            slow = " (the slow ones run first)" if total and pct > 100 * done / total + 15 else ""
+            slow = " (the slow ones run first)" if cur in SLOW_FIRST[:2] else ""
             say(STAGE_TESTS, f"now testing {TEST_TOPIC.get(cur, cur)}{note} · {done}/{total} tests done{slow}"
                 + (f" · {failed} failed" if failed else ""), shown, weight, f"{pct}%")
         while True:
