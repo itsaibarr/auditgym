@@ -6,6 +6,7 @@ import sys
 import time
 from collections import Counter
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 
@@ -1135,3 +1136,37 @@ def test_csv_rows_parse_with_a_standard_reader(tmp_path, capsys):
     assert main(["run", "--policy", "random,flag_all", "--split", "dev", "--out", str(tmp_path), "--format", "csv"]) == 0
     rows = list(csv.reader(io.StringIO(capsys.readouterr().out)))
     assert len(rows) == 3 and all(len(r) == len(rows[0]) for r in rows) and "Reward, partial credit" in rows[0]
+
+
+def test_long_policy_label_table_not_cropped_in_logs(capsys, monkeypatch):
+    """Not a terminal (Docker without -t): a 120-character policy label must not push the last column off the table."""
+    from auditgym.cli import COLUMNS, print_table
+    monkeypatch.delenv("COLUMNS", raising=False)
+    label = "cmd:python3 /policies/" + "a_deeply_nested_folder/" * 4 + "stdio_adversary_with_a_long_name.py"
+    assert len(label) > 120
+    row = {k: 0.5 for k, _ in COLUMNS} | {"policy": label, "episodes": 20}
+    print_table([row, row | {"policy": "random"}], "Results")
+    lines = [ln for ln in capsys.readouterr().out.splitlines() if ln.strip().startswith(("┃", "│", "┏", "┡", "└", "┗"))]
+    assert lines and all(ln.rstrip()[-1] in "┃│┓┩┘┛" for ln in lines), "a table line lost its right border"
+    assert label in "\n".join(lines) and "Crashed" in "\n".join(lines)
+
+
+def test_config_lists_every_problem_in_one_pass():
+    """An organizer fixing a split should not need one run per mistake: months, year and max_errors are all reported."""
+    from auditgym.episode import make_config
+    with pytest.raises(ValueError) as e:
+        make_config({"months": [13], "year": 2201, "max_errors": 99})
+    assert all(k in str(e.value) for k in ("months", "year", "max_errors"))
+
+
+def test_policy_repeats_and_cmd_keeps_its_commas(tmp_path, capsys):
+    """--policy may repeat; a cmd: value is one command even with a comma in its path."""
+    import shutil
+    from auditgym.cli import main
+    d = tmp_path / "a,b"
+    d.mkdir()
+    shutil.copy(Path(__file__).resolve().parents[1] / "examples" / "stdio_policy.py", d / "p.py")
+    assert main(["run", "--policy", "random", "--policy", f"cmd:{sys.executable} {d / 'p.py'}", "--split", "dev",
+                 "--out", str(tmp_path / "out"), "--trust-policies", "--format", "csv"]) == 0
+    rows = capsys.readouterr().out.splitlines()
+    assert len(rows) == 3 and rows[2].startswith('"cmd:')

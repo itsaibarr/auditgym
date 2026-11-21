@@ -36,13 +36,14 @@ def rich_table(title: str, headers: list[str], rows: list[list[str]], legend: st
     t = Table(title=title or None, title_justify="left", title_style="bold")
     for i, h in enumerate(headers):
         t.add_column(h, justify="left" if i < left else "right", no_wrap=i == 0, overflow="fold",
-                     min_width=max(len(w) for w in h.split()))  # IDs stay whole; headers wrap between words, never inside one
+                     min_width=max([len(w) for w in h.split()] + [len(r[0]) for r in rows if i == 0]))  # IDs and labels stay whole; headers wrap between words
     for r in rows:
         t.add_row(*r)
     con = _console()
-    if not con.is_terminal and con.width > 160:  # a log or Docker output: 160 columns, wider only if the table cannot fit
-        from rich.measure import Measurement      # its minimum width (headers wrapped between words) without cutting a cell
-        con.width = max(160, min(Measurement.get(con, con.options, t).minimum, 400))
+    if not con.is_terminal and con.width > 160:  # a log or Docker output: 160 columns (headers wrap) if the table fits there,
+        from rich.measure import Measurement      # else its natural width up to 400: Rich crops the last column when squeezed
+        if Measurement.get(con, con.options, t).minimum + len(headers) <= 160:  # to exactly its minimum (it rounds widths up)
+            con.width = 160
     con.print(t)
     if legend:
         con.print(legend, style="dim", markup=False, width=min(con.width, 160))
@@ -182,7 +183,7 @@ def cmd_run(a) -> int:
                            "docker run --rm -e AUDITGYM_SALT=... auditgym:1.0.0 run ...")
     episodes = _episodes(a)
     _shape_note(a, [ep for _, ep in episodes])
-    specs = a.policy.split(",")
+    specs = _specs(a.policy)
     print(f"  ... starting {len(specs)} {'policy' if len(specs) == 1 else 'policies'} on {len(episodes)} episode{'' if len(episodes) == 1 else 's'} "
           "(first checking that each one starts)", file=sys.stderr, flush=True)
     if any(x.startswith("-") or "=" not in x for x in (a.policy_arg or [])):
@@ -243,7 +244,7 @@ def cmd_run(a) -> int:
         if failed == len(res):
             dead.append(spec)
     mode = "evaluation: rewards stay hidden from the policy until the end" if a.mode == "eval" else "training: the policy sees its final reward"
-    print_table(rows, f"Results ({mode}; {len(next(iter(results.values()), []))} episodes per policy)", a.format)
+    print_table(rows, f"Results ({mode}; {_pl(len(next(iter(results.values()), [])), 'episode')} per policy)", a.format)
     if dead:
         print(f"FAIL: {', '.join(dead)} crashed or timed out on every episode: these rows are not a score", file=sys.stderr)
         return 1
@@ -419,6 +420,11 @@ def _accusations(run, back: dict | None = None) -> list:
     return sorted(out)
 
 
+def _specs(values: list[str]) -> list[str]:
+    """--policy may repeat; each value is comma separated, except a 'cmd:' value, which is one command (it may contain commas)."""
+    return [s for v in values for s in ([v] if v.startswith("cmd:") else v.split(","))]
+
+
 def _pl(n: int, word: str) -> str:
     return f"{n} {word}" + ("" if n == 1 else "s")
 
@@ -485,7 +491,7 @@ def cmd_paired(a) -> int:
                            "run paired checks on a closed split with: docker run -i --rm -e AUDITGYM_SALT=... auditgym:1.0.0 paired --split - < split.json")
     from .datacheck import kind, kind_counts
     from .policies import BUILTIN
-    specs = [s for s in a.policy.split(",") if s != "oracle"]
+    specs = [s for s in _specs(a.policy or ["expert"]) if s != "oracle"]
     if a.policy_path and not Path(a.policy_path).exists() and (ROOT / a.policy_path).is_dir():
         a.policy_path = str(ROOT / a.policy_path)
     from rich.console import Console
@@ -709,8 +715,9 @@ def build_parser() -> argparse.ArgumentParser:
     g.set_defaults(fn=cmd_generate)
 
     r = cmdp("run", "test agents (policies) on a set of episodes: grades every answer and saves trajectories, results and a summary")
-    r.add_argument("--policy", required=True, help="the agent(s) to test, comma separated: a built-in (random, reconcile, flag_all, "
-                   "oracle, expert), your Python class as module:Class, or any program as 'cmd:<command>'")
+    r.add_argument("--policy", required=True, action="append", help="the agent(s) to test, comma separated or repeated: a built-in "
+                   "(random, reconcile, flag_all, oracle, expert), your Python class as module:Class, or any program as 'cmd:<command>' "
+                   "(one --policy per command; it may contain commas)")
     source(r)
     r.add_argument("--mode", choices=["eval", "train"], default="eval")
     r.add_argument("--out", default=str(ROOT / "runs"))
@@ -767,8 +774,9 @@ def build_parser() -> argparse.ArgumentParser:
                         "of the policy")
     source(pc)
     pc.add_argument("--seed", type=int, default=1, help="seed of the first shuffle/rename; episode k uses seed + k")
-    pc.add_argument("--policy", default="expert", help="policies to report on (does their answer change on the copy?), comma separated: built-ins, "
-                    "module:Class (with --policy-path) or 'cmd:<command>'; oracle is always checked (default: %(default)s)")
+    pc.add_argument("--policy", action="append", help="policies to report on (does their answer change on the copy?), comma separated "
+                    "or repeated: built-ins, module:Class (with --policy-path) or 'cmd:<command>' (one --policy per command); oracle is "
+                    "always checked (default: expert)")
     pc.add_argument("--policy-path", help="directory with your policy module")
     pc.add_argument("--policy-arg", action="append", default=[], help="k=v passed to the policy constructor")
     pc.set_defaults(fn=cmd_paired)

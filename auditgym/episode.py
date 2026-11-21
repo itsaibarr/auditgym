@@ -77,52 +77,81 @@ def _make_config(overrides: dict | None = None) -> dict:
 
 
 def _validate_config(cfg: dict) -> None:
+    """Every independent check runs, so one pass lists all problems of a config (checks inside a group depend on each other)."""
     def rng(name, v):
         if not (isinstance(v, list) and len(v) == 2 and all(isinstance(x, int) and not isinstance(x, bool) for x in v) and 0 <= v[0] <= v[1]):
             raise ValueError(f"{name} must be [min, max] integers with 0 <= min <= max, got {v!r}")
-    caps = {"customers": 200, "opening_invoices": 200, "invoices": 2000, "on_account": 200, "expenses": 5000}
-    for k, cap in caps.items():
+
+    def size(k, cap):
         rng(k, cfg[k])
         if cfg[k][1] > cap:
             raise ValueError(f"{k} max must be <= {cap}, got {cfg[k][1]}")
-    for t, spec in cfg["errors"].items():
+        if k == "customers" and cfg[k][0] < 2:
+            raise ValueError("customers min must be >= 2 (one base-currency and one foreign-currency customer)")
+
+    def error_spec(t, spec):
         rng(f"errors.{t}.count", spec.get("count", [1, 1]))
         if not isinstance(spec.get("on", False), bool):
             raise ValueError(f"errors.{t}.on must be true/false")
-    if cfg["customers"][0] < 2:
-        raise ValueError("customers min must be >= 2 (one base-currency and one foreign-currency customer)")
-    for k in ("base_currencies", "foreign_currencies", "timezones", "months"):
-        if not isinstance(cfg[k], list):
-            raise ValueError(f"{k} must be a list, got {cfg[k]!r}")
-    if not cfg["base_currencies"] or not all(c in EXPONENTS for c in cfg["base_currencies"] + cfg["foreign_currencies"]):
-        raise ValueError(f"currencies must be non-empty and among {sorted(EXPONENTS)}")
-    for b in cfg["base_currencies"]:
-        if not any(c != b for c in cfg["foreign_currencies"]):
-            raise ValueError(f"foreign_currencies needs at least one currency other than base {b}")
-    if not all(isinstance(p, (int, float)) and not isinstance(p, bool) and 0 <= p <= 1 for p in cfg["interacting"].values()):
-        raise ValueError("interacting probabilities must be numbers in [0, 1]")
-    w = cfg["cutoff_window_days"]
-    if not (isinstance(w, int) and not isinstance(w, bool) and 4 <= w <= 60):
-        raise ValueError(f"cutoff_window_days must be an integer in [4, 60] (late-cutoff postings land up to 3 days after "
-                         f"period end, inside the export window), got {w!r}")
-    m = cfg["months"]
-    if not (isinstance(m, list) and m and all(isinstance(x, int) and not isinstance(x, bool) and 1 <= x <= 12 for x in m)):
-        raise ValueError(f"months must be a non-empty list of integers 1..12, got {m!r}")
-    y = cfg["year"]
-    if not (isinstance(y, int) and not isinstance(y, bool) and 1971 <= y <= 2200):
-        raise ValueError(f"year must be an integer in [1971, 2200], got {y!r}")
-    me = cfg["max_errors"]
-    if not (isinstance(me, int) and not isinstance(me, bool) and 0 <= me <= 25):
-        raise ValueError(f"max_errors must be an integer in [0, 25] (findings are capped at 30), got {me!r}")
-    tzs = cfg["timezones"]
-    if not (isinstance(tzs, list) and tzs):
-        raise ValueError("timezones must be a non-empty list")
-    from zoneinfo import ZoneInfo
-    for tz in tzs:
+
+    def currencies():
+        for k in ("base_currencies", "foreign_currencies"):
+            if not isinstance(cfg[k], list):
+                raise ValueError(f"{k} must be a list, got {cfg[k]!r}")
+        if not cfg["base_currencies"] or not all(c in EXPONENTS for c in cfg["base_currencies"] + cfg["foreign_currencies"]):
+            raise ValueError(f"currencies must be non-empty and among {sorted(EXPONENTS)}")
+        for b in cfg["base_currencies"]:
+            if not any(c != b for c in cfg["foreign_currencies"]):
+                raise ValueError(f"foreign_currencies needs at least one currency other than base {b}")
+
+    def interacting():
+        if not all(isinstance(p, (int, float)) and not isinstance(p, bool) and 0 <= p <= 1 for p in cfg["interacting"].values()):
+            raise ValueError("interacting probabilities must be numbers in [0, 1]")
+
+    def cutoff():
+        w = cfg["cutoff_window_days"]
+        if not (isinstance(w, int) and not isinstance(w, bool) and 4 <= w <= 60):
+            raise ValueError(f"cutoff_window_days must be an integer in [4, 60] (late-cutoff postings land up to 3 days after "
+                             f"period end, inside the export window), got {w!r}")
+
+    def months():
+        m = cfg["months"]
+        if not (isinstance(m, list) and m and all(isinstance(x, int) and not isinstance(x, bool) and 1 <= x <= 12 for x in m)):
+            raise ValueError(f"months must be a non-empty list of integers 1..12, got {m!r}")
+
+    def year():
+        y = cfg["year"]
+        if not (isinstance(y, int) and not isinstance(y, bool) and 1971 <= y <= 2200):
+            raise ValueError(f"year must be an integer in [1971, 2200], got {y!r}")
+
+    def max_errors():
+        me = cfg["max_errors"]
+        if not (isinstance(me, int) and not isinstance(me, bool) and 0 <= me <= 25):
+            raise ValueError(f"max_errors must be an integer in [0, 25] (findings are capped at 30), got {me!r}")
+
+    def timezones():
+        tzs = cfg["timezones"]
+        if not (isinstance(tzs, list) and tzs):
+            raise ValueError("timezones must be a non-empty list")
+        from zoneinfo import ZoneInfo
+        for tz in tzs:
+            try:
+                ZoneInfo(tz)
+            except Exception:
+                raise ValueError(f"unknown timezone {tz!r}") from None
+
+    caps = {"customers": 200, "opening_invoices": 200, "invoices": 2000, "on_account": 200, "expenses": 5000}
+    checks = [lambda k=k, c=c: size(k, c) for k, c in caps.items()]
+    checks += [lambda t=t, sp=sp: error_spec(t, sp) for t, sp in cfg["errors"].items()]
+    checks += [currencies, interacting, cutoff, months, year, max_errors, timezones]
+    problems = []
+    for check in checks:
         try:
-            ZoneInfo(tz)
-        except Exception:
-            raise ValueError(f"unknown timezone {tz!r}") from None
+            check()
+        except ValueError as e:
+            problems.append(str(e))
+    if problems:
+        raise ValueError("; ".join(problems))
 
 
 def current_salt() -> str:
