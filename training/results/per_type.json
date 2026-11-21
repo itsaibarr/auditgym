@@ -142,5 +142,75 @@
    "period_cutoff": 128
   },
   "mean_new_tokens": 532.3
+ },
+ "c4": {
+  "per_type": {
+   "duplicate_invoice": {
+    "tp": 24,
+    "fp": 2,
+    "fn": 5
+   },
+   "fx_conversion": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 27
+   },
+   "payment_allocation": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 19
+   },
+   "period_cutoff": {
+    "tp": 12,
+    "fp": 9,
+    "fn": 15
+   }
+  },
+  "fp_reasons": {
+   "no_issue": 6,
+   "unknown_evidence_id": 2,
+   "insufficient_evidence": 2,
+   "amount": 1
+  },
+  "submitted_types": {
+   "duplicate_invoice": 26,
+   "period_cutoff": 21
+  },
+  "mean_new_tokens": 78.4
+ },
+ "c4_b": {
+  "per_type": {
+   "duplicate_invoice": {
+    "tp": 21,
+    "fp": 3,
+    "fn": 6
+   },
+   "fx_conversion": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 30
+   },
+   "payment_allocation": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 17
+   },
+   "period_cutoff": {
+    "tp": 16,
+    "fp": 7,
+    "fn": 14
+   }
+  },
+  "fp_reasons": {
+   "no_issue": 5,
+   "unknown_evidence_id": 3,
+   "insufficient_evidence": 1,
+   "amount": 1
+  },
+  "submitted_types": {
+   "duplicate_invoice": 24,
+   "period_cutoff": 23
+  },
+  "mean_new_tokens": 78.9
  }
 }
