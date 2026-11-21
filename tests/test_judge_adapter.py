@@ -294,3 +294,29 @@ def test_paired_copy_with_shuffled_rows_and_renamed_ids(eps, tmp_path):
     env = ja.make_env()
     obs, _ = closed(env, dst)
     assert obs["manifest"]["episode_id"] == new_truth["episode_id"]
+
+
+@pytest.mark.parametrize("kind", TYPES + ("X1", "X2"))
+def test_requested_minimum_is_always_placed(kind):
+    """The jury's D06-D20 configs ask for one type (or one interacting scenario): never a silently clean book."""
+    off = {t: {"on": False} for t in TYPES}
+    cfg = {"errors": {**off, kind: {"on": True, "count": [1, 1]}}} if kind in TYPES else {"errors": off, "interacting": {kind: 1.0}}
+    for seed in range(25):
+        ep = ja._generate(seed, cfg)
+        assert ep.truth["issues"] and kind not in ep.provenance["skipped_injectors"], (kind, seed)
+        if kind in TYPES:
+            assert any(i["type"] == kind for i in ep.truth["issues"])
+    a, b = ja._generate(13, cfg), ja._generate(13, cfg)
+    assert a.public == b.public and a.truth == b.truth
+
+
+def test_closed_reset_never_needs_the_answer_key(eps, tmp_path):
+    d = tmp_path / "no_truth"
+    shutil.copytree(eps["E"], d)
+    (d / "truth.json").unlink()
+    (d / "provenance.json").unlink()
+    env = ja.make_env()
+    obs, _ = closed(env, d)
+    ep_id = obs["manifest"]["episode_id"]
+    o, r, term, _, _ = env.step(act("submit", findings={"episode_id": ep_id, "findings": []}))
+    assert term and o["result"] == {"accepted": True} and r == 0

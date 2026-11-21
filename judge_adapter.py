@@ -6,9 +6,15 @@ Inside the container (WORKDIR /app, Python 3.11 with the locked dependencies on 
 
     generate_episode(seed, config, output_dir)  -> writes manifest.json, policy.json, ledger.csv, invoices.jsonl,
         payments.jsonl, fx.csv and the closed truth.json + provenance.json (top level of output_dir, section 03 names).
-        `config` is AuditGym's documented generator config (README "Конфигурация генератора"), e.g.
-        {"errors": {"fx_conversion": {"on": true, "count": [1, 1]}}, "interacting": {"X1": 1.0}}; {} = defaults.
-        The secret salt is AUDITGYM_SALT when set (closed evaluation), else the public default.
+        `config` is AuditGym's documented generator config (README "Конфигурация генератора"). Every type is on by
+        default with count [0, 2], so to get ONLY one type switch the others off, e.g. FX only:
+        {"errors": {"fx_conversion": {"on": true, "count": [1, 1]}, "duplicate_invoice": {"on": false},
+                    "payment_allocation": {"on": false}, "period_cutoff": {"on": false}}};
+        a clean company: all four {"on": false}; interacting scenario X1 or X2: {"interacting": {"X1": 1.0}}.
+        {} = defaults. A requested minimum (count[0] >= 1, or X1/X2 probability 1.0) is always met: if this seed's
+        company has no valid target for it, the world is redrawn deterministically from "<seed>/retry1", "/retry2",
+        ... (same seed + config -> same episode; provenance.json records "redraws"). The secret salt is
+        AUDITGYM_SALT when set (closed evaluation), else the public default.
     make_env() -> object with
         reset(seed, config) -> (observation, info)
             config={"mode": "closed", "episode_dir": dir}: loads exactly that episode (ids unchanged), reward is 0
@@ -33,7 +39,7 @@ import sys
 from pathlib import Path
 
 from auditgym.env import AuditEnv
-from auditgym.episode import Episode, fx_id, generate, load_public, write_episode
+from auditgym.episode import Episode, fx_id, generate, load_public, make_config, write_episode
 from auditgym.matcher import grade
 from auditgym.schemas import parse_findings
 
@@ -54,8 +60,28 @@ def _grader_files(d: Path) -> tuple[dict, dict]:
     raise FileNotFoundError(f"no truth.json in {d} or {d / '_grader'}")
 
 
+def _required(config: dict | None) -> set[str]:
+    cfg = make_config(config or None)
+    need = {t for t, spec in cfg["errors"].items() if spec.get("on") and spec.get("count", [1, 1])[0] >= 1}
+    return need | {x for x, p in cfg["interacting"].items() if p >= 1.0}
+
+
+def _generate(seed, config: dict | None) -> Episode:
+    """generate(), redrawn deterministically while a requested minimum could not be placed (see the docstring)."""
+    need = _required(config)
+    for k in range(_MAX_REDRAWS + 1):
+        ep = generate(seed if k == 0 else f"{seed}/retry{k}", config or None)
+        if not need & set(ep.provenance.get("skipped_injectors", [])):
+            break
+    ep.provenance["redraws"] = k
+    return ep
+
+
+_MAX_REDRAWS = 20
+
+
 def generate_episode(seed: int, config: dict, output_dir: str) -> None:
-    ep = generate(seed, config or None)
+    ep = _generate(seed, config)
     out = Path(output_dir)
     write_episode(ep, out, with_grader=False)
     (out / "truth.json").write_text(json.dumps(ep.truth, indent=2, ensure_ascii=False) + "\n")
@@ -94,12 +120,14 @@ class JudgeEnv:
         self._env = AuditEnv(mode="eval" if self._closed else "train")
         if config.get("episode_dir"):
             d = Path(config["episode_dir"])
-            truth, prov = _grader_files(d)
-            obs, _ = self._env.reset(options={"episode": Episode(public=load_public(d), truth=truth, provenance=prov, clean_public={})})
+            pub = load_public(d)
+            # closed: the jury grades with score_episode; this env never reads the answer key (works without truth.json)
+            truth, prov = ({"episode_id": pub["manifest"]["episode_id"], "issues": []}, {}) if self._closed else _grader_files(d)
+            obs, _ = self._env.reset(options={"episode": Episode(public=pub, truth=truth, provenance=prov, clean_public={})})
         elif self._closed:
             raise ValueError("closed mode needs config['episode_dir']")
         else:
-            obs, _ = self._env.reset(seed=seed, config=config.get("team_config") or None)
+            obs, _ = self._env.reset(options={"episode": _generate(seed, config.get("team_config"))})
         first = {"task": TASK, "manifest": obs["manifest"], "policy": obs["policy"], "remaining_steps": obs["steps_remaining"]}
         return first, {"remaining_steps": obs["steps_remaining"]}
 

@@ -32,7 +32,7 @@ Sleep 2s
 Type `echo "[auditgym] fetching the launcher (7 KB) ..."; curl -fsSL https://raw.githubusercontent.com/itsaibarr/auditgym/master/run.sh | sh`
 Enter
 Wait
-Sleep 12s
+Sleep 9s
 
 Type "clear"
 Enter
@@ -50,7 +50,7 @@ Enter
 Type "$D -v $PWD/out:/out auditgym:1.0.0 run --policy random,reconcile,flag_all,oracle --policy-arg seed=7 --split - --out /out < my_split.json"
 Enter
 Wait
-Sleep 10s
+Sleep 7s
 
 Type "clear"
 Enter
@@ -59,7 +59,7 @@ Enter
 Type "$D auditgym:1.0.0 datacheck --split - < my_split.json"
 Enter
 Wait
-Sleep 10s
+Sleep 7s
 
 Type "clear"
 Enter
@@ -68,7 +68,7 @@ Enter
 Type "$D auditgym:1.0.0 paired --split - < my_split.json"
 Enter
 Wait
-Sleep 10s
+Sleep 7s
 
 Type "clear"
 Enter
@@ -85,7 +85,7 @@ Enter
 Type "docker run -i --rm --init --network none -e AUDITGYM_SALT=$SALT auditgym:1.0.0 run --policy expert --split - --out /tmp/x < my_split.json; echo exit=$?"
 Enter
 Wait
-Sleep 8s
+Sleep 6s
 
 Type "clear"
 Enter
@@ -98,7 +98,7 @@ Enter
 Type "auditgym init my-agent && auditgym run --policy my_policy:LookAround --policy-path my-agent --split dev --out my-agent/runs --trust-policies"
 Enter
 Wait
-Sleep 9s
+Sleep 7s
 Type "# More: README (sections for the jury and for the organizers' process), docs/DESIGN.md, docs/FAILURE_ANALYSIS.md. Thank you!"
 Enter
 Sleep 6s

@@ -265,7 +265,8 @@ def _verified(runs) -> bool:
 def cmd_compare(a) -> int:
     if a.per_type and a.format == "csv":  # two tables with different columns cannot share one CSV header
         raise ValueError("--per-type with --format csv would print two tables in one file; use --format json "
-                         "(one object with both: comparison and by_error_type), or run compare twice")
+                         "(one object with both: comparison and by_error_type), or drop --per-type: --format csv without it lists the "
+                         "main table, and the per-type counts are also in --format json)")
     if not _verified(a.runs):
         return 1
     rows = []
@@ -291,7 +292,9 @@ def cmd_compare(a) -> int:
         s = json.loads((Path(d) / "summary.json").read_text())["all"]
         per += [[Path(d).name, t, str(v["tp"]), str(v["fp"]), str(v["fn"])] for t, v in sorted(s["per_type"].items())] or \
             [[Path(d).name, "(no valid answer: nothing to match)", "-", "-", "-"]]
-        per_json += [{"run": Path(d).name, "type": t, "tp": v["tp"], "fp": v["fp"], "fn": v["fn"]} for t, v in sorted(s["per_type"].items())]
+        label = json.loads((Path(d) / "run.json").read_text())["policy"]
+        per_json += [{"run": Path(d).name, "policy": label, "type": t, "tp": v["tp"], "fp": v["fp"], "fn": v["fn"]}
+                     for t, v in sorted(s["per_type"].items())] or [{"run": Path(d).name, "policy": label, "type": None, "tp": 0, "fp": 0, "fn": 0}]
     if a.format == "json":  # one document for scripts: both tables in one object
         print(json.dumps({"comparison": rows, "by_error_type": per_json}, indent=2))
         return 0
