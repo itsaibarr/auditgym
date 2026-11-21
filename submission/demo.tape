@@ -1,7 +1,7 @@
 # AuditGym demo (VHS): the jury tour, then the case's own checking process (section 06) step by step, then your own agent.
 # Render: cd <repo> && vhs submission/demo.tape   -> submission/demo.mp4
 # Needs: curl, docker image auditgym:1.0.0 (docker build -t auditgym:1.0.0 .), openssl.
-# The uv/Python cache (~/.cache/auditgym) is warmed before recording; a first run adds up to a minute of downloads.
+# Recorded with a neutral HOME (/tmp/jury/home), warmed up off camera; a real first run adds a 20-60 s one-time setup.
 Output submission/demo.mp4
 
 Require curl
@@ -19,8 +19,9 @@ Set WaitTimeout 4m
 Set WaitPattern /\$\s*$/
 
 Hide
-Type "export PS1='$ ' DOCKER_CLI_HINTS=false && rm -rf /tmp/jury && mkdir -p /tmp/jury/out && cd /tmp/jury && clear"
+Type `export PS1='$ ' DOCKER_CLI_HINTS=false DOCKER_CONFIG="$HOME/.docker" && rm -rf /tmp/jury && mkdir -p /tmp/jury/out /tmp/jury/home && export HOME=/tmp/jury/home && cd /tmp/jury && curl -fsSL https://raw.githubusercontent.com/itsaibarr/auditgym/master/run.sh | sh -s -- --version >/dev/null 2>&1; clear`
 Enter
+Wait
 Show
 
 Type "# AuditGym: an RL environment and grader for AI financial auditors. Genesis Hackathon FinTech 2026, team tryHard"
@@ -35,7 +36,7 @@ Sleep 12s
 
 Type "clear"
 Enter
-Type "# 2) The case's own checking process (section 06): the organizers' policies on THEIR hidden seeds, each step one command."
+Type "# 2) The case's own checking process (section 06): the case's policies on hidden seeds you choose, each step one command."
 Enter
 Type "# D = an offline container with the case's limits (2 CPU, 4 GB) and a secret salt only the runner sees"
 Enter

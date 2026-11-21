@@ -36,6 +36,7 @@ if [ "$(uname -s)" != "Darwin" ] && [ "$(uname -s)" != "Linux" ]; then
 fi
 
 mkdir -p "$HOME_DIR/bin"
+T0=$(date +%s)
 [ -d "$SRC/.venv" ] || { say "first run: one-time setup before the tour, usually 20-60 s (up to 3 min on a slow network):"; say "  uv, a Python installer (~20 MB), and Python 3.11 (~30 MB), each only if missing; then 19 pinned packages."; say "  Ctrl-C is safe: running the same command again resumes. Later runs start in about 1 s."; }
 HERE=""
 if [ -f "$0" ] && [ "$(basename "$0")" = "run.sh" ]; then HERE="$(cd "$(dirname "$0")" 2>/dev/null && pwd || true)"; fi
@@ -88,16 +89,14 @@ fi
 
 rc=0
 if [ ! -d "$SRC/.venv" ]; then   # first run: visible Python download only if missing, quiet packages, one receipt line
-  T0=$(date +%s)
   if ! "$UV" python find 3.11 >/dev/null 2>&1; then
     say "downloading Python 3.11 (~30 MB, one time) ..."
     "$UV" python install --no-bin 3.11 || { say "Python download failed: run the same command again (finished downloads are kept)"; exit 2; }
   fi
   say "installing the 19 pinned packages ..."
   "$UV" sync --quiet --frozen --extra gym --project "$SRC" || { say "package install failed: run the same command again (finished downloads are kept)"; exit 2; }
-  say "✓ ready in $(( $(date +%s) - T0 )) s: Python 3.11 and the packages (later runs start in about 1 s)"
+  say "✓ setup done in $(( $(date +%s) - T0 )) s: uv, Python 3.11 and the packages (later runs start in about 1 s)"
 fi
-say "auditgym $*"
 AUDITGYM_LAUNCHER="sh '$SRC/run.sh'" AUDITGYM_SRC="$SRC" "$UV" run --quiet --frozen --extra gym --project "$SRC" auditgym "$@" || rc=$?
 if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then
   say "exit code 2: if the message above is a network/download error, run the same command again (finished downloads are kept); otherwise it explains what to change"

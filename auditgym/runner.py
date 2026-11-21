@@ -410,7 +410,7 @@ def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root
     if exposed:
         raise RuntimeError(f"refusing to start: the secret salt (AUDITGYM_SALT) is visible to another process in this container "
                            f"(process id {', '.join(map(str, exposed[:5]))}, for example the init process added by docker --init, or a "
-                           "shell or uv wrapper), so a policy could read it too. Start the runner directly: "
+                           "launcher script), so a policy could read it too. Start the runner directly: "
                            "docker run --rm -e AUDITGYM_SALT=... auditgym:1.0.0 run ...")
     done: dict[str, list[EpisodeRun]] = {}
     for spec in order:

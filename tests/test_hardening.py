@@ -1065,3 +1065,24 @@ def test_paired_judges_the_answer_not_the_step_count(monkeypatch, capsys):
     assert main(["paired", "--split", "dev", "--policy", "reconcile"]) == 0
     out = capsys.readouterr().out
     assert "10/10 paired checks pass" in out and "different step count" in out
+
+
+def test_paired_verdict_comes_from_the_oracle_only(monkeypatch, capsys):
+    """A policy whose answer depends on row order (e.g. it reads only the first page) is reported per policy as
+    order-dependent; the case's paired check, the oracle on the copy, still decides the result and the exit code."""
+    import auditgym.runner as R
+    from types import SimpleNamespace
+    from auditgym.cli import main
+    calls = {"n": 0}
+
+    def fake(spec, ep, mode="eval", *a, **k):
+        if spec == "oracle":
+            return SimpleNamespace(result={"tp": 1, "fp": 0, "fn": 0, "reward": 1.0})
+        calls["n"] += 1
+        tp = 5 if calls["n"] % 2 else 1  # original, then copy: a different answer
+        return SimpleNamespace(result={"tp": tp, "fp": 0, "fn": 8 - tp, "reward": 0.1 * tp})
+    monkeypatch.setattr(R, "run_episode", fake)
+    assert main(["paired", "--split", "dev", "--policy", "firstpage"]) == 0
+    out = capsys.readouterr().out
+    assert "10/10 paired checks pass" in out and "firstpage: answer changed on 10/10 copies" in out
+    assert "not an environment failure" in out

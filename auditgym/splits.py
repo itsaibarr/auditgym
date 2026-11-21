@@ -39,8 +39,15 @@ def split_episodes(split_or_path: str, cfg: dict | None = None) -> list[tuple[st
         raise ValueError("split lists the same (seed, config) twice")
     name = cfg.get("split", Path(split_or_path).stem if split_or_path != "-" else "closed")
     salt = DEFAULT_SALT if split_or_path in OPEN_SPLITS else None
-    out = [(name, generate(e["seed"], {**cfg.get("base_config", {}), **e.get("config", {})}, salt=salt,
-                           config_version=cfg.get("config_version"))) for e in cfg["episodes"]]
+    out = []
+    for pos, e in enumerate(cfg["episodes"]):
+        try:
+            ep = generate(e["seed"], {**cfg.get("base_config", {}), **e.get("config", {})}, salt=salt,
+                          config_version=cfg.get("config_version"))
+        except ValueError as exc:
+            raise ValueError(f"split entry {pos} (seed {e['seed']!r}): {exc}") from None
+        ep.split_pos = pos  # shown by datacheck/paired so rows map back to the split file
+        out.append((name, ep))
     ids = [ep.episode_id for _, ep in out]
     if len(set(ids)) != len(ids):
         raise ValueError("two split entries generate the same episode (e.g. seed 1 and \"1\", or an explicit default config)")

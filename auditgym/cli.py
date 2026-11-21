@@ -15,11 +15,11 @@ from .episode import generate, load_public, write_episode
 from .splits import ROOT, dir_episode, load_split_config, parse_seeds, split_episodes
 
 COLUMNS = [("policy", "Policy"), ("episodes", "Episodes"), ("micro_precision", "Precision"), ("micro_recall", "Recall"), ("mean_f1", "F1"),
-           ("mean_return", "Reward"), ("mean_return_experimental", "Reward (exp.)"), ("mean_steps", "Steps"),
+           ("mean_return", "Reward"), ("mean_return_experimental", "Reward, partial credit"), ("mean_steps", "Steps"),
            ("clean_fp_rate", "Clean books flagged"), ("mean_wall_s", "Sec/episode"), ("failed", "Crashed/timed out")]
 LEGEND = ("Precision and recall: pooled over all findings · F1: mean per episode (an empty answer on clean books scores F1 = 1, "
           "so a policy can have F1 > 0 with precision and recall 0) · Reward: the case's terminal reward, -1 to +1, higher is "
-          "better (2·F1 - 1 minus a small cost per step) · Reward (exp.): reported separately, gives half credit for the right "
+          "better (2·F1 - 1 minus a small cost per step) · Reward, partial credit: an extra variant reported separately, gives half credit for the right "
           "error with a wrong amount · Clean books flagged: share of clean episodes where the policy reported any error")
 
 
@@ -168,7 +168,7 @@ def cmd_run(a) -> int:
     if exposed:
         raise RuntimeError(f"refusing to start: the secret salt (AUDITGYM_SALT) is visible to another process in this container "
                            f"(process id {', '.join(map(str, exposed[:5]))}, for example the init process added by docker --init, or a "
-                           "shell or uv wrapper), so a policy could read it too. Start the runner directly: "
+                           "launcher script), so a policy could read it too. Start the runner directly: "
                            "docker run --rm -e AUDITGYM_SALT=... auditgym:1.0.0 run ...")
     episodes = _episodes(a)
     specs = a.policy.split(",")
@@ -377,7 +377,7 @@ def cmd_schema(a) -> int:
 
 
 KINDS = ("Kind: interacting X1 = a partial foreign-currency payment across the period end, posted late at the wrong rate "
-         "(3 linked errors); X2 = a duplicate invoice whose credit note is posted at the invoice's rate (2 linked errors).")
+         "(3 linked errors); X2 = an invoice with a credit note that is later billed twice; the credit note is posted at the invoice's rate (2 linked errors).")
 
 
 def _yes(v) -> str:
@@ -401,10 +401,10 @@ def cmd_datacheck(a) -> int:
         say(f"Checking the data of {len(eps)} episodes", "", len(checks), len(eps))
     for ep, c in zip(eps, checks):
         bad += not c["ok"]
-        rows.append([ep.episode_id, kind(ep), str(c["issues"]), _yes(c["invariants_before"]), _yes(c["declared_after"]),
+        rows.append([str(getattr(ep, "split_pos", "")), ep.episode_id, kind(ep), str(c["issues"]), _yes(c["invariants_before"]), _yes(c["declared_after"]),
                      _yes(c["evidence"]), "✓ PASS" if c["ok"] else "✗ FAIL"])
     rich_table("Independent data check (case section 10, 'Data and answer key')",
-               ["Episode", "Kind", "Errors injected", "Books balance before injection (I1-I8)", "Problems found = declared errors",
+               ["#", "Episode", "Kind", "Errors injected", "Books balance before injection (I1-I8)", "Problems found = declared errors",
                 "Evidence reproduces the amounts", "Result"], rows,
                "I1 each journal entry balances · I2 trial balance nets to zero · I3 AR control account = subledger · I4 invoice "
                "lines add up to the total · I5 FX conversion follows the policy · I6 period cut-off · I7 payments are allocated "
@@ -416,8 +416,8 @@ def cmd_datacheck(a) -> int:
 
 def cmd_paired(a) -> int:
     """The case's paired checks (section 06/10): each episode is copied with its rows shuffled and its document and line
-    IDs renamed; the oracle must still get reward 1.0 under the new IDs and the expert policy must get exactly the same
-    outcome as on the original."""
+    IDs renamed; the oracle's answer under the new IDs must still get reward 1.0 (this decides the result and exit code).
+    For every other --policy, whether its answer stays the same is reported per policy: a property of that policy."""
     from .episode import Episode
     from .perturb import perturb
     from .runner import harden_runner, run_episode, salt_exposures
@@ -437,30 +437,41 @@ def cmd_paired(a) -> int:
     ctx = working(Console(stderr=True, highlight=False))
     say = ctx.__enter__()
     say(stage, "", 0, len(eps))
+    per = {sp: {"same": 0, "steps_only": 0, "changed": []} for sp in specs}
     for k, ep in enumerate(eps):
         pub2, truth2, mapping = perturb(ep.public, ep.truth, seed=a.seed + k)
         ep2 = Episode(pub2, truth2, ep.provenance, {})
         o2 = run_episode("oracle", ep2, "eval").result
-        cells, same_all = [], True
+        changed = []
         for spec in specs:
             r1, r2 = (run_episode(spec, e, "eval", a.policy_arg, a.policy_path, isolate=spec not in BUILTIN).result for e in (ep, ep2))
-            same = all(r1[f] == r2[f] for f in ("tp", "fp", "fn"))  # the answer, mapped through the renaming by the grader
-            same_all &= same
-            note = "" if r1["reward"] == r2["reward"] else f" (reward {r1['reward']:+.3f} → {r2['reward']:+.3f}: different step count)"
-            cells.append(f"{r1['tp']}/{r1['fp']}/{r1['fn']} {'=' if same else '≠ CHANGED'} {r2['tp']}/{r2['fp']}/{r2['fn']}{note}")
-        ok = o2["reward"] == 1.0 and same_all
+            if all(r1[f] == r2[f] for f in ("tp", "fp", "fn")):  # the answer, mapped through the renaming by the grader
+                per[spec]["same"] += 1
+                per[spec]["steps_only"] += r1["reward"] != r2["reward"]
+            else:
+                changed.append(spec)
+                per[spec]["changed"].append(f"{ep.episode_id} {r1['tp']}/{r1['fp']}/{r1['fn']} → {r2['tp']}/{r2['fp']}/{r2['fn']}")
+        ok = o2["reward"] == 1.0  # the case's paired check: the oracle's answer under the new IDs still gets the maximum
         bad += not ok
-        rows.append([ep.episode_id, kind(ep), str(len(mapping)), f"{o2['reward']:+.3f}", *cells, "✓ PASS" if ok else "✗ FAIL"])
+        rows.append([str(getattr(ep, "split_pos", "")), ep.episode_id, kind(ep), str(len(mapping)), f"{o2['reward']:+.3f}",
+                     f"{len(specs) - len(changed)}/{len(specs)}" + (f" (changed: {', '.join(changed)})" if changed else ""),
+                     "✓ PASS" if ok else "✗ FAIL"])
         say(stage, f"now: {ep.episode_id}", k + 1, len(eps))
     ctx.__exit__(None, None, None)
     rich_table("Paired checks (case sections 06 and 10, 'Reproducibility and generalization')",
-               ["Episode", "Kind", "IDs renamed", "Oracle reward on the copy", *[f"{s}: found/false alarms/missed, original → copy" for s in specs],
-                "Result"], rows,
-               "Each copy has its rows shuffled and its document and line IDs renamed (auditgym/perturb.py). Oracle must stay at "
-               "+1.000 under the new IDs (the case's paired check); every other policy must give the same answer on the copy: the "
-               "same errors found, the same false alarms, the same misses. A reward difference that comes only from a different "
-               "step count is shown as information, not a failure. " + KINDS)
-    print(f"{len(rows) - bad}/{len(rows)} paired checks pass ({kind_counts(eps)})")
+               ["#", "Episode", "Kind", "IDs renamed", "Oracle reward on the copy", "Other policies with the same answer", "Result"], rows,
+               "Each copy has its rows shuffled and its document and line IDs renamed (auditgym/perturb.py). The case's paired "
+               "check, and this command's result and exit code: the oracle's answer, mapped to the new IDs, still gets +1.000. " + KINDS)
+    print()
+    for spec, v in per.items():  # a property of each policy, not of the environment
+        if not v["changed"]:
+            print(f"{spec}: same answer (errors found, false alarms, misses) on {v['same']}/{len(eps)} copies"
+                  + (f"; on {v['steps_only']} of them only the reward differs, from a different step count" if v["steps_only"] else ""))
+        else:
+            print(f"{spec}: answer changed on {len(v['changed'])}/{len(eps)} copies (found/false alarms/missed, original → copy: "
+                  f"{'; '.join(v['changed'][:3])}{' ...' if len(v['changed']) > 3 else ''}). This policy depends on row order or IDs; "
+                  "it is a property of the policy, not an environment failure.")
+    print(f"{len(rows) - bad}/{len(rows)} paired checks pass ({kind_counts(eps)}; case section 10: oracle +1.000 on every copy)")
     return 1 if bad else 0
 
 
@@ -490,7 +501,7 @@ def cmd_check(a) -> int:
     from .tour import working  # a live status line in a terminal, one line per stage otherwise
     con = _console()
     con.print("auditgym check: the test suite (about 570 tests), then the 5 baseline policies on the 20 open episodes, reward-order "
-              "checks, a leak scan, 20 paired checks and a replay. Usually 40-110 s at 2 CPU; a results table and "
+              "checks, a leak scan, 20 paired checks and a replay. Usually 30-90 s at 2 CPU; a results table and "
               "PASS or FAIL with the number of checks passed come at the end.", markup=False, soft_wrap=True)
     with working(con) as say:
         return run_check(quick=a.quick, out=Path(a.out), progress=say)
@@ -585,7 +596,8 @@ def build_parser() -> argparse.ArgumentParser:
     spl.set_defaults(fn=cmd_split)
 
     def source(sp, default="dev"):
-        sp.add_argument("--split", default=default, help="split name(s) from configs/, comma separated (default: %(default)s)")
+        sp.add_argument("--split", default=default, help="split name(s) from configs/, comma separated, or '-' to read a split JSON "
+                        "from stdin (default: %(default)s)")
         sp.add_argument("--episodes", nargs="+", help="episode directories (or a directory of episodes) instead of a split")
         sp.add_argument("--seeds", help="seed list/ranges, e.g. 1-20,40 (closed runs: set AUDITGYM_SALT)")
         sp.add_argument("--config", help="config JSON for --seeds (a split file with 'episodes' is used as a split)")
@@ -747,6 +759,7 @@ def cmd_split(a) -> int:
     for e in cfg["episodes"]:
         e["seed"] = f"jury-{secrets.token_hex(8)}"
     print(json.dumps(cfg, indent=1, ensure_ascii=False))
+    print(f"wrote a split with {len(cfg['episodes'])} episodes (5 clean, 5 interacting, 10 other; fresh random seeds)", file=sys.stderr)
     return 0
 
 

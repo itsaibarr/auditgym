@@ -76,17 +76,23 @@ def working(con: Console, first: str | None = None):
     starts a new line; count overrides the "done/total" text (e.g. when the bar is weighted by time)."""
     if not con.is_terminal:  # logs (jury harnesses capture to files): a line per stage, then a status line every 5 s
         import threading
-        st: dict = {"stage": None, "t0": 0.0, "last": 0.0, "count": "", "frac": None, "total": 0.0, "weighted": None}
+        st: dict = {"stage": None, "t0": 0.0, "last": 0.0, "count": "", "frac": None, "total": 0.0, "weighted": None, "detail": ""}
         stop = threading.Event()
 
         def say(stage: str, detail: str = "", done: float | None = None, total: float | None = None, count: str | None = None) -> None:
             now = time.monotonic()
             if stage != st["stage"]:
-                st.update(stage=stage, t0=now, last=now, count="", frac=None)
+                done_line()
+                st.update(stage=stage, t0=now, last=now, count="", frac=None, detail="")
                 con.print(f"  ... {stage}", style="dim", markup=False, soft_wrap=True)
+            st["detail"] = detail
             if total:
                 st.update(frac=min((done or 0) / total, 1.0), total=total, weighted=count,
                           count=count or f"{int(done or 0)}/{int(total)}")
+
+        def done_line() -> None:  # close the previous stage with its final count, so no stale "48/80 · ~3 s left" stays last
+            if st["stage"] and st["frac"] is not None:
+                con.print(f"      done: {st['count']} · {time.monotonic() - st['t0']:.0f} s", style="dim", markup=False)
 
         def beat() -> None:  # runs even while a long step reports nothing (test collection, one slow episode)
             while not stop.wait(1.0):
@@ -95,8 +101,8 @@ def working(con: Console, first: str | None = None):
                     st["last"] = now
                     el = now - st["t0"]
                     left = _left(st["frac"], el, st["total"], st["weighted"]) if st["frac"] is not None else ""
-                    con.print(f"      {st['count'] + ' · ' if st['count'] else 'still working · '}{el:.0f} s{' · ' + left if left else ''}",
-                              style="dim", markup=False)
+                    con.print(f"      {st['count'] + ' · ' if st['count'] else 'still working · '}{el:.0f} s{' · ' + left if left else ''}"
+                              f"{' · ' + st['detail'] if st['detail'] else ''}", style="dim", markup=False)
         if first:
             say(first)
         th = threading.Thread(target=beat, daemon=True)
@@ -106,6 +112,7 @@ def working(con: Console, first: str | None = None):
         finally:
             stop.set()
             th.join()
+            done_line()
         return
     from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
     cols = (SpinnerColumn(finished_text="[green]✓[/]"), TextColumn("{task.description}"), BarColumn(bar_width=20),
@@ -172,6 +179,12 @@ def _shown(p: Path) -> str:
     """Path as the user sees it: the Windows launcher mounts the host report folder at /report."""
     host = os.environ.get("AUDITGYM_REPORT_HOST")
     return str(p).replace("/report", host, 1) if host and str(p).startswith("/report") else str(p)
+
+
+def _clean_txt(n: int, tour_shape: bool) -> str:
+    """The tour's split has 5 clean episodes; an 'other' episode can also draw no errors at random."""
+    extra = n - 5
+    return f"{n} clean books: the 5 clean ones plus {extra} that drew no errors at random" if tour_shape and extra > 0 else f"{n} clean books"
 
 
 def _rel(p: Path) -> str:
@@ -260,7 +273,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
         "Runs the whole verification in 1-2.5 minutes, then prints a pass/fail scorecard for each case criterion.\n"
         "Fully offline: no network, GPU, API keys or accounts needed. Ctrl-C stops it at any time.\n"
         "4 steps: hidden-episode evaluation → paired checks → replay and leak scan → the full official check → scorecard\n"
-        f"[dim]Python {platform.python_version()} · {platform.system()} {platform.machine()} · code hash {report['code_hash']}[/]\n"
+        f"[dim]Python {platform.python_version()} · {platform.system()} {platform.machine()} · build {report['code_hash']} (the same id is in every run.json)[/]\n"
         "Report folder: " + _shown(outdir),
         border_style="cyan"))
     in_docker = os.environ.get("AUDITGYM_LAUNCHER", "").startswith("docker run")
@@ -316,7 +329,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     data_ok_n = sum(c["ok"] for c in checks)
     con.print(f"{'[green]✓[/]' if data_ok_n == n_eps else '[red]✗[/]'} Data, checked on each of the {n_eps} episodes by code that "
               f"does not use the generator ({sum(c['issues'] for c in checks)} errors injected, "
-              f"{sum(1 for c in checks if not c['issues'])} clean books):")
+              f"{_clean_txt(sum(1 for c in checks if not c['issues']), split is None)}):")
     con.print(f"    the books balance before errors are injected (8 accounting equalities, e.g. every entry balances): {sum(c['invariants_before'] is not False for c in checks)}/{n_eps}\n"
               f"    the problems found in the books are exactly the declared errors: {sum(c['declared_after'] for c in checks)}/{n_eps}\n"
               f"    the evidence in the answer key reproduces the amounts: {sum(c['evidence'] for c in checks)}/{n_eps}")
