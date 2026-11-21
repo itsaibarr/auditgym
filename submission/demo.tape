@@ -29,7 +29,7 @@ Enter
 Type "# 1) The jury tour: one line from the README (it downloads only itself; every check runs offline), no keys or GPU. Ends with a scorecard."
 Enter
 Sleep 2s
-Type "curl -fsSL https://raw.githubusercontent.com/itsaibarr/auditgym/master/run.sh | sh"
+Type `echo "[auditgym] fetching the launcher (7 KB) ..."; curl -fsSL https://raw.githubusercontent.com/itsaibarr/auditgym/master/run.sh | sh`
 Enter
 Wait
 Sleep 12s
@@ -63,7 +63,7 @@ Sleep 10s
 
 Type "clear"
 Enter
-Type "# 20 paired checks: rows shuffled and document/line IDs renamed; oracle must stay at 1.0 and expert must not change"
+Type "# 20 paired checks: rows shuffled, document/line IDs renamed; the oracle must stay at 1.0 (we also show if expert's answer changes)"
 Enter
 Type "$D auditgym:1.0.0 paired --split - < my_split.json"
 Enter

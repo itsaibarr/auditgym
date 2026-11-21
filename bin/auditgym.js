@@ -105,15 +105,18 @@ const runs = (u) => spawnSync(u, ["--version"], { timeout: 15000 }).status === 0
 let uv = process.env.AUDITGYM_UV ||
   [path.join(CACHE, "bin", "uv"), which("uv"), path.join(os.homedir(), ".local", "bin", "uv"), path.join(os.homedir(), ".cargo", "bin", "uv")].find((u) => u && exists(u) && runs(u));
 if (!uv) uv = installUv();
-if (first) {  // visible Python download only if missing, quiet package install, then one receipt line
+// run a setup step quietly with a live line every 2 s (bin/tick.sh, shared with run.sh); this path is macOS/Linux only
+const ticked = (label, cmd) => spawnSync("sh", ["-c", `say() { printf '[auditgym] %s\\n' "$*" >&2; }; UV="$1"; shift; . "$1"; shift; tick "$@"`,
+  "sh", uv, path.join(ROOT, "bin", "tick.sh"), label, ...cmd], { stdio: ["ignore", 2, "inherit"] }).status;
+if (first) {  // quiet installs with a live line every 2 s, then one receipt line
   if (spawnSync(uv, ["python", "find", "3.11"], { stdio: "ignore" }).status !== 0) {
     say("downloading Python 3.11 (~30 MB, one time) ...");
-    if (spawnSync(uv, ["python", "install", "--no-bin", "3.11"], { stdio: ["ignore", 2, "inherit"] }).status !== 0) {
+    if (ticked("downloading Python 3.11 (usually 5-30 s)", [uv, "python", "install", "--quiet", "--no-bin", "3.11"]) !== 0) {
       say("Python download failed: run the same command again (finished downloads are kept)"); process.exit(2);
     }
   }
   say("installing the 19 pinned packages ...");
-  if (spawnSync(uv, ["sync", "--quiet", "--frozen", "--extra", "gym", "--project", ROOT], { stdio: ["ignore", 2, "inherit"] }).status !== 0) {
+  if (ticked("installing the 19 pinned packages (usually 5-20 s)", [uv, "sync", "--quiet", "--frozen", "--extra", "gym", "--project", ROOT]) !== 0) {
     say("package install failed: run the same command again (finished downloads are kept)"); process.exit(2);
   }
   say(`✓ setup done in ${Math.round((Date.now() - T0) / 1000)} s: uv, Python 3.11 and the packages (later runs start in about 1 s)`);

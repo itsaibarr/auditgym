@@ -145,6 +145,7 @@ def _closed_guard(a, how: str) -> None:
 
 
 def cmd_generate(a) -> int:
+    print("  ... preparing the episodes (a large one can take a few seconds)", file=sys.stderr, flush=True)
     if a.seed is not None:
         cfg = json.loads(Path(a.config).read_text()) if a.config else {}
         a.seed = parse_seeds(a.seed)[0]
@@ -162,6 +163,7 @@ def cmd_generate(a) -> int:
 
 
 def cmd_run(a) -> int:
+    print("  ... preparing the episodes (a large one can take a few seconds)", file=sys.stderr, flush=True)
     from .runner import harden_runner, run_policies, salt_exposures, summarize
     harden_runner()  # first: same-user children (incl. the pre-flight probe) must not read /proc/<runner>/environ|mem
     exposed = salt_exposures()  # [] unless Linux and AUDITGYM_SALT is set
@@ -212,10 +214,11 @@ def cmd_run(a) -> int:
     stage = (f"Running {len(specs)} {'policy' if len(specs) == 1 else 'policies'} on {len(episodes)} episodes"
              + (", each in an isolated process" if not a.no_isolate else ""))
     with working(Console(stderr=True, highlight=False), stage) as say:  # progress on stderr: stdout stays the results
+        say(stage, "each episode: up to 60 s and 100 steps", 0, len(specs) * len(episodes))
         results = run_policies(specs, episodes, Path(a.out), mode=a.mode, args=a.policy_arg, policy_path=a.policy_path,
                                isolate=not a.no_isolate, allow_forks=a.allow_forks, meta={"sources": source, "isolate": not a.no_isolate, "allow_forks": a.allow_forks,
                                                          "trust_policies": a.trust_policies}, dir_name=name,
-                               on_episode=lambda spec, n, tot: say(stage, f"now: {spec}", n, tot))
+                               on_episode=lambda spec, n, tot: say(stage, f"now: {spec} (each episode: up to 60 s and 100 steps)", n, tot))
     rows, dead = [], []
     for spec in specs:
         res = results[spec]
@@ -351,6 +354,7 @@ def cmd_leakscan(a) -> int:
         print(f"{'PASS' if not problems else 'FAIL'} {d}: {len(problems)} problems")
         for p in problems[:20]:
             print("  " + p)
+    print(f"{'PASS' if not bad else 'FAIL'}: {len(a.runs)} runs scanned, {bad} problems")
     return 1 if bad else 0
 
 
@@ -389,6 +393,7 @@ def cmd_datacheck(a) -> int:
     injected books break exactly the declared errors, and every evidence set reproduces its amount from its own records.
     Uses code that does not import the generator. Episodes from a split are regenerated (so the books before injection
     exist); episode folders on disk only have the injected books, so that column says n/a."""
+    print("  ... preparing the episodes (a large one can take a few seconds)", file=sys.stderr, flush=True)
     from rich.console import Console
     from .datacheck import kind, kind_counts, verify_episode
     from .tour import working
@@ -418,6 +423,7 @@ def cmd_paired(a) -> int:
     """The case's paired checks (section 06/10): each episode is copied with its rows shuffled and its document and line
     IDs renamed; the oracle's answer under the new IDs must still get reward 1.0 (this decides the result and exit code).
     For every other --policy, whether its answer stays the same is reported per policy: a property of that policy."""
+    print("  ... preparing the episodes (a large one can take a few seconds)", file=sys.stderr, flush=True)
     from .episode import Episode
     from .perturb import perturb
     from .runner import harden_runner, run_episode, salt_exposures
@@ -459,7 +465,8 @@ def cmd_paired(a) -> int:
         say(stage, f"now: {ep.episode_id}", k + 1, len(eps))
     ctx.__exit__(None, None, None)
     rich_table("Paired checks (case sections 06 and 10, 'Reproducibility and generalization')",
-               ["#", "Episode", "Kind", "IDs renamed", "Oracle reward on the copy", "Other policies with the same answer", "Result"], rows,
+               ["#", "Episode", "Kind", "IDs renamed", "Oracle reward on the copy",
+                f"{specs[0]}: same answer on the copy" if len(specs) == 1 else "Other policies with the same answer", "Result"], rows,
                "Each copy has its rows shuffled and its document and line IDs renamed (auditgym/perturb.py). The case's paired "
                "check, and this command's result and exit code: the oracle's answer, mapped to the new IDs, still gets +1.000. " + KINDS)
     print()
@@ -586,7 +593,7 @@ def build_parser() -> argparse.ArgumentParser:
     def cmdp(name: str, h: str):
         return sub.add_parser(name, help=h, description=h[0].upper() + h[1:] + ".")
 
-    t = cmdp("tour", "start here: the whole jury check in 1-2.5 minutes, ending with a pass/fail scorecard for each case criterion")
+    t = cmdp("tour", "start here: the whole jury check in 1-2 minutes, ending with a pass/fail scorecard for each case criterion")
     t.add_argument("--out", help="report directory (default: ./auditgym-report)")
     t.add_argument("--quick", action="store_true", help="fewer fresh seeds in the test step")
     t.add_argument("--split", help="'-' = run steps 2-4 on YOUR split from stdin (AUDITGYM_SALT if set and not visible to a wrapper process such as npx/run.sh, else a random salt)")
@@ -697,7 +704,7 @@ and grades whether an agent finds them. Runs offline: no network, API keys, GPU 
 
 START HERE
   auditgym tour
-      The whole jury check in 1-2.5 minutes. Ends with a pass/fail scorecard for each case criterion.
+      The whole jury check in 1-2 minutes. Ends with a pass/fail scorecard for each case criterion.
 
 CHECK THE GRADER ON SEEDS ONLY YOU KNOW
   auditgym split > my_split.json

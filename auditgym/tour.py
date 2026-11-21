@@ -264,13 +264,15 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     # bound to the real stdout now: steps below capture sys.stdout, the live progress must not go there. Not a terminal
     # (Docker without -t, a pipe): 160 columns instead of Rich's 80, so the scorecard is not squeezed.
     con = Console(file=sys.stdout, highlight=False, width=None if sys.stdout.isatty() or os.environ.get("COLUMNS") else 160)
+    # live progress goes to stderr (bound now, before steps capture it); tables, scorecard and next steps stay on stdout
+    pcon = Console(file=sys.stderr, highlight=False, width=None if sys.stderr.isatty() or os.environ.get("COLUMNS") else 160)
     t_all = time.time()
     outdir = _out_dir(out)
     report: dict = {"auditgym_version": __version__, "code_hash": code_hash(), "python": platform.python_version(),
                     "platform": platform.platform(), "steps": {}}
     con.print(Panel.fit(
         f"[bold]AuditGym {__version__} · jury tour[/]\n"
-        "Runs the whole verification in 1-2.5 minutes, then prints a pass/fail scorecard for each case criterion.\n"
+        "Runs the whole verification in 1-2 minutes, then prints a pass/fail scorecard for each case criterion.\n"
         "Fully offline: no network, GPU, API keys or accounts needed. Ctrl-C stops it at any time.\n"
         "4 steps: hidden-episode evaluation → paired checks → replay and leak scan → the full official check → scorecard\n"
         f"[dim]Python {platform.python_version()} · {platform.system()} {platform.machine()} · build {report['code_hash']} (the same id is in every run.json)[/]\n"
@@ -285,11 +287,11 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     # 1. closed evaluation like the organizers' ---------------------------------------------------------------------
     _step(con, "Step 1/4 · Hidden-episode evaluation", "how the organizers will test agents",
           ("Uses the episodes from your split (read from stdin). " if split is not None else
-           "Creates 20 new episodes from secret random seeds and a secret salt (a random key mixed into every seed, so an "
-           "agent cannot rebuild the answers with the open generator), never written down: 5 with clean books, 5 with "
-           "errors that interact. ")
-          + "Checks each episode's data independently, then runs our adapters of the case's 4 reference policies and our expert policy on them, "
-            "each in its own isolated process. Usually under 10 s.")
+           "20 new episodes from secret random seeds and a secret salt, never written down (5 with clean books, 5 with "
+           "errors that interact). ")
+          + "Their data is checked independently, then the case's 4 reference policies (our adapters) and our expert run on "
+            "them, each in an isolated process. Under 10 s. (The salt is a secret key mixed into every seed, so an agent cannot "
+            "rebuild the answers with the open generator.)")
     t0 = time.time()
     if split is not None and os.environ.get("AUDITGYM_SALT"):
         from .runner import salt_exposures
@@ -299,7 +301,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
                       "uses a new random salt instead. For a strict closed evaluation with your own salt, use the Docker recipe "
                       "in the README.",
                       style="yellow", markup=False, soft_wrap=True)
-    with working(con) as say, contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+    with working(pcon) as say, contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
         say("Generating the hidden episodes" if split is None else "Generating the episodes of your split")
         eps, redrawn, used_split, salt = _closed_episodes(split)
         closed = outdir / "closed"
@@ -373,7 +375,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
           "oracle stays at 1.0 and expert gets exactly the same result. Usually a few seconds.")
     t0 = time.time()
     bad = []
-    with working(con) as say:
+    with working(pcon) as say:
         for k, (_, ep) in enumerate(eps):
             pub2, truth2, _ = perturb(ep.public, ep.truth, seed=secrets.randbits(32))
             ep2 = Episode(pub2, truth2, ep.provenance, {})
@@ -393,7 +395,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
           "(HMAC) saved in its run.json, and scans everything the policies saw for leaked answers. Usually a few seconds.")
     t0 = time.time()
     epmap = {ep.episode_id: ep for _, ep in eps}
-    with working(con) as say:
+    with working(pcon) as say:
         say("Replaying the recorded reconcile run with re-grading")
         rep_ok, rep_n = _replay_ok(outdir / "closed" / "reconcile", epmap)
     old = os.environ.get("AUDITGYM_SALT")
@@ -421,7 +423,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     cap_out, cap_err = io.StringIO(), io.StringIO()
     juror_salt = os.environ.pop("AUDITGYM_SALT", None)  # the official check uses its own open data, never the juror's salt
     try:
-        with working(con) as say, contextlib.redirect_stdout(cap_out), contextlib.redirect_stderr(cap_err):
+        with working(pcon) as say, contextlib.redirect_stdout(cap_out), contextlib.redirect_stderr(cap_err):
             rc = run_check(quick=quick, out=outdir / "check", progress=say)
     finally:
         if juror_salt is not None:
@@ -513,6 +515,10 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
         con.print("  " + short(cmd), soft_wrap=True, markup=False)
     con.print(f"More commands, each with when to use it: {short(ag0) if not ag0.startswith('docker run') else 'docker run --rm auditgym:1.0.0'} --help"
               " · the full list is also in report.md", style="dim", markup=False, soft_wrap=True)
+    opener = "open" if sys.platform == "darwin" else "xdg-open" if sys.platform.startswith("linux") else ""
+    if opener and not ag0.startswith("docker run"):
+        con.print(f"[bold cyan]»[/] [bold]Read the full report[/] (scorecard, policy table, every check): "
+                  f"{opener} {_rel(outdir / 'report.md')}", soft_wrap=True)
     con.print()
     con.print(verdict)  # the verdict is the last line on screen
     with open(outdir / "report.md", "a", encoding="utf-8") as f:

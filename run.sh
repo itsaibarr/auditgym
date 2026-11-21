@@ -88,13 +88,14 @@ if [ -z "$UV" ]; then
 fi
 
 rc=0
-if [ ! -d "$SRC/.venv" ]; then   # first run: visible Python download only if missing, quiet packages, one receipt line
+. "$SRC/bin/tick.sh"   # tick: a live line every 2 s while a quiet setup step runs
+if [ ! -d "$SRC/.venv" ]; then   # first run: quiet installs with a live line every 2 s, then one receipt line
   if ! "$UV" python find 3.11 >/dev/null 2>&1; then
     say "downloading Python 3.11 (~30 MB, one time) ..."
-    "$UV" python install --no-bin 3.11 || { say "Python download failed: run the same command again (finished downloads are kept)"; exit 2; }
+    tick "downloading Python 3.11 (usually 5-30 s)" "$UV" python install --quiet --no-bin 3.11 || { say "Python download failed: run the same command again (finished downloads are kept)"; exit 2; }
   fi
   say "installing the 19 pinned packages ..."
-  "$UV" sync --quiet --frozen --extra gym --project "$SRC" || { say "package install failed: run the same command again (finished downloads are kept)"; exit 2; }
+  tick "installing the 19 pinned packages (usually 5-20 s)" "$UV" sync --quiet --frozen --extra gym --project "$SRC" || { say "package install failed: run the same command again (finished downloads are kept)"; exit 2; }
   say "✓ setup done in $(( $(date +%s) - T0 )) s: uv, Python 3.11 and the packages (later runs start in about 1 s)"
 fi
 AUDITGYM_LAUNCHER="sh '$SRC/run.sh'" AUDITGYM_SRC="$SRC" "$UV" run --quiet --frozen --extra gym --project "$SRC" auditgym "$@" || rc=$?

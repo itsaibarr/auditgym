@@ -15,7 +15,7 @@ Hide
 Type `export PS1='$ ' && rm -rf /tmp/jury-cold && mkdir -p /tmp/jury-cold/home /tmp/jury-cold/work && export HOME=/tmp/jury-cold/home PATH="$(dirname "$(command -v node)"):/usr/bin:/bin" UV_PYTHON_PREFERENCE=only-managed && cd /tmp/jury-cold/work && clear`
 Enter
 Show
-Type "curl -fsSL https://raw.githubusercontent.com/itsaibarr/auditgym/master/run.sh | sh"
+Type `echo "[auditgym] fetching the launcher (7 KB) ..."; curl -fsSL https://raw.githubusercontent.com/itsaibarr/auditgym/master/run.sh | sh`
 Enter
 Wait
 Sleep 10s

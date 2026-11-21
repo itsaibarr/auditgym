@@ -91,13 +91,14 @@ def _pytest(rep: Report, quick: bool, say) -> None:
                 q.put(ln)
             q.put(None)
         threading.Thread(target=pump, daemon=True).start()
-        cur, t_last = Path(_test_files()[0]).stem, time.monotonic()
+        cur, t_last, shown_max = Path(_test_files()[0]).stem, time.monotonic(), [0.0]
         say(STAGE_TESTS, "collecting the tests (about 5 s)", 0, weight, "0%")
 
         def show(running: float = 0.0, note: str = "") -> None:
             # finished tests count with their measured seconds; the running one moves the bar at most up to its expected time.
             # The bar is time, so the count goes in the detail: early on, few slow tests are most of the time.
-            shown = min(spent + running, weight * 0.99)
+            shown = max(min(spent + running, weight * 0.99), shown_max[0])  # never moves back
+            shown_max[0] = shown
             pct = int(100 * shown / weight)
             slow = " (the slow ones run first)" if total and pct > 100 * done / total + 15 else ""
             say(STAGE_TESTS, f"now testing {TEST_TOPIC.get(cur, cur)}{note} · {done}/{total} tests done{slow}"
