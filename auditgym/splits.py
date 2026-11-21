@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .episode import DEFAULT_SALT, Episode, generate, load_grader, load_public
+from .episode import DEFAULT_SALT, Episode, generate, load_grader, load_public, make_config
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -46,7 +46,11 @@ def split_episodes(split_or_path: str, cfg: dict | None = None) -> list[tuple[st
     out, errors = [], bad_seeds + ([dup_error] if dup_error else [])
     bad_pos = {i for i, e in enumerate(cfg["episodes"]) if isinstance(e["seed"], bool) or not isinstance(e["seed"], (int, str))}
     for pos, e in enumerate(cfg["episodes"]):
-        if pos in bad_pos:
+        if pos in bad_pos:  # its seed is already reported; still list its config problems in the same pass
+            try:
+                make_config({**cfg.get("base_config", {}), **e.get("config", {})})
+            except ValueError as exc:
+                errors.append(f"split entry {pos}: {exc}")
             continue
         try:
             ep = generate(e["seed"], {**cfg.get("base_config", {}), **e.get("config", {})}, salt=salt,

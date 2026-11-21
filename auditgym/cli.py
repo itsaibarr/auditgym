@@ -539,8 +539,9 @@ def cmd_paired(a) -> int:
                 moved = ""
                 if acc1 != acc2:  # name what moved, in the original's ids (the copy's mapped back)
                     fmt = lambda a: "; ".join(f"{x[0]} {','.join(x[1])}" if len(x) > 1 else x[0] for x in a) or "nothing"
-                    moved = (f", accused {fmt(sorted(set(acc1) - set(acc2)))} on the original but "
-                             f"{fmt(sorted(set(acc2) - set(acc1)))} on the copy")
+                    only1, only2 = sorted(set(acc1) - set(acc2)), sorted(set(acc2) - set(acc1))
+                    moved = ", " + "; ".join(p for p in (only1 and f"accused {fmt(only1)} only on the original",
+                                                         only2 and f"accused {fmt(only2)} only on the copy") if p)
                 per[spec]["changed"].append(f"{ep.episode_id} {r1['tp']}/{r1['fp']}/{r1['fn']} {hit(r1)} → "
                                             f"{r2['tp']}/{r2['fp']}/{r2['fn']} {hit(r2)}{moved}")
         ok = o2["reward"] == 1.0  # the case's paired check: the oracle's answer under the new IDs still gets the maximum

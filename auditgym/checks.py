@@ -91,13 +91,26 @@ def _pytest(rep: Report, quick: bool, say) -> None:
                 q.put(ln)
             q.put(None)
         threading.Thread(target=pump, daemon=True).start()
-        cur, t_last, shown_max = Path(_test_files()[0]).stem, time.monotonic(), [0.0]
+        cur, t_last, shown_max, t_tests = Path(_test_files()[0]).stem, time.monotonic(), [0.0], [time.monotonic()]
         say(STAGE_TESTS, "collecting the tests (about 5 s)", 0, weight, "0%")
 
+        hist: list[tuple[float, float]] = []  # (when, expected seconds finished): this machine's pace, recently
+
         def show(running: float = 0.0, note: str = "") -> None:
-            # finished tests count with their measured seconds; the running one moves the bar at most up to its expected time.
-            # The bar is time, so the count goes in the detail: early on, few slow tests are most of the time.
-            shown = max(min(spent + running, weight * 0.99), shown_max[0])  # never moves back
+            # The bar is this machine's time: elapsed / (elapsed + expected seconds left x the pace of the last ~10 s).
+            # Measured seconds keep the few slow tests from looking like most of the work; the recent pace corrects for
+            # machines where the many fast tests are relatively slower (2 CPU), so the tail does not sit at "almost done".
+            now = time.monotonic()
+            if hist:
+                while len(hist) > 2 and now - hist[1][0] > 10:
+                    hist.pop(0)
+                el, dt, dw = now - t_tests[0], now - hist[0][0], spent - hist[0][1]
+                pace = dt / dw if dw > 0.2 else el / spent if spent > 0.2 else 1.0  # no recent finish: the overall pace
+                left = max(weight - spent - running, 0.0) * pace
+                frac = el / (el + left) if el + left > 0 else 0.0
+            else:
+                frac = 0.0
+            shown = max(min(frac * weight, weight * 0.99), shown_max[0])  # never moves back
             shown_max[0] = shown
             pct = int(100 * shown / weight)
             say(STAGE_TESTS, f"{done}/{total} tests (the % is time: slow ones run first) · now: {TEST_TOPIC.get(cur, cur)}{note}"
@@ -115,12 +128,15 @@ def _pytest(rep: Report, quick: bool, say) -> None:
             lines.append(line)
             if not total and (m := _COLLECTED.search(line)):
                 total = int(m.group(1))
+                t_tests[0] = time.monotonic()
+                hist.append((t_tests[0], 0.0))
                 show()
             elif m := _RESULT.match(line):
                 done += 1
                 failed += m.group(3) in ("FAILED", "ERROR")
                 spent += per_test.get(f"{m.group(1)}::{m.group(2)}", 0.02)
                 cur, t_last = m.group(1), time.monotonic()
+                hist.append((t_last, spent))
                 show()
         proc.wait()
         if total:

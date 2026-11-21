@@ -1170,3 +1170,11 @@ def test_policy_repeats_and_cmd_keeps_its_commas(tmp_path, capsys):
                  "--out", str(tmp_path / "out"), "--trust-policies", "--format", "csv"]) == 0
     rows = capsys.readouterr().out.splitlines()
     assert len(rows) == 3 and rows[2].startswith('"cmd:')
+
+
+def test_config_unknown_key_and_unfit_scenario_reported_together():
+    """An unknown key does not hide the rest; X1 (3 linked errors) cannot silently vanish under max_errors 1."""
+    from auditgym.episode import make_config
+    with pytest.raises(ValueError) as e:
+        make_config({"colour": 1, "year": 2201, "interacting": {"X1": 1.0}, "max_errors": 1})
+    assert all(k in str(e.value) for k in ("colour", "year", "max_errors >= 3"))

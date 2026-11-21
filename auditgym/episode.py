@@ -58,21 +58,29 @@ def _make_config(overrides: dict | None = None) -> dict:
     if overrides is not None and not isinstance(overrides, dict):
         raise ValueError("config must be an object")
     cfg = json.loads(json.dumps(DEFAULT_CONFIG))
+    problems = []  # keep going after a bad key, so one pass lists every problem
     for k, v in (overrides or {}).items():
         if k not in DEFAULT_CONFIG:
-            raise ValueError(f"unknown config key {k!r} (known: {sorted(DEFAULT_CONFIG)})")
-        if k == "errors":
-            for t, spec in v.items():
+            problems.append(f"unknown config key {k!r} (known: {sorted(DEFAULT_CONFIG)})")
+        elif k == "errors":
+            for t, spec in (v.items() if isinstance(v, dict) else [(v, None)]):
                 if t not in cfg["errors"] or not isinstance(spec, dict) or set(spec) - {"on", "count"}:
-                    raise ValueError(f"bad errors entry {t!r}: types {sorted(cfg['errors'])}, keys on/count")
-                cfg["errors"][t] = {**cfg["errors"][t], **spec}
+                    problems.append(f"bad errors entry {t!r}: types {sorted(cfg['errors'])}, keys on/count")
+                else:
+                    cfg["errors"][t] = {**cfg["errors"][t], **spec}
         elif k == "interacting":
-            if set(v) - {"X1", "X2"}:
-                raise ValueError(f"interacting takes X1/X2 probabilities, got {sorted(v)}")
-            cfg["interacting"].update(v)
+            if not isinstance(v, dict) or set(v) - {"X1", "X2"}:
+                problems.append(f"interacting takes X1/X2 probabilities, got {sorted(v) if isinstance(v, dict) else v!r}")
+            else:
+                cfg["interacting"].update(v)
         else:
             cfg[k] = v
-    _validate_config(cfg)
+    try:
+        _validate_config(cfg)
+    except ValueError as e:
+        problems.append(str(e))
+    if problems:
+        raise ValueError("; ".join(problems))
     return cfg
 
 
@@ -107,6 +115,10 @@ def _validate_config(cfg: dict) -> None:
     def interacting():
         if not all(isinstance(p, (int, float)) and not isinstance(p, bool) and 0 <= p <= 1 for p in cfg["interacting"].values()):
             raise ValueError("interacting probabilities must be numbers in [0, 1]")
+        me = cfg["max_errors"]
+        for x, size in (("X1", 3), ("X2", 2)):  # a linked scenario injects this many errors at once; it never fits a smaller budget
+            if cfg["interacting"][x] > 0 and isinstance(me, int) and me < size:
+                raise ValueError(f"interacting {x} injects {size} linked errors, so it needs max_errors >= {size}, got {me}")
 
     def cutoff():
         w = cfg["cutoff_window_days"]
