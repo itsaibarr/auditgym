@@ -489,9 +489,9 @@ def cmd_check(a) -> int:
         return run_check(quick=a.quick, as_json=True, out=Path(a.out))
     from .tour import working  # a live status line in a terminal, one line per stage otherwise
     con = _console()
-    con.print("auditgym check: the test suite (570 tests), then the 5 baseline policies on the 20 open episodes, reward-order "
+    con.print("auditgym check: the test suite (about 570 tests), then the 5 baseline policies on the 20 open episodes, reward-order "
               "checks, a leak scan, 20 paired checks and a replay. Usually 40-110 s at 2 CPU; a results table and "
-              "PASS/FAIL n/148 come at the end.", markup=False, soft_wrap=True)
+              "PASS or FAIL with the number of checks passed come at the end.", markup=False, soft_wrap=True)
     with working(con) as say:
         return run_check(quick=a.quick, out=Path(a.out), progress=say)
 
