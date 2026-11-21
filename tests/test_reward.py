@@ -113,18 +113,28 @@ MALFORMED = [
     {"episode_id": "ep_wrong", "findings": []},
     {"episode_id": "{ep}", "findings": [], "extra": 1},
     {"episode_id": "{ep}", "findings": [{"type": "duplicate_invoice"}]},
-    {"episode_id": "{ep}", "findings": [{"type": "fraud", "affected_ids": ["D-1"], "claimed_amount_minor": 1, "currency": "USD", "evidence_ids": [], "explanation": ""}]},
     {"episode_id": "{ep}", "findings": [{"type": "fx_conversion", "affected_ids": ["D-1"], "claimed_amount_minor": 1.0, "currency": "USD", "evidence_ids": [], "explanation": ""}]},
     {"episode_id": "{ep}", "findings": [{"type": "fx_conversion", "affected_ids": ["D-1"], "claimed_amount_minor": "100", "currency": "USD", "evidence_ids": [], "explanation": ""}]},
     {"episode_id": "{ep}", "findings": [{"type": "fx_conversion", "affected_ids": ["D-1"], "claimed_amount_minor": True, "currency": "USD", "evidence_ids": [], "explanation": ""}]},
-    {"episode_id": "{ep}", "findings": [{"type": "fx_conversion", "affected_ids": ["D-1"], "claimed_amount_minor": -5, "currency": "USD", "evidence_ids": [], "explanation": ""}]},
     {"episode_id": "{ep}", "findings": [{"type": "fx_conversion", "affected_ids": ["D-1"], "claimed_amount_minor": 10**30, "currency": "USD", "evidence_ids": [], "explanation": ""}]},
-    {"episode_id": "{ep}", "findings": [{"type": "fx_conversion", "affected_ids": ["D-1"], "claimed_amount_minor": 1, "currency": "usd", "evidence_ids": [], "explanation": ""}]},
     {"episode_id": "{ep}", "findings": [{"type": "fx_conversion", "affected_ids": ["D-1"], "claimed_amount_minor": 1, "currency": "USD", "evidence_ids": ["x"] * 11, "explanation": ""}]},
     {"episode_id": "{ep}", "findings": [{"type": "fx_conversion", "affected_ids": ["D-1"], "claimed_amount_minor": 1, "currency": "USD", "evidence_ids": [], "explanation": "x" * 1001}]},
     {"episode_id": "{ep}", "findings": [{"type": "fx_conversion", "affected_ids": ["D-1"], "claimed_amount_minor": 1, "currency": "USD", "evidence_ids": [], "explanation": ""}] * 31},
     {"episode_id": "{ep}", "findings": [{"type": "fx_conversion", "affected_ids": [], "claimed_amount_minor": 1, "currency": "USD", "evidence_ids": [], "explanation": ""}]},
 ]
+
+
+# Published jury conventions (genesis-exe.com/fintech-checks.html, "Нормализация" 4-6, M06): an unknown type string, a
+# currency that differs (also only by case, spaces or a newline) and any JSON integer amount are structurally valid;
+# such a finding simply does not match: FP, the episode is graded normally (not reward -1 for the whole submit).
+UNMATCHED = [{"type": "fraud"}, {"claimed_amount_minor": -5}, {"currency": "usd"}, {"currency": "USD "}]
+
+
+@pytest.mark.parametrize("change", UNMATCHED)
+def test_unknown_type_or_currency_is_an_fp_not_malformed(dirty, change):
+    f = oracle_findings(dirty)[0]
+    res, _ = submit_after(dirty, [{**f, **change}])
+    assert res["valid"] is True and res["tp"] == 0 and res["fp"] == 1
 
 
 @pytest.mark.parametrize("payload", MALFORMED)

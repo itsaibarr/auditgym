@@ -322,10 +322,11 @@ def test_forged_or_foreign_cursors_rejected(dirty, cursor):
     assert o["error"]["code"] == "invalid_cursor"
 
 
-def test_currency_with_newline_is_malformed(dirty):
+def test_currency_with_newline_does_not_match(dirty):
+    """Exact currency comparison, no trimming (published convention M06): a valid finding that is an FP."""
     f = oracle_findings(dirty)[0]
     res, _ = submit_after(dirty, [{**f, "currency": f["currency"] + "\n"}])
-    assert res["valid"] is False and res["reward"] == -1.0
+    assert res["valid"] is True and res["tp"] == 0 and res["fp"] == 1
 
 
 def test_gym_reset_without_seed_varies():
