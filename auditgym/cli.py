@@ -263,6 +263,9 @@ def _verified(runs) -> bool:
 
 
 def cmd_compare(a) -> int:
+    if a.per_type and a.format == "csv":  # two tables with different columns cannot share one CSV header
+        raise ValueError("--per-type with --format csv would print two tables in one file; use --format json "
+                         "(one object with both: comparison and by_error_type), or run compare twice")
     if not _verified(a.runs):
         return 1
     rows = []
@@ -280,21 +283,27 @@ def cmd_compare(a) -> int:
                      "failed": sum(part.get("termination", {}).get(t, 0) for t in ("timeout", "policy_crash")),
                      "dirty_return": round(sum(dirty) / len(dirty), 4) if dirty else None,
                      "invalid": sum(1 for r in res if not r.get("valid", True))})
+    if not a.per_type:
+        print_table(rows, "Comparison of runs", a.format)
+        return 0
+    per, per_json = [], []
+    for d in a.runs:
+        s = json.loads((Path(d) / "summary.json").read_text())["all"]
+        per += [[Path(d).name, t, str(v["tp"]), str(v["fp"]), str(v["fn"])] for t, v in sorted(s["per_type"].items())] or \
+            [[Path(d).name, "(no valid answer: nothing to match)", "-", "-", "-"]]
+        per_json += [{"run": Path(d).name, "type": t, "tp": v["tp"], "fp": v["fp"], "fn": v["fn"]} for t, v in sorted(s["per_type"].items())]
+    if a.format == "json":  # one document for scripts: both tables in one object
+        print(json.dumps({"comparison": rows, "by_error_type": per_json}, indent=2))
+        return 0
     print_table(rows, "Comparison of runs", a.format)
-    if a.per_type:
-        per = []
-        for d in a.runs:
-            s = json.loads((Path(d) / "summary.json").read_text())["all"]
-            per += [[Path(d).name, t, str(v["tp"]), str(v["fp"]), str(v["fn"])] for t, v in sorted(s["per_type"].items())] or \
-                [[Path(d).name, "(no valid answer: nothing to match)", "-", "-", "-"]]
-        if a.format == "auto":
-            print()
-            rich_table("By error type", ["Run", "Error type", "Found", "False alarms", "Missed"], per,
-                       "Found: planted errors the policy reported · False alarms: reported errors that were not planted · "
-                       "Missed: planted errors it did not report", left=2)
-        else:
-            print(json.dumps([dict(zip(("run", "type", "tp", "fp", "fn"), r)) for r in per], indent=2) if a.format == "json" else
-                  "\n".join(["run,type,tp,fp,fn"] + [",".join(r) for r in per]))
+    if a.format == "auto":
+        print()
+        rich_table("By error type", ["Run", "Error type", "Found", "False alarms", "Missed"], per,
+                   "Found: planted errors the policy reported · False alarms: reported errors that were not planted · "
+                   "Missed: planted errors it did not report", left=2)
+    else:  # md: a second table
+        print("\n### By error type\n\n| Run | Error type | Found | False alarms | Missed |\n|---|---|---|---|---|")
+        print("\n".join("| " + " | ".join(r) + " |" for r in per))
     return 0
 
 
@@ -538,7 +547,9 @@ def cmd_paired(a) -> int:
                 changed.append(spec)
                 moved = ""
                 if acc1 != acc2:  # name what moved, in the original's ids (the copy's mapped back)
-                    fmt = lambda a: "; ".join(f"{x[0]} {','.join(x[1])}" if len(x) > 1 else x[0] for x in a) or "nothing"
+                    def fmt(a: list) -> str:  # at most 3 accusations and 3 ids each, so one line stays readable
+                        one = lambda x: f"{x[0]} {','.join(x[1][:3])}{',…' if len(x[1]) > 3 else ''}" if len(x) > 1 else x[0]
+                        return "; ".join(one(x) for x in a[:3]) + (f"; and {len(a) - 3} more" if len(a) > 3 else "") or "nothing"
                     only1, only2 = sorted(set(acc1) - set(acc2)), sorted(set(acc2) - set(acc1))
                     moved = ", " + "; ".join(p for p in (only1 and f"accused {fmt(only1)} only on the original",
                                                          only2 and f"accused {fmt(only2)} only on the copy") if p)
@@ -570,7 +581,7 @@ def cmd_paired(a) -> int:
                   "found/false alarms/missed and the errors found, original → copy: "
                   f"{'; '.join(v['changed'][:3])}{' ...' if len(v['changed']) > 3 else ''}). This policy depends on row order or IDs; "
                   "it is a property of the policy, not an environment failure."
-                  + (f" On {v['steps_only']} other copies only the reward differs, from a different step count." if v["steps_only"] else ""))
+                  + (f" On {_pl(v['steps_only'], 'other copy').replace('copys', 'copies')} only the reward differs, from a different step count." if v["steps_only"] else ""))
     print(f"{len(rows) - bad}/{len(rows)} paired checks pass ({kind_counts(eps)}; case section 10: oracle +1.000 on every copy)")
     return 1 if bad else 0
 

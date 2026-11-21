@@ -37,7 +37,7 @@ fi
 
 mkdir -p "$HOME_DIR/bin"
 T0=$(date +%s)
-[ -d "$SRC/.venv" ] || { say "first run: one-time setup before the tour, usually 20-60 s (up to 3 min on a slow network):"; say "  uv, a Python installer (~20 MB), and Python 3.11 (~30 MB download), each only if missing; then 19 pinned packages."; say "  Ctrl-C is safe: running the same command again resumes. Later runs start in a few seconds."; }
+[ -d "$SRC/.venv" ] || { say "first run: one-time setup before the tour, usually 20-60 s (up to 3 min on a slow network):"; say "  uv, a Python installer (16-22 MB, by platform), and Python 3.11 (~30 MB download), each only if missing; then 19 pinned packages."; say "  Ctrl-C is safe: running the same command again resumes. Later runs start in a few seconds."; }
 HERE=""
 if [ -f "$0" ] && [ "$(basename "$0")" = "run.sh" ]; then HERE="$(cd "$(dirname "$0")" 2>/dev/null && pwd || true)"; fi
 if [ -z "${AUDITGYM_SRC:-}" ] && [ -n "$HERE" ] && [ -f "$HERE/uv.lock" ] && [ -d "$HERE/auditgym" ]; then

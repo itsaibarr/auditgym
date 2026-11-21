@@ -1178,3 +1178,25 @@ def test_config_unknown_key_and_unfit_scenario_reported_together():
     with pytest.raises(ValueError) as e:
         make_config({"colour": 1, "year": 2201, "interacting": {"X1": 1.0}, "max_errors": 1})
     assert all(k in str(e.value) for k in ("colour", "year", "max_errors >= 3"))
+
+
+def test_split_shape_problems_and_base_config_named_once(tmp_path):
+    """A typo'd key, a missing seed and a bad base_config are reported in one pass, base_config once."""
+    from auditgym.splits import split_episodes
+    with pytest.raises(ValueError) as e:
+        split_episodes("-", {"episodez": 1, "episodes": [{"sed": 1}, {"seed": 2}]})
+    assert all(k in str(e.value) for k in ("'episodez'", "entry 0: no 'seed'", "'sed'"))
+    with pytest.raises(ValueError) as e:
+        split_episodes("-", {"base_config": {"year": 3000}, "episodes": [{"seed": 2, "config": {"months": [0]}}, {"seed": 3}]})
+    assert str(e.value).count("year must be") == 1 and "months" in str(e.value)
+
+
+def test_compare_per_type_json_is_one_document(tmp_path, capsys):
+    """Scripts parse compare --per-type --format json with one json.loads; csv refuses the two-table mix."""
+    from auditgym.cli import main
+    assert main(["run", "--policy", "reconcile", "--split", "dev", "--out", str(tmp_path)]) == 0
+    capsys.readouterr()
+    assert main(["compare", str(tmp_path / "reconcile"), "--per-type", "--format", "json"]) == 0
+    doc = json.loads(capsys.readouterr().out)
+    assert doc["comparison"][0]["policy"] == "reconcile" and all(isinstance(r["tp"], int) for r in doc["by_error_type"])
+    assert main(["compare", str(tmp_path / "reconcile"), "--per-type", "--format", "csv"]) == 2

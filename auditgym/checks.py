@@ -76,11 +76,12 @@ def _pytest(rep: Report, quick: bool, say) -> None:
                                 cwd=ROOT, env={**env, "PYTHONUNBUFFERED": "1", "COLUMNS": "400"}, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT, text=True)
         try:  # measured seconds per test: the bar moves with time spent, not with the (very uneven) test count
-            per_test = {k: v for k, v in json.loads((ROOT / "tests" / "durations.json").read_text()).items() if k[0] != "_"}
+            dur = json.loads((ROOT / "tests" / "durations.json").read_text())
+            per_test, cases = dur.get("darwin" if sys.platform == "darwin" else "linux", {}), dur.get("cases", {})
         except (OSError, ValueError):
-            per_test = {}
+            per_test, cases = {}, {}
         lines, total, done, failed, spent = [], 0, 0, 0, 0.0
-        weight = sum(per_test.values()) or 1.0
+        weight = sum(v * cases.get(k, 1) for k, v in per_test.items()) or 1.0  # values are seconds per case
         longest: dict[str, float] = {}  # per test file: its slowest test's expected seconds
         for k, v in per_test.items():
             longest[k.split("::")[0]] = max(longest.get(k.split("::")[0], 0.0), v)
@@ -94,19 +95,21 @@ def _pytest(rep: Report, quick: bool, say) -> None:
         cur, t_last, shown_max, t_tests = Path(_test_files()[0]).stem, time.monotonic(), [0.0], [time.monotonic()]
         say(STAGE_TESTS, "collecting the tests (about 5 s)", 0, weight, "0%")
 
-        hist: list[tuple[float, float]] = []  # (when, expected seconds finished): this machine's pace, recently
+        hist: list[tuple[float, float, int]] = []  # per finished test: (when, expected seconds finished, tests done)
 
         def show(running: float = 0.0, note: str = "") -> None:
-            # The bar is this machine's time: elapsed / (elapsed + expected seconds left x the pace of the last ~10 s).
-            # Measured seconds keep the few slow tests from looking like most of the work; the recent pace corrects for
-            # machines where the many fast tests are relatively slower (2 CPU), so the tail does not sit at "almost done".
+            # The bar is this machine's time: elapsed / (elapsed + expected seconds left x the pace of the last 8 tests).
+            # Measured seconds keep the few slow tests from looking like most of the work; the recent pace (seconds taken per
+            # measured second, over the last 8 finished tests, so one long test stops dominating within a few tests) corrects
+            # for machines where the many short tests are relatively slower (2 CPU), so the tail does not sit at "almost done".
             now = time.monotonic()
             if hist:
-                while len(hist) > 2 and now - hist[1][0] > 10:
-                    hist.pop(0)
-                el, dt, dw = now - t_tests[0], now - hist[0][0], spent - hist[0][1]
+                el, base = now - t_tests[0], hist[max(0, len(hist) - 9)]
+                dt, dw = now - base[0], spent + running - base[1]
                 pace = dt / dw if dw > 0.2 else el / spent if spent > 0.2 else 1.0  # no recent finish: the overall pace
                 left = max(weight - spent - running, 0.0) * pace
+                if cur not in SLOW_FIRST and done - base[2] >= 5:  # the many fast tests: never fewer seconds than
+                    left = max(left, dt / (done - base[2]) * (total - done))  # the tests still to run at the recent rate
                 frac = el / (el + left) if el + left > 0 else 0.0
             else:
                 frac = 0.0
@@ -129,14 +132,14 @@ def _pytest(rep: Report, quick: bool, say) -> None:
             if not total and (m := _COLLECTED.search(line)):
                 total = int(m.group(1))
                 t_tests[0] = time.monotonic()
-                hist.append((t_tests[0], 0.0))
+                hist.append((t_tests[0], 0.0, 0))
                 show()
             elif m := _RESULT.match(line):
                 done += 1
                 failed += m.group(3) in ("FAILED", "ERROR")
                 spent += per_test.get(f"{m.group(1)}::{m.group(2)}", 0.02)
                 cur, t_last = m.group(1), time.monotonic()
-                hist.append((t_last, spent))
+                hist.append((t_last, spent, done))
                 show()
         proc.wait()
         if total:
