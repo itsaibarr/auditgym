@@ -34,8 +34,8 @@ POLICIES = ["oracle", "expert", "reconcile", "flag_all", "random"]
 STAGE_TESTS = "Running the test suite"
 TEST_TOPIC = {  # test file -> what it checks, in the juror's words
     "test_contract": "the agent contract: actions, pages, errors", "test_data": "the data and the answer key",
-    "test_reward": "that the reward cannot be gamed", "test_repro": "reproducibility", "test_isolation": "agent isolation (slow: real sandboxed processes)",
-    "test_hardening": "bad inputs and the launchers (slow: each test starts a fresh process)", "test_preflight_leak": "salt-leak guards",
+    "test_reward": "that the reward cannot be gamed", "test_repro": "reproducibility", "test_isolation": "agent isolation",
+    "test_hardening": "bad inputs and the launchers", "test_preflight_leak": "salt-leak guards",
     "test_units": "money and currency arithmetic", "test_gymnasium": "the Gymnasium wrapper",
 }
 _COLLECTED = re.compile(r"collected (\d+) items?")
@@ -100,8 +100,8 @@ def _pytest(rep: Report, quick: bool, say) -> None:
             shown = max(min(spent + running, weight * 0.99), shown_max[0])  # never moves back
             shown_max[0] = shown
             pct = int(100 * shown / weight)
-            slow = " (the slow ones run first)" if cur in SLOW_FIRST[:2] else ""
-            say(STAGE_TESTS, f"now testing {TEST_TOPIC.get(cur, cur)}{note} · {done}/{total} tests done{slow}"
+            slow = " (slow ones first: each starts a process)" if cur in SLOW_FIRST[:2] else ""
+            say(STAGE_TESTS, f"{done}/{total} tests{slow} · now: {TEST_TOPIC.get(cur, cur)}{note}"
                 + (f" · {failed} failed" if failed else ""), shown, weight, f"{pct}%")
         while True:
             try:

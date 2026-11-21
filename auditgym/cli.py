@@ -868,7 +868,10 @@ def main(argv: list[str] | None = None) -> int:
         print("\nstopped. Nothing is lost: run the same command again (downloads and setup are cached).", file=sys.stderr)
         return 130
     except (OSError, RuntimeError, KeyError, json.JSONDecodeError, ValueError) as e:
-        print(f"error: {e}", file=sys.stderr)
+        import shutil
+        import textwrap
+        w = min(shutil.get_terminal_size((120, 24)).columns, 120)  # wrap between words, never inside one
+        print("\n".join(textwrap.fill(line, w, subsequent_indent="  ") for line in f"error: {e}".splitlines()), file=sys.stderr)
         if isinstance(e, PermissionError):
             print("hint: in Docker the image runs as user `auditor`; on Linux add --user \"$(id -u):$(id -g)\" for mounted "
                   "output dirs, and write generate/schema output under /tmp or a mounted dir", file=sys.stderr)

@@ -41,7 +41,7 @@ CRITERIA = [  # the case's five scoring criteria and their maximum points
 POLICIES = ["random", "reconcile", "flag_all", "oracle", "expert"]
 POLICY_LABEL = {p: p for p in POLICIES}
 ROLE = {  # what each row is for, so the table reads without a footnote
-    "random": "floor: random actions", "reconcile": "simple rule-based baseline", "flag_all": "floor: accuses everything",
+    "random": "floor: random actions", "reconcile": "simple rule-based baseline", "flag_all": "floor: accuses every record, never with a correct amount",
     "oracle": "install check: reads the answer key, must be +1.000", "expert": "our solver: sees only what an agent sees",
 }
 FOOTNOTE = ("Reward: the case's score for one episode, from -1 to +1, higher is better · Precision and recall: pooled over all "
@@ -64,9 +64,11 @@ def _left(frac: float, elapsed: float, total: float, count: str | None) -> str:
         return ""
     timed = bool(count) and "%" in count
     if timed and (frac < 0.4 or elapsed < 4):  # too early to extrapolate: the slow tests come first, machines differ 2-3x
-        return "usually 30-90 s in total"
+        return "usually 30-90 s"
     if not timed and frac * total < 2:
         return ""
+    if timed and frac >= 0.95:  # the fast tests run last; a seconds figure would read ~0 while hundreds remain
+        return "almost done"
     return f"~{elapsed * (1 - frac) / frac:.0f} s left" if frac > 0 else ""
 
 
@@ -131,11 +133,13 @@ def working(con: Console, first: str | None = None):
             t = task.finished_time if task.finished else task.elapsed
             t = t or 0.0
             return Text(f"{t:.1f} s" if t < 10 else f"{int(t // 60)}:{int(t % 60):02d}", style="progress.elapsed")
-    cols = (SpinnerColumn(finished_text="[green]✓[/]"), TextColumn("{task.description}"),
+    fixed = lambda: Column(no_wrap=True)  # these never shrink or wrap: only the detail text at the end gives way
+    cols = (SpinnerColumn(finished_text="[green]✓[/]", table_column=fixed()), TextColumn("{task.description}", table_column=fixed()),
             BarColumn(bar_width=20, table_column=Column(no_wrap=True, min_width=20)),
-            TextColumn("{task.fields[count]}"), Elapsed(), TextColumn("[dim]{task.fields[left]}"),
-            TextColumn("[dim]{task.fields[detail]}", table_column=Column(no_wrap=True, overflow="ellipsis", ratio=1)))
-    with Progress(*cols, console=con) as prog:
+            TextColumn("{task.fields[count]}", table_column=fixed()), Elapsed(table_column=fixed()),
+            TextColumn("[dim]{task.fields[left]}", table_column=fixed()),
+            TextColumn("[dim]{task.fields[detail]}", table_column=Column(no_wrap=True, overflow="ellipsis", ratio=1, min_width=0)))
+    with Progress(*cols, console=con, expand=True) as prog:  # expand: only the ratio=1 detail column gives way
         cur: dict = {"id": None, "stage": None, "t0": 0.0, "count": "", "done": None, "moved": 0.0}
 
         def close() -> None:
