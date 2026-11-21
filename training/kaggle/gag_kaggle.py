@@ -306,7 +306,7 @@ def main():
         return
     path = setup()
     held = [json.loads(l) for l in open(find("heldout.jsonl"))]
-    sft = [json.loads(l) for l in open(find("sft.jsonl"))]
+    sft = [json.loads(l) for l in open(find(os.environ.get("GAG_SFT_FILE", "sft.jsonl")))]
     log(event="start", mode=MODE, n_held=len(held), n_sft=len(sft))
     if MODE == "smoke":
         longest = sorted(sft, key=lambda r: -(r["prompt_tokens"] + r["target_tokens"]))[:3]
@@ -316,6 +316,12 @@ def main():
     elif MODE == "base":
         generate_sharded(path, held, "base")
         run_train(path, sft, TRAIN_DEVICES, "main")
+    elif MODE == "gen":
+        # GAG_GEN = "file:tag:adapter|none,...": greedy generation on each held-out file, in order
+        for item in os.environ["GAG_GEN"].split(","):
+            fname, tag, ad = item.split(":")
+            rows = [json.loads(l) for l in open(find(fname))]
+            generate_sharded(path, rows, tag, adapter=os.path.dirname(find("adapter_config.json")) if ad == "adapter" else None)
     elif MODE == "sft":
         run_train(path, sft, TRAIN_DEVICES, "main")
     elif MODE == "diag":

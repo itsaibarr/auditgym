@@ -1,0 +1,12 @@
+[{"stream_name":"stdout","time":1.623781017,"data":"nvidia-smi: GPU 0: Tesla T4 (UUID: GPU-66cbe9be-5ccb-1332-4883-424171b51e77)\n"}
+,{"stream_name":"stdout","time":1.623825292,"data":"GPU 1: Tesla T4 (UUID: GPU-aa451f94-31a3-0a02-39aa-8f04d990a6fa)\n"}
+,{"stream_name":"stdout","time":1.623844507,"data":"\n"}
+,{"stream_name":"stdout","time":1.623849069,"data":"dev: ['nvidia-caps', 'nvidia1', 'nvidia0', 'nvidiactl', 'nvidia-uvm-tools', 'nvidia-uvm']\n"}
+,{"stream_name":"stdout","time":1.69682969,"data":"internet: yes\n"}
+,{"stream_name":"stderr","time":4.87274783,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":4.872784175,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":5.391360036,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":5.391421643,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":8.099136243,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":9.482188705,"data":"[NbConvertApp] Writing 274805 bytes to __results__.html\n"}
+]

@@ -1,0 +1,108 @@
+[{"stream_name":"stdout","time":1.48720385,"data":"running /kaggle/input/datasets/arttts/gag3-pkg/gag_kaggle.py {'GAG_MODE': 'sft', 'GAG_SFT_FILE': 'sft3.jsonl', 'GAG_TRAIN_DEVICES': 'balanced', 'GAG_TRAIN_SAMPLES': '640', 'GAG_TRAIN_SECONDS': '28800', 'GAG_LOSS_NORM': 'token_sum'}\n"}
+,{"stream_name":"stdout","time":1.644938016,"data":"+ nvidia-smi; python -V\n"}
+,{"stream_name":"stderr","time":1.656926243,"data":"/bin/sh: 1: nvidia-smi: not found\n"}
+,{"stream_name":"stdout","time":1.661247469,"data":"Python 3.13.18\n"}
+,{"stream_name":"stdout","time":1.6616684290000001,"data":"+ pip install -q -U bitsandbytes peft 2\u003e\u00261 | tail -3\n"}
+,{"stream_name":"stdout","time":202.552767472,"data":"WARNING: Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError(\"HTTPSConnection(host='pypi.org', port=443): Failed to resolve 'pypi.org' ([Errno -3] Temporary failure in name resolution)\")': /simple/bitsandbytes/\n"}
+,{"stream_name":"stdout","time":202.552805,"data":"ERROR: Could not find a version that satisfies the requirement bitsandbytes (from versions: none)\n"}
+,{"stream_name":"stdout","time":202.552811129,"data":"ERROR: No matching distribution found for bitsandbytes\n"}
+,{"stream_name":"stdout","time":202.553295002,"data":"+ pip freeze | grep -iE '^(torch|transformers|peft|bitsandbytes|accelerate|safetensors)==' || true\n"}
+,{"stream_name":"stdout","time":206.166501782,"data":"accelerate==1.15.0\n"}
+,{"stream_name":"stdout","time":206.166528329,"data":"peft==0.21.2\n"}
+,{"stream_name":"stdout","time":206.166532217,"data":"safetensors==0.8.0\n"}
+,{"stream_name":"stdout","time":206.166535531,"data":"transformers==5.20.2\n"}
+,{"stream_name":"stdout","time":206.168014846,"data":"+ pip freeze \u003e /kaggle/working/freeze_sft.txt\n"}
+,{"stream_name":"stderr","time":272.199356805,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":272.2007654,"data":"  File \"/usr/local/lib/python3.13/dist-packages/httpx/_transports/default.py\", line 101, in map_httpcore_exceptions\n"}
+,{"stream_name":"stderr","time":272.200783492,"data":"    yield\n"}
+,{"stream_name":"stderr","time":272.200789102,"data":"  File \"/usr/local/lib/python3.13/dist-packages/httpx/_transports/default.py\", line 250, in handle_request\n"}
+,{"stream_name":"stderr","time":272.200795005,"data":"    resp = self._pool.handle_request(req)\n"}
+,{"stream_name":"stderr","time":272.200800104,"data":"  File \"/usr/local/lib/python3.13/dist-packages/httpcore/_sync/connection_pool.py\", line 256, in handle_request\n"}
+,{"stream_name":"stderr","time":272.200805772,"data":"    raise exc from None\n"}
+,{"stream_name":"stderr","time":272.200810827,"data":"  File \"/usr/local/lib/python3.13/dist-packages/httpcore/_sync/connection_pool.py\", line 236, in handle_request\n"}
+,{"stream_name":"stderr","time":272.200816454,"data":"    response = connection.handle_request(\n"}
+,{"stream_name":"stderr","time":272.20082139,"data":"        pool_request.request\n"}
+,{"stream_name":"stderr","time":272.20082637,"data":"    )\n"}
+,{"stream_name":"stderr","time":272.200831149,"data":"  File \"/usr/local/lib/python3.13/dist-packages/httpcore/_sync/connection.py\", line 101, in handle_request\n"}
+,{"stream_name":"stderr","time":272.200836856,"data":"    raise exc\n"}
+,{"stream_name":"stderr","time":272.200841512,"data":"  File \"/usr/local/lib/python3.13/dist-packages/httpcore/_sync/connection.py\", line 78, in handle_request\n"}
+,{"stream_name":"stderr","time":272.200846747,"data":"    stream = self._connect(request)\n"}
+,{"stream_name":"stderr","time":272.200851734,"data":"  File \"/usr/local/lib/python3.13/dist-packages/httpcore/_sync/connection.py\", line 124, in _connect\n"}
+,{"stream_name":"stderr","time":272.20087056,"data":"    stream = self._network_backend.connect_tcp(**kwargs)\n"}
+,{"stream_name":"stderr","time":272.200873772,"data":"  File \"/usr/local/lib/python3.13/dist-packages/httpcore/_backends/sync.py\", line 207, in connect_tcp\n"}
+,{"stream_name":"stderr","time":272.200876521,"data":"    with map_exceptions(exc_map):\n"}
+,{"stream_name":"stderr","time":272.200878945,"data":"         ~~~~~~~~~~~~~~^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":272.200881806,"data":"  File \"/usr/lib/python3.13/contextlib.py\", line 162, in __exit__\n"}
+,{"stream_name":"stderr","time":272.200885868,"data":"    self.gen.throw(value)\n"}
+,{"stream_name":"stderr","time":272.200889527,"data":"    ~~~~~~~~~~~~~~^^^^^^^\n"}
+,{"stream_name":"stderr","time":272.200893161,"data":"  File \"/usr/local/lib/python3.13/dist-packages/httpcore/_exceptions.py\", line 14, in map_exceptions\n"}
+,{"stream_name":"stderr","time":272.200897226,"data":"    raise to_exc(exc) from exc\n"}
+,{"stream_name":"stderr","time":272.200901236,"data":"httpcore.ConnectError: [Errno -3] Temporary failure in name resolution\n"}
+,{"stream_name":"stderr","time":272.20092751,"data":"\n"}
+,{"stream_name":"stderr","time":272.200931428,"data":"The above exception was the direct cause of the following exception:\n"}
+,{"stream_name":"stderr","time":272.200936135,"data":"\n"}
+,{"stream_name":"stderr","time":272.200939773,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":272.20296396,"data":"  File \"/kaggle/input/datasets/arttts/gag3-pkg/gag_kaggle.py\", line 344, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":272.202980479,"data":"    main()\n"}
+,{"stream_name":"stderr","time":272.202985072,"data":"    ~~~~^^\n"}
+,{"stream_name":"stderr","time":272.202989787,"data":"  File \"/kaggle/input/datasets/arttts/gag3-pkg/gag_kaggle.py\", line 307, in main\n"}
+,{"stream_name":"stderr","time":272.202994298,"data":"    path = setup()\n"}
+,{"stream_name":"stderr","time":272.202998118,"data":"  File \"/kaggle/input/datasets/arttts/gag3-pkg/gag_kaggle.py\", line 68, in setup\n"}
+,{"stream_name":"stderr","time":272.203002864,"data":"    p = snapshot_download(MODEL_REPO, revision=MODEL_REV, cache_dir=\"/tmp/hf\")\n"}
+,{"stream_name":"stderr","time":272.20300714,"data":"  File \"/usr/local/lib/python3.13/dist-packages/huggingface_hub/utils/_validators.py\", line 89, in _inner_fn\n"}
+,{"stream_name":"stderr","time":272.203011174,"data":"    return fn(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":272.203015232,"data":"  File \"/usr/local/lib/python3.13/dist-packages/huggingface_hub/utils/_http.py\", line 266, in _inner\n"}
+,{"stream_name":"stderr","time":272.203019284,"data":"    return fn(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":272.203023267,"data":"  File \"/usr/local/lib/python3.13/dist-packages/huggingface_hub/_snapshot_download.py\", line 403, in snapshot_download\n"}
+,{"stream_name":"stderr","time":272.203027724,"data":"    for f in api.list_repo_tree(repo_id=repo_id, recursive=True, revision=commit_hash, repo_type=repo_type)\n"}
+,{"stream_name":"stderr","time":272.203031935,"data":"             ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":272.20303674,"data":"  File \"/usr/local/lib/python3.13/dist-packages/huggingface_hub/hf_api.py\", line 4103, in list_repo_tree\n"}
+,{"stream_name":"stderr","time":272.203040999,"data":"    for path_info in paginate(path=tree_url, headers=headers, params={\"recursive\": recursive, \"expand\": expand}):\n"}
+,{"stream_name":"stderr","time":272.203045422,"data":"                     ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":272.203057982,"data":"  File \"/usr/local/lib/python3.13/dist-packages/huggingface_hub/utils/_pagination.py\", line 36, in paginate\n"}
+,{"stream_name":"stderr","time":272.203061213,"data":"    r = session.get(path, params=params, headers=headers, timeout=timeout)\n"}
+,{"stream_name":"stderr","time":272.203063857,"data":"  File \"/usr/local/lib/python3.13/dist-packages/httpx/_client.py\", line 1053, in get\n"}
+,{"stream_name":"stderr","time":272.203066549,"data":"    return self.request(\n"}
+,{"stream_name":"stderr","time":272.203069004,"data":"           ~~~~~~~~~~~~^\n"}
+,{"stream_name":"stderr","time":272.203071423,"data":"        \"GET\",\n"}
+,{"stream_name":"stderr","time":272.203074023,"data":"        ^^^^^^\n"}
+,{"stream_name":"stderr","time":272.203076401,"data":"    ...\u003c7 lines\u003e...\n"}
+,{"stream_name":"stderr","time":272.203078923,"data":"        extensions=extensions,\n"}
+,{"stream_name":"stderr","time":272.203081588,"data":"        ^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":272.203084164,"data":"    )\n"}
+,{"stream_name":"stderr","time":272.203086582,"data":"    ^\n"}
+,{"stream_name":"stderr","time":272.203088987,"data":"  File \"/usr/local/lib/python3.13/dist-packages/httpx/_client.py\", line 825, in request\n"}
+,{"stream_name":"stderr","time":272.2030916,"data":"    return self.send(request, auth=auth, follow_redirects=follow_redirects)\n"}
+,{"stream_name":"stderr","time":272.203094182,"data":"           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":272.203097431,"data":"  File \"/usr/local/lib/python3.13/dist-packages/httpx/_client.py\", line 914, in send\n"}
+,{"stream_name":"stderr","time":272.203100115,"data":"    response = self._send_handling_auth(\n"}
+,{"stream_name":"stderr","time":272.203102908,"data":"        request,\n"}
+,{"stream_name":"stderr","time":272.203105389,"data":"    ...\u003c2 lines\u003e...\n"}
+,{"stream_name":"stderr","time":272.203107884,"data":"        history=[],\n"}
+,{"stream_name":"stderr","time":272.203110309,"data":"    )\n"}
+,{"stream_name":"stderr","time":272.203112883,"data":"  File \"/usr/local/lib/python3.13/dist-packages/httpx/_client.py\", line 942, in _send_handling_auth\n"}
+,{"stream_name":"stderr","time":272.203115611,"data":"    response = self._send_handling_redirects(\n"}
+,{"stream_name":"stderr","time":272.203118059,"data":"        request,\n"}
+,{"stream_name":"stderr","time":272.203121226,"data":"        follow_redirects=follow_redirects,\n"}
+,{"stream_name":"stderr","time":272.203125203,"data":"        history=history,\n"}
+,{"stream_name":"stderr","time":272.203128711,"data":"    )\n"}
+,{"stream_name":"stderr","time":272.203132288,"data":"  File \"/usr/local/lib/python3.13/dist-packages/httpx/_client.py\", line 979, in _send_handling_redirects\n"}
+,{"stream_name":"stderr","time":272.203135031,"data":"    response = self._send_single_request(request)\n"}
+,{"stream_name":"stderr","time":272.203137516,"data":"  File \"/usr/local/lib/python3.13/dist-packages/httpx/_client.py\", line 1014, in _send_single_request\n"}
+,{"stream_name":"stderr","time":272.20314011,"data":"    response = transport.handle_request(request)\n"}
+,{"stream_name":"stderr","time":272.203142558,"data":"  File \"/usr/local/lib/python3.13/dist-packages/httpx/_transports/default.py\", line 249, in handle_request\n"}
+,{"stream_name":"stderr","time":272.203145202,"data":"    with map_httpcore_exceptions():\n"}
+,{"stream_name":"stderr","time":272.203147856,"data":"         ~~~~~~~~~~~~~~~~~~~~~~~^^\n"}
+,{"stream_name":"stderr","time":272.203153516,"data":"  File \"/usr/lib/python3.13/contextlib.py\", line 162, in __exit__\n"}
+,{"stream_name":"stderr","time":272.203156234,"data":"    self.gen.throw(value)\n"}
+,{"stream_name":"stderr","time":272.203158728,"data":"    ~~~~~~~~~~~~~~^^^^^^^\n"}
+,{"stream_name":"stderr","time":272.203161142,"data":"  File \"/usr/local/lib/python3.13/dist-packages/httpx/_transports/default.py\", line 118, in map_httpcore_exceptions\n"}
+,{"stream_name":"stderr","time":272.203163788,"data":"    raise mapped_exc(message) from exc\n"}
+,{"stream_name":"stderr","time":272.203166265,"data":"httpx.ConnectError: [Errno -3] Temporary failure in name resolution\n"}
+,{"stream_name":"stderr","time":274.983073021,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":274.9831092,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":275.334036821,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":275.334067635,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":276.426738138,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":277.683682757,"data":"[NbConvertApp] Writing 275607 bytes to __results__.html\n"}
+]
