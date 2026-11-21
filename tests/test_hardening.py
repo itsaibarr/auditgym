@@ -1086,3 +1086,22 @@ def test_paired_verdict_comes_from_the_oracle_only(monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "10/10 paired checks pass" in out and "firstpage: answer changed on 10/10 copies" in out
     assert "not an environment failure" in out
+
+
+def test_paired_same_answer_means_the_same_errors_found(monkeypatch, capsys):
+    """Equal counts are not enough: a policy that finds I-01 on the original and I-04 on the copy changed its answer."""
+    import auditgym.runner as R
+    from types import SimpleNamespace
+    from auditgym.cli import main
+    calls = {"n": 0}
+
+    def fake(spec, ep, mode="eval", *a, **k):
+        if spec == "oracle":
+            return SimpleNamespace(result={"tp": 1, "fp": 0, "fn": 0, "reward": 1.0, "matches": []})
+        calls["n"] += 1
+        iid = "I-01" if calls["n"] % 2 else "I-04"
+        return SimpleNamespace(result={"tp": 1, "fp": 0, "fn": 1, "reward": 0.0,
+                                       "matches": [{"finding": 0, "result": "TP", "issue_id": iid}]})
+    monkeypatch.setattr(R, "run_episode", fake)
+    assert main(["paired", "--split", "dev", "--policy", "idbound"]) == 0
+    assert "idbound: answer changed on 10/10 copies" in capsys.readouterr().out

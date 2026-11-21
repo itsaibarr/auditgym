@@ -27,9 +27,11 @@ def split_episodes(split_or_path: str, cfg: dict | None = None) -> list[tuple[st
     if not isinstance(cfg, dict) or not isinstance(cfg.get("episodes"), list) or not cfg["episodes"] \
             or not all(isinstance(e, dict) and "seed" in e for e in cfg["episodes"]):
         raise ValueError(f"split {split_or_path!r} must be an object with a non-empty 'episodes' list of objects with a 'seed'")
+    bad_seeds = [f"split entry {pos}: seed must be an integer or a string, got {e['seed']!r}" for pos, e in enumerate(cfg["episodes"])
+                 if isinstance(e["seed"], bool) or not isinstance(e["seed"], (int, str))]
+    if bad_seeds:
+        raise ValueError(f"the split has {len(bad_seeds)} problem{'' if len(bad_seeds) == 1 else 's'}:\n  " + "\n  ".join(bad_seeds))
     for pos, e in enumerate(cfg["episodes"]):
-        if isinstance(e["seed"], bool) or not isinstance(e["seed"], (int, str)):
-            raise ValueError(f"split entry {pos}: seed must be an integer or a string, got {e['seed']!r}")
         if not isinstance(e.get("config", {}), dict):
             raise ValueError("episode 'config' must be an object")
     if not isinstance(cfg.get("base_config", {}), dict):

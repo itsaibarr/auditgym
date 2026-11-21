@@ -1,7 +1,7 @@
 {
   "split": "closed_example",
   "config_version": "1.0.0",
-  "note": "Shape of a closed evaluation: jury picks secret seeds and new combinations, sets AUDITGYM_SALT in the runner. 5 clean + 5 interacting + 10 other. Interacting entries request both X1 and X2 and 'other' entries at least one duplicate, so the 5 clean / 5 interacting / 10 other mix holds whatever the salt.",
+  "note": "Shape of a closed evaluation: jury picks secret seeds and new combinations, sets AUDITGYM_SALT in the runner. 5 clean + 5 interacting + 10 other. Interacting entries request both X1 and X2 and 'other' entries at least one duplicate, so the 5 clean / 5 interacting / 10 other mix holds for nearly every salt (measured: about 1 interacting entry in 10,000 comes out as 'other'; datacheck shows the real mix).",
   "base_config": {},
   "episodes": [
     {

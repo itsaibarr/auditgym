@@ -110,7 +110,7 @@ const ticked = (label, cmd) => spawnSync("sh", ["-c", `say() { printf '[auditgym
   "sh", uv, path.join(ROOT, "bin", "tick.sh"), label, ...cmd], { stdio: ["ignore", 2, "inherit"] }).status;
 if (first) {  // quiet installs with a live line every 2 s, then one receipt line
   if (spawnSync(uv, ["python", "find", "3.11"], { stdio: "ignore" }).status !== 0) {
-    say("downloading Python 3.11 (~30 MB download, ~55 MB on disk; usually 5-30 s, one time) ...");
+    say("downloading Python 3.11 (~30 MB download, ~60 MB on disk; usually 5-30 s, one time) ...");
     if (ticked("Python 3.11 download", [uv, "python", "install", "--quiet", "--no-bin", "3.11"]) !== 0) {
       say("Python download failed: run the same command again (finished downloads are kept)"); process.exit(2);
     }

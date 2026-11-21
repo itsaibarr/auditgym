@@ -97,7 +97,7 @@ def working(con: Console, first: str | None = None):
 
         def done_line() -> None:  # close the previous stage with its final count, so no stale "48/80 · ~3 s left" stays last
             if st["stage"] and st["frac"] is not None:
-                con.print(f"      done: {st['count']} · {time.monotonic() - st['t0']:.0f} s", style="dim", markup=False)
+                con.print(f"      done: {st['count']} · {time.monotonic() - st['t0']:.0f} s", style="dim", markup=False, soft_wrap=True)
 
         def beat() -> None:  # runs even while a long step reports nothing (test collection, one slow episode)
             while not stop.wait(1.0):
@@ -105,10 +105,10 @@ def working(con: Console, first: str | None = None):
                 if st["stage"] and now - st["last"] >= 3:
                     st["last"] = now
                     el = now - st["t0"]
-                    left = ("waiting on the running item (an episode is cut at 60 s)" if "%" not in (st["weighted"] or "") and now - st["moved"] > 6
+                    left = (f"current run {now - st['moved']:.0f} s of at most 60 s" if "%" not in (st["weighted"] or "") and now - st["moved"] > 6
                             else _left(st["frac"], el, st["total"], st["weighted"]) if st["frac"] is not None else "")
                     con.print(f"      {st['count'] + ' · ' if st['count'] else 'still working · '}{el:.0f} s{' · ' + left if left else ''}"
-                              f"{' · ' + st['detail'] if st['detail'] else ''}", style="dim", markup=False)
+                              f"{' · ' + st['detail'] if st['detail'] else ''}", style="dim", markup=False, soft_wrap=True)
         if first:
             say(first)
         th = threading.Thread(target=beat, daemon=True)
@@ -146,7 +146,7 @@ def working(con: Console, first: str | None = None):
                     cur.update(done=done, moved=time.monotonic())
                 stalled = "%" not in (count or "") and time.monotonic() - cur["moved"] > 6
                 kw.update(total=total, completed=min(done or 0, total * 0.999),  # ✓ only on close
-                          left="waiting on the running item (an episode is cut at 60 s)" if stalled else _left(frac, el, total, count))
+                          left=f"current run {time.monotonic() - cur['moved']:.0f} s of at most 60 s" if stalled else _left(frac, el, total, count))
                 cur["count"] = count or f"{int(done or 0)}/{int(total)}"
                 kw["count"] = cur["count"]
             prog.update(cur["id"], **kw)

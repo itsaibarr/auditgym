@@ -91,7 +91,7 @@ rc=0
 . "$SRC/bin/tick.sh"   # tick: a live line every 2 s while a quiet setup step runs
 if [ ! -d "$SRC/.venv" ]; then   # first run: quiet installs with a live line every 2 s, then one receipt line
   if ! "$UV" python find 3.11 >/dev/null 2>&1; then
-    say "downloading Python 3.11 (~30 MB download, ~55 MB on disk; usually 5-30 s, one time) ..."
+    say "downloading Python 3.11 (~30 MB download, ~60 MB on disk; usually 5-30 s, one time) ..."
     tick "Python 3.11 download" "$UV" python install --quiet --no-bin 3.11 || { say "Python download failed: run the same command again (finished downloads are kept)"; exit 2; }
   fi
   say "installing the 19 pinned packages (usually 5-20 s) ..."

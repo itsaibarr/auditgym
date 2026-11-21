@@ -6,11 +6,11 @@
 
 | policy | episodes | P | R | F1 | return | return (clean) | return (with errors) | steps | clean-FP rate | s/episode |
 |---|---|---|---|---|---|---|---|---|---|---|
-| oracle | 20 | 1.000 | 1.000 | 1.000 | +1.000 | +1.000 | +1.000 | 1.0 | 0.0 | 0.002 |
-| expert | 20 | 1.000 | 1.000 | 1.000 | +0.956 | +0.954 | +0.957 | 22.9 | 0.0 | 0.041 |
-| reconcile | 20 | 0.113 | 0.509 | 0.191 | -0.649 | -1.000 | -0.561 | 22.9 | 1.0 | 0.033 |
+| oracle | 20 | 1.000 | 1.000 | 1.000 | +1.000 | +1.000 | +1.000 | 1.0 | 0.0 | 0.001 |
+| expert | 20 | 1.000 | 1.000 | 1.000 | +0.956 | +0.954 | +0.957 | 22.9 | 0.0 | 0.034 |
+| reconcile | 20 | 0.113 | 0.509 | 0.191 | -0.649 | -1.000 | -0.561 | 22.9 | 1.0 | 0.030 |
 | flag_all | 20 | 0.000 | 0.000 | 0.000 | -1.000 | -1.000 | -1.000 | 4.5 | 1.0 | 0.026 |
-| random | 20 | 0.000 | 0.000 | 0.000 | -1.000 | -1.000 | -1.000 | 72.5 | 1.0 | 0.040 |
+| random | 20 | 0.000 | 0.000 | 0.000 | -1.000 | -1.000 | -1.000 | 72.5 | 1.0 | 0.032 |
 
 | policy | FP по причинам | FP по типам | FN по типам | завершение |
 |---|---|---|---|---|
@@ -24,19 +24,19 @@
 
 | policy | episodes | P | R | F1 | return | return (clean) | return (with errors) | steps | clean-FP rate | s/episode |
 |---|---|---|---|---|---|---|---|---|---|---|
-| oracle | 20 | 1.000 | 1.000 | 1.000 | +1.000 | +1.000 | +1.000 | 1.0 | 0.0 | 0.002 |
-| expert | 20 | 1.000 | 1.000 | 1.000 | +0.961 | +0.962 | +0.960 | 20.7 | 0.0 | 0.034 |
-| reconcile | 20 | 0.192 | 0.603 | 0.265 | -0.499 | -1.000 | -0.332 | 20.7 | 1.0 | 0.035 |
-| flag_all | 20 | 0.000 | 0.000 | 0.000 | -1.000 | -1.000 | -1.000 | 4.3 | 1.0 | 0.027 |
-| random | 20 | 0.000 | 0.000 | 0.150 | -0.730 | +0.080 | -1.000 | 70.3 | 0.4 | 0.035 |
+| oracle | 20 | 1.000 | 1.000 | 1.000 | +1.000 | +1.000 | +1.000 | 1.0 | 0.0 | 0.001 |
+| expert | 20 | 1.000 | 1.000 | 1.000 | +0.963 | +0.962 | +0.963 | 19.8 | 0.0 | 0.033 |
+| reconcile | 20 | 0.178 | 0.548 | 0.271 | -0.486 | -1.000 | -0.314 | 19.8 | 1.0 | 0.029 |
+| flag_all | 20 | 0.000 | 0.000 | 0.000 | -1.000 | -1.000 | -1.000 | 4.3 | 1.0 | 0.030 |
+| random | 20 | 0.000 | 0.000 | 0.150 | -0.730 | +0.080 | -1.000 | 77.3 | 0.4 | 0.033 |
 
 | policy | FP по причинам | FP по типам | FN по типам | завершение |
 |---|---|---|---|---|
 | oracle | — | — | — | submitted: 20 |
 | expert | — | — | — | submitted: 20 |
-| reconcile | insufficient_evidence: 7, no_issue: 166 | duplicate_invoice: 128, fx_conversion: 6, payment_allocation: 14, period_cutoff: 25 | fx_conversion: 14, payment_allocation: 3, period_cutoff: 10 | submitted: 20 |
-| flag_all | amount: 1, no_issue: 599 | duplicate_invoice: 160, fx_conversion: 140, payment_allocation: 160, period_cutoff: 140 | duplicate_invoice: 14, fx_conversion: 18, payment_allocation: 18, period_cutoff: 18 | submitted: 20 |
-| random | no_issue: 24 | duplicate_invoice: 4, fx_conversion: 5, payment_allocation: 9, period_cutoff: 6 | duplicate_invoice: 14, fx_conversion: 18, payment_allocation: 18, period_cutoff: 18 | step_limit: 7, submitted: 13 |
+| reconcile | insufficient_evidence: 8, no_issue: 204 | duplicate_invoice: 155, fx_conversion: 6, payment_allocation: 27, period_cutoff: 24 | fx_conversion: 20, payment_allocation: 5, period_cutoff: 13 | submitted: 20 |
+| flag_all | no_issue: 600 | duplicate_invoice: 160, fx_conversion: 140, payment_allocation: 160, period_cutoff: 140 | duplicate_invoice: 24, fx_conversion: 23, payment_allocation: 18, period_cutoff: 19 | submitted: 20 |
+| random | no_issue: 23 | duplicate_invoice: 8, fx_conversion: 4, payment_allocation: 6, period_cutoff: 5 | duplicate_invoice: 24, fx_conversion: 23, payment_allocation: 18, period_cutoff: 19 | step_limit: 8, submitted: 12 |
 
 ## Интерпретация
 

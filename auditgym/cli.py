@@ -35,7 +35,8 @@ def rich_table(title: str, headers: list[str], rows: list[list[str]], legend: st
     from rich.table import Table
     t = Table(title=title or None, title_justify="left", title_style="bold")
     for i, h in enumerate(headers):
-        t.add_column(h, justify="left" if i < left else "right", no_wrap=i == 0, overflow="fold")  # IDs stay whole, nothing is cut
+        t.add_column(h, justify="left" if i < left else "right", no_wrap=i == 0, overflow="fold",
+                     min_width=max(len(w) for w in h.split()))  # IDs stay whole; headers wrap between words, never inside one
     for r in rows:
         t.add_row(*r)
     con = _console()
@@ -177,7 +178,7 @@ def cmd_run(a) -> int:
     episodes = _episodes(a)
     _shape_note(a, [ep for _, ep in episodes])
     specs = a.policy.split(",")
-    print(f"  ... starting {len(specs)} {'policy' if len(specs) == 1 else 'policies'} on {len(episodes)} episodes "
+    print(f"  ... starting {len(specs)} {'policy' if len(specs) == 1 else 'policies'} on {len(episodes)} episode{'' if len(episodes) == 1 else 's'} "
           "(first checking that each one starts)", file=sys.stderr, flush=True)
     if any(x.startswith("-") or "=" not in x for x in (a.policy_arg or [])):
         raise ValueError(f"--policy-arg takes key=value pairs, got {a.policy_arg!r}")
@@ -214,7 +215,7 @@ def cmd_run(a) -> int:
             raise ValueError(f"policy {spec!r} does not start{hint}:\n{why}")
     from rich.console import Console
     from .tour import working
-    stage = (f"Running {len(specs)} {'policy' if len(specs) == 1 else 'policies'} on {len(episodes)} episodes"
+    stage = (f"Running {len(specs)} {'policy' if len(specs) == 1 else 'policies'} on {len(episodes)} episode{'' if len(episodes) == 1 else 's'}"
              + (", each in an isolated process" if not a.no_isolate else ""))
     with working(_console(stderr=True)) as say:  # progress on stderr: stdout stays the results
         say(stage, "each episode: up to 60 s and 100 steps", 0, len(specs) * len(episodes))
@@ -490,12 +491,13 @@ def cmd_paired(a) -> int:
                 done_u[0] += 1
             r1, r2 = rr
             per[spec]["crashed"] += any(r.get("termination") in ("timeout", "policy_crash") for r in (r1, r2))
-            if all(r1[f] == r2[f] for f in ("tp", "fp", "fn")):  # the answer, mapped through the renaming by the grader
+            hit = lambda r: sorted(m["issue_id"] for m in r.get("matches", []) if m.get("result") == "TP")  # issue ids survive renaming
+            if all(r1[f] == r2[f] for f in ("tp", "fp", "fn")) and hit(r1) == hit(r2):  # the same errors found, same counts
                 per[spec]["same"] += 1
                 per[spec]["steps_only"] += r1["reward"] != r2["reward"]
             else:
                 changed.append(spec)
-                per[spec]["changed"].append(f"{ep.episode_id} {r1['tp']}/{r1['fp']}/{r1['fn']} → {r2['tp']}/{r2['fp']}/{r2['fn']}")
+                per[spec]["changed"].append(f"{ep.episode_id} {r1['tp']}/{r1['fp']}/{r1['fn']} {hit(r1)} → {r2['tp']}/{r2['fp']}/{r2['fn']} {hit(r2)}")
         ok = o2["reward"] == 1.0  # the case's paired check: the oracle's answer under the new IDs still gets the maximum
         bad += not ok
         rows.append([str(getattr(ep, "split_pos", "")), ep.episode_id, kind(ep), str(len(mapping)), f"{o2['reward']:+.3f}",
@@ -518,7 +520,7 @@ def cmd_paired(a) -> int:
             print(f"{spec}: same answer (errors found, false alarms, misses) on {v['same']}/{len(eps)} copies"
                   + (f"; on {v['steps_only']} of them only the reward differs, from a different step count" if v["steps_only"] else ""))
         else:
-            print(f"{spec}: answer changed on {len(v['changed'])}/{len(eps)} copies (found/false alarms/missed, original → copy: "
+            print(f"{spec}: answer changed on {len(v['changed'])}/{len(eps)} copies (found/false alarms/missed and the errors found, original → copy: "
                   f"{'; '.join(v['changed'][:3])}{' ...' if len(v['changed']) > 3 else ''}). This policy depends on row order or IDs; "
                   "it is a property of the policy, not an environment failure.")
     print(f"{len(rows) - bad}/{len(rows)} paired checks pass ({kind_counts(eps)}; case section 10: oracle +1.000 on every copy)")
