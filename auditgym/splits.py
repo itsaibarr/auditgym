@@ -36,18 +36,23 @@ def split_episodes(split_or_path: str, cfg: dict | None = None) -> list[tuple[st
         raise ValueError("'base_config' must be an object")
     keys = [json.dumps([e["seed"], e.get("config", {})], sort_keys=True) for e in cfg["episodes"]]
     if len(set(keys)) != len(keys):
-        raise ValueError("split lists the same (seed, config) twice")
+        first: dict = {}
+        dups = [f"entries {first[k]} and {i}" for i, k in enumerate(keys) if k in first or first.setdefault(k, i) is None]
+        raise ValueError(f"split lists the same (seed, config) twice: {'; '.join(dups)}")
     name = cfg.get("split", Path(split_or_path).stem if split_or_path != "-" else "closed")
     salt = DEFAULT_SALT if split_or_path in OPEN_SPLITS else None
-    out = []
+    out, errors = [], []
     for pos, e in enumerate(cfg["episodes"]):
         try:
             ep = generate(e["seed"], {**cfg.get("base_config", {}), **e.get("config", {})}, salt=salt,
                           config_version=cfg.get("config_version"))
-        except ValueError as exc:
-            raise ValueError(f"split entry {pos} (seed {e['seed']!r}): {exc}") from None
+        except ValueError as exc:  # collect every bad entry, so one run of the command lists them all
+            errors.append(f"split entry {pos} (seed {e['seed']!r}): {exc}")
+            continue
         ep.split_pos = pos  # shown by datacheck/paired so rows map back to the split file
         out.append((name, ep))
+    if errors:
+        raise ValueError(f"{len(errors)} split entr{'y' if len(errors) == 1 else 'ies'} rejected:\n  " + "\n  ".join(errors))
     ids = [ep.episode_id for _, ep in out]
     if len(set(ids)) != len(ids):
         raise ValueError("two split entries generate the same episode (e.g. seed 1 and \"1\", or an explicit default config)")

@@ -416,6 +416,8 @@ def run_policies(specs: list[str], episodes: list[tuple[str, Episode]], out_root
     for spec in order:
         runs = []
         for split, ep in episodes:
+            if on_episode:  # before: the progress line names the policy that is running now
+                on_episode(spec, len(runs) + len(episodes) * len(done), len(episodes) * len(order))
             er = run_episode(spec, ep, mode, args, policy_path, isolate, allow_forks=allow_forks)
             reap_leftovers(keep)
             er.result["split"] = split

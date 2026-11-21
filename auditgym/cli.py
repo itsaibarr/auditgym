@@ -16,11 +16,12 @@ from .splits import ROOT, dir_episode, load_split_config, parse_seeds, split_epi
 
 COLUMNS = [("policy", "Policy"), ("episodes", "Episodes"), ("micro_precision", "Precision"), ("micro_recall", "Recall"), ("mean_f1", "F1"),
            ("mean_return", "Reward"), ("dirty_return", "Reward, books with errors"), ("mean_return_experimental", "Reward, partial credit"), ("mean_steps", "Steps"),
-           ("clean_fp_rate", "Clean books flagged"), ("mean_wall_s", "Sec/episode"), ("failed", "Crashed/timed out")]
+           ("clean_fp_rate", "Clean books flagged"), ("invalid", "Invalid answers"), ("mean_wall_s", "Sec/episode"), ("failed", "Crashed/timed out")]
 LEGEND = ("Precision and recall: pooled over all findings · F1: mean per episode (an empty answer on clean books scores F1 = 1, "
           "so a policy can have F1 > 0 with precision and recall 0) · Reward: the case's terminal reward, -1 to +1, higher is "
           "better (2·F1 - 1 minus a small cost per step) · Reward, books with errors: the same, only on episodes that have errors (the case's reward ordering is stated there) · Reward, partial credit: an extra variant reported separately, gives half credit for the right "
-          "error with a wrong amount · Clean books flagged: share of clean episodes where the policy reported any error")
+          "error with a wrong amount · Clean books flagged: share of clean episodes where the policy reported any error · Invalid answers: submissions that broke "
+          "the findings schema (reward -1, nothing matched)")
 
 
 def _console(stderr: bool = False):
@@ -225,7 +226,7 @@ def cmd_run(a) -> int:
         res = results[spec]
         failed = sum(1 for r in res if r["termination"] in ("timeout", "policy_crash"))
         dirty = [r["reward"] for r in res if not r["clean"]]
-        rows.append({"policy": spec, **summarize(res)["all"], "failed": failed,
+        rows.append({"policy": spec, **summarize(res)["all"], "failed": failed, "invalid": sum(1 for r in res if not r.get("valid", True)),
                      "dirty_return": round(sum(dirty) / len(dirty), 4) if dirty else None})
         print(f"{spec}: {len(res)} episodes -> {Path(a.out) / name(spec)}", file=sys.stderr)
         if failed:
@@ -266,7 +267,8 @@ def cmd_compare(a) -> int:
         per = []
         for d in a.runs:
             s = json.loads((Path(d) / "summary.json").read_text())["all"]
-            per += [[Path(d).name, t, str(v["tp"]), str(v["fp"]), str(v["fn"])] for t, v in sorted(s["per_type"].items())]
+            per += [[Path(d).name, t, str(v["tp"]), str(v["fp"]), str(v["fn"])] for t, v in sorted(s["per_type"].items())] or \
+                [[Path(d).name, "(no valid answer: nothing to match)", "-", "-", "-"]]
         if a.format == "auto":
             print()
             rich_table("By error type", ["Run", "Error type", "Found", "False alarms", "Missed"], per,
@@ -387,6 +389,18 @@ KINDS = ("Kind: interacting X1 = a partial foreign-currency payment across the p
          "(3 linked errors); X2 = an invoice with a credit note that is later billed twice; the credit note is posted at the invoice's rate (2 linked errors).")
 
 
+def _shape_note(a, eps) -> None:
+    """The case's closed check uses 20 hidden episodes, 5 clean and 5 interacting: say so if a split from stdin differs."""
+    from .datacheck import kind
+    if getattr(a, "split", None) != "-":
+        return
+    ks = [kind(e) for e in eps]
+    n_clean, n_x = ks.count("clean"), sum(k.startswith("interacting") for k in ks)
+    if (len(ks), n_clean >= 5, n_x >= 5) != (20, True, True):
+        print(f"note: this split has {len(ks)} episodes ({n_clean} clean, {n_x} interacting); the case's closed check uses 20 "
+              "(5 clean, 5 interacting). Fine for exploring.", file=sys.stderr)
+
+
 def _yes(v) -> str:
     return "n/a" if v is None else "yes" if v else "NO"
 
@@ -401,6 +415,7 @@ def cmd_datacheck(a) -> int:
     from .datacheck import kind, kind_counts, verify_episode
     from .tour import working
     rows, bad, eps = [], 0, sorted((ep for _, ep in _episodes(a)), key=lambda e: getattr(e, 'split_pos', 0))  # split order
+    _shape_note(a, eps)
     with working(_console(stderr=True)) as say:
         checks = []
         for ep in eps:
@@ -442,11 +457,12 @@ def cmd_paired(a) -> int:
     from rich.console import Console
     from .tour import working
     rows, bad, eps = [], 0, sorted((ep for _, ep in _episodes(a)), key=lambda e: getattr(e, 'split_pos', 0))  # split order
+    _shape_note(a, eps)
     stage = f"Grading shuffled and renamed copies of {len(eps)} episodes (oracle + {', '.join(specs)})"
     ctx = working(_console(stderr=True))
     say = ctx.__enter__()
     say(stage, "", 0, len(eps))
-    per = {sp: {"same": 0, "steps_only": 0, "changed": []} for sp in specs}
+    per = {sp: {"same": 0, "steps_only": 0, "changed": [], "crashed": 0} for sp in specs}
     for k, ep in enumerate(eps):
         pub2, truth2, mapping = perturb(ep.public, ep.truth, seed=a.seed + k)
         ep2 = Episode(pub2, truth2, ep.provenance, {})
@@ -454,6 +470,7 @@ def cmd_paired(a) -> int:
         changed = []
         for spec in specs:
             r1, r2 = (run_episode(spec, e, "eval", a.policy_arg, a.policy_path, isolate=spec not in BUILTIN).result for e in (ep, ep2))
+            per[spec]["crashed"] += any(r.get("termination") in ("timeout", "policy_crash") for r in (r1, r2))
             if all(r1[f] == r2[f] for f in ("tp", "fp", "fn")):  # the answer, mapped through the renaming by the grader
                 per[spec]["same"] += 1
                 per[spec]["steps_only"] += r1["reward"] != r2["reward"]
@@ -475,6 +492,9 @@ def cmd_paired(a) -> int:
                "check, and this command's result and exit code: the oracle's answer, mapped to the new IDs, still gets +1.000. " + KINDS)
     print()
     for spec, v in per.items():  # a property of each policy, not of the environment
+        if v["crashed"]:
+            print(f"warning: {spec} crashed or timed out on {v['crashed']}/{len(eps)} episodes (original or copy); those answers "
+                  "count as empty, so 'same answer' below says little about it. Run it with `run` to see its stderr.")
         if not v["changed"]:
             print(f"{spec}: same answer (errors found, false alarms, misses) on {v['same']}/{len(eps)} copies"
                   + (f"; on {v['steps_only']} of them only the reward differs, from a different step count" if v["steps_only"] else ""))
@@ -683,8 +703,9 @@ def build_parser() -> argparse.ArgumentParser:
     source(dc)
     dc.set_defaults(fn=cmd_datacheck)
 
-    pc = cmdp("paired", "paired checks: shuffle rows and rename IDs in each episode; oracle must stay at 1.0 and expert must get "
-                        "the same outcome (case sections 06 and 10)")
+    pc = cmdp("paired", "paired checks (case sections 06 and 10): shuffle rows and rename IDs in each episode; the oracle must stay "
+                        "at 1.0 (this sets the exit code); for other policies it reports whether their answer changes, a property "
+                        "of the policy")
     source(pc)
     pc.add_argument("--seed", type=int, default=1, help="seed of the first shuffle/rename; episode k uses seed + k")
     pc.add_argument("--policy", default="expert", help="policies whose outcome must not change, comma separated: built-ins, "

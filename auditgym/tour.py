@@ -76,7 +76,8 @@ def working(con: Console, first: str | None = None):
     starts a new line; count overrides the "done/total" text (e.g. when the bar is weighted by time)."""
     if not con.is_terminal:  # logs (jury harnesses capture to files): a line per stage, then a status line every 5 s
         import threading
-        st: dict = {"stage": None, "t0": 0.0, "last": 0.0, "count": "", "frac": None, "total": 0.0, "weighted": None, "detail": ""}
+        st: dict = {"stage": None, "t0": 0.0, "last": 0.0, "count": "", "frac": None, "total": 0.0, "weighted": None, "detail": "",
+                    "moved": 0.0}
         stop = threading.Event()
 
         def say(stage: str, detail: str = "", done: float | None = None, total: float | None = None, count: str | None = None) -> None:
@@ -88,6 +89,8 @@ def working(con: Console, first: str | None = None):
                 con.print(f"  ... {stage}{' · ' + first if first else ''}", style="dim", markup=False, soft_wrap=True)
             st["detail"] = detail
             if total:
+                if st["frac"] is None or min((done or 0) / total, 1.0) != st["frac"]:
+                    st["moved"] = now
                 st.update(frac=min((done or 0) / total, 1.0), total=total, weighted=count,
                           count=count or f"{int(done or 0)}/{int(total)}")
 
@@ -101,7 +104,8 @@ def working(con: Console, first: str | None = None):
                 if st["stage"] and now - st["last"] >= 3:
                     st["last"] = now
                     el = now - st["t0"]
-                    left = _left(st["frac"], el, st["total"], st["weighted"]) if st["frac"] is not None else ""
+                    left = ("waiting on the running item (an episode is cut at 60 s)" if not st["weighted"] and now - st["moved"] > 6
+                            else _left(st["frac"], el, st["total"], st["weighted"]) if st["frac"] is not None else "")
                     con.print(f"      {st['count'] + ' · ' if st['count'] else 'still working · '}{el:.0f} s{' · ' + left if left else ''}"
                               f"{' · ' + st['detail'] if st['detail'] else ''}", style="dim", markup=False)
         if first:
@@ -120,7 +124,7 @@ def working(con: Console, first: str | None = None):
             TextColumn("{task.fields[count]}"), TimeElapsedColumn(), TextColumn("[dim]{task.fields[left]}"),
             TextColumn("[dim]{task.fields[detail]}"))
     with Progress(*cols, console=con) as prog:
-        cur: dict = {"id": None, "stage": None, "t0": 0.0, "count": ""}
+        cur: dict = {"id": None, "stage": None, "t0": 0.0, "count": "", "done": None, "moved": 0.0}
 
         def close() -> None:
             if cur["id"] is not None:
@@ -132,12 +136,16 @@ def working(con: Console, first: str | None = None):
         def say(stage: str, detail: str = "", done: float | None = None, total: float | None = None, count: str | None = None) -> None:
             if stage != cur["stage"]:
                 close()
-                cur.update(stage=stage, t0=time.monotonic(), count="",
+                cur.update(stage=stage, t0=time.monotonic(), count="", done=None, moved=time.monotonic(),
                            id=prog.add_task(stage, total=None, count="", detail="", left=""))
             kw: dict = {"detail": detail}
             if total:
                 frac, el = min((done or 0) / total, 1.0), time.monotonic() - cur["t0"]
-                kw.update(total=total, completed=min(done or 0, total * 0.999), left=_left(frac, el, total, count))  # ✓ only on close
+                if done != cur["done"]:
+                    cur.update(done=done, moved=time.monotonic())
+                stalled = not count and time.monotonic() - cur["moved"] > 6
+                kw.update(total=total, completed=min(done or 0, total * 0.999),  # ✓ only on close
+                          left="waiting on the running item (an episode is cut at 60 s)" if stalled else _left(frac, el, total, count))
                 cur["count"] = count or f"{int(done or 0)}/{int(total)}"
                 kw["count"] = cur["count"]
             prog.update(cur["id"], **kw)
