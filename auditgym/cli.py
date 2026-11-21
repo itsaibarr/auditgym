@@ -35,7 +35,7 @@ def rich_table(title: str, headers: list[str], rows: list[list[str]], legend: st
     from rich.table import Table
     t = Table(title=title or None, title_justify="left", title_style="bold")
     for i, h in enumerate(headers):
-        t.add_column(h, justify="left" if i < left else "right", no_wrap=i == 0)  # IDs and policy names stay whole
+        t.add_column(h, justify="left" if i < left else "right", no_wrap=i == 0, overflow="fold")  # IDs stay whole, nothing is cut
     for r in rows:
         t.add_row(*r)
     con = _console()
@@ -175,6 +175,7 @@ def cmd_run(a) -> int:
                            "launcher script), so a policy could read it too. Start the runner directly: "
                            "docker run --rm -e AUDITGYM_SALT=... auditgym:1.0.0 run ...")
     episodes = _episodes(a)
+    _shape_note(a, [ep for _, ep in episodes])
     specs = a.policy.split(",")
     print(f"  ... starting {len(specs)} {'policy' if len(specs) == 1 else 'policies'} on {len(episodes)} episodes "
           "(first checking that each one starts)", file=sys.stderr, flush=True)
@@ -260,8 +261,14 @@ def cmd_compare(a) -> int:
         part = s.get(f"split:{a.split}") if a.split else s["all"]
         if part is None:
             raise ValueError(f"{d}: no split {a.split!r} in this run (has: {sorted(k[6:] for k in s if k.startswith('split:'))})")
+        res = [json.loads(l) for l in (Path(d) / "results.jsonl").read_text().splitlines() if l]
+        if a.split:
+            res = [r for r in res if r.get("split") == a.split]
+        dirty = [r["reward"] for r in res if not r.get("clean")]
         rows.append({"policy": meta["policy"], **part,
-                     "failed": sum(part.get("termination", {}).get(t, 0) for t in ("timeout", "policy_crash"))})
+                     "failed": sum(part.get("termination", {}).get(t, 0) for t in ("timeout", "policy_crash")),
+                     "dirty_return": round(sum(dirty) / len(dirty), 4) if dirty else None,
+                     "invalid": sum(1 for r in res if not r.get("valid", True))})
     print_table(rows, "Comparison of runs", a.format)
     if a.per_type:
         per = []
@@ -461,15 +468,27 @@ def cmd_paired(a) -> int:
     stage = f"Grading shuffled and renamed copies of {len(eps)} episodes (oracle + {', '.join(specs)})"
     ctx = working(_console(stderr=True))
     say = ctx.__enter__()
-    say(stage, "", 0, len(eps))
+    units, done_u = len(eps) * (1 + 2 * len(specs)), [0]  # one unit = one policy run on one episode (original or copy)
+
+    def step(what: str, k: int) -> None:
+        say(stage, f"now: {what}, episode {k + 1}/{len(eps)} (each run is cut at 60 s)", done_u[0], units,
+            f"{done_u[0]}/{units} policy runs")
+    say(stage, "", 0, units, f"0/{units} policy runs")
     per = {sp: {"same": 0, "steps_only": 0, "changed": [], "crashed": 0} for sp in specs}
     for k, ep in enumerate(eps):
         pub2, truth2, mapping = perturb(ep.public, ep.truth, seed=a.seed + k)
         ep2 = Episode(pub2, truth2, ep.provenance, {})
+        step("oracle on the shuffled copy", k)
         o2 = run_episode("oracle", ep2, "eval").result
+        done_u[0] += 1
         changed = []
         for spec in specs:
-            r1, r2 = (run_episode(spec, e, "eval", a.policy_arg, a.policy_path, isolate=spec not in BUILTIN).result for e in (ep, ep2))
+            rr = []
+            for e, which in ((ep, "original"), (ep2, "shuffled copy")):
+                step(f"{spec} on the {which}", k)
+                rr.append(run_episode(spec, e, "eval", a.policy_arg, a.policy_path, isolate=spec not in BUILTIN).result)
+                done_u[0] += 1
+            r1, r2 = rr
             per[spec]["crashed"] += any(r.get("termination") in ("timeout", "policy_crash") for r in (r1, r2))
             if all(r1[f] == r2[f] for f in ("tp", "fp", "fn")):  # the answer, mapped through the renaming by the grader
                 per[spec]["same"] += 1
@@ -483,7 +502,7 @@ def cmd_paired(a) -> int:
                      ("yes" if not changed else "NO, changed") if len(specs) == 1 else
                      f"{len(specs) - len(changed)}/{len(specs)}" + (f" (changed: {', '.join(changed)})" if changed else ""),
                      "✓ PASS" if ok else "✗ FAIL"])
-        say(stage, f"now: {ep.episode_id}", k + 1, len(eps))
+        say(stage, "", done_u[0], units, f"{done_u[0]}/{units} policy runs")
     ctx.__exit__(None, None, None)
     rich_table("Paired checks (case sections 06 and 10, 'Reproducibility and generalization')",
                ["#", "Episode", "Kind", "IDs renamed", "Oracle reward on the copy",
@@ -708,7 +727,7 @@ def build_parser() -> argparse.ArgumentParser:
                         "of the policy")
     source(pc)
     pc.add_argument("--seed", type=int, default=1, help="seed of the first shuffle/rename; episode k uses seed + k")
-    pc.add_argument("--policy", default="expert", help="policies whose outcome must not change, comma separated: built-ins, "
+    pc.add_argument("--policy", default="expert", help="policies to report on (does their answer change on the copy?), comma separated: built-ins, "
                     "module:Class (with --policy-path) or 'cmd:<command>'; oracle is always checked (default: %(default)s)")
     pc.add_argument("--policy-path", help="directory with your policy module")
     pc.add_argument("--policy-arg", action="append", default=[], help="k=v passed to the policy constructor")

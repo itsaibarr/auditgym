@@ -58,13 +58,14 @@ def _past(stage: str) -> str:
 
 
 def _left(frac: float, elapsed: float, total: float, count: str | None) -> str:
-    """"~N s left". Early on, a bar weighted by measured seconds (count given) trusts its total of expected seconds;
-    a plain count extrapolates once something finished; with nothing to go on, no estimate."""
-    if frac <= 0.15 or elapsed < 4:  # too early to extrapolate: machines differ 2-3x
-        if count:
-            return "usually 30-90 s in total"
-        return f"~{elapsed * (1 - frac) / frac:.0f} s left" if frac > 0 else ""
-    return f"~{elapsed * (1 - frac) / frac:.0f} s left"
+    """"~N s left". The test suite's bar is weighted by measured seconds (its count shows a percent): early on it states
+    the usual length. Any other count extrapolates only after at least 2 items finished; before that, no estimate."""
+    timed = bool(count) and "%" in count
+    if timed and (frac <= 0.15 or elapsed < 4):  # too early to extrapolate: machines differ 2-3x
+        return "usually 30-90 s in total"
+    if not timed and frac * total < 2:
+        return ""
+    return f"~{elapsed * (1 - frac) / frac:.0f} s left" if frac > 0 else ""
 
 
 @contextlib.contextmanager
@@ -104,7 +105,7 @@ def working(con: Console, first: str | None = None):
                 if st["stage"] and now - st["last"] >= 3:
                     st["last"] = now
                     el = now - st["t0"]
-                    left = ("waiting on the running item (an episode is cut at 60 s)" if not st["weighted"] and now - st["moved"] > 6
+                    left = ("waiting on the running item (an episode is cut at 60 s)" if "%" not in (st["weighted"] or "") and now - st["moved"] > 6
                             else _left(st["frac"], el, st["total"], st["weighted"]) if st["frac"] is not None else "")
                     con.print(f"      {st['count'] + ' · ' if st['count'] else 'still working · '}{el:.0f} s{' · ' + left if left else ''}"
                               f"{' · ' + st['detail'] if st['detail'] else ''}", style="dim", markup=False)
@@ -143,7 +144,7 @@ def working(con: Console, first: str | None = None):
                 frac, el = min((done or 0) / total, 1.0), time.monotonic() - cur["t0"]
                 if done != cur["done"]:
                     cur.update(done=done, moved=time.monotonic())
-                stalled = not count and time.monotonic() - cur["moved"] > 6
+                stalled = "%" not in (count or "") and time.monotonic() - cur["moved"] > 6
                 kw.update(total=total, completed=min(done or 0, total * 0.999),  # ✓ only on close
                           left="waiting on the running item (an episode is cut at 60 s)" if stalled else _left(frac, el, total, count))
                 cur["count"] = count or f"{int(done or 0)}/{int(total)}"

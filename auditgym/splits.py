@@ -38,10 +38,12 @@ def split_episodes(split_or_path: str, cfg: dict | None = None) -> list[tuple[st
     if len(set(keys)) != len(keys):
         first: dict = {}
         dups = [f"entries {first[k]} and {i}" for i, k in enumerate(keys) if k in first or first.setdefault(k, i) is None]
-        raise ValueError(f"split lists the same (seed, config) twice: {'; '.join(dups)}")
+        dup_error = f"split lists the same (seed, config) twice: {'; '.join(dups)}"
+    else:
+        dup_error = None
     name = cfg.get("split", Path(split_or_path).stem if split_or_path != "-" else "closed")
     salt = DEFAULT_SALT if split_or_path in OPEN_SPLITS else None
-    out, errors = [], []
+    out, errors = [], [dup_error] if dup_error else []
     for pos, e in enumerate(cfg["episodes"]):
         try:
             ep = generate(e["seed"], {**cfg.get("base_config", {}), **e.get("config", {})}, salt=salt,
@@ -52,7 +54,7 @@ def split_episodes(split_or_path: str, cfg: dict | None = None) -> list[tuple[st
         ep.split_pos = pos  # shown by datacheck/paired so rows map back to the split file
         out.append((name, ep))
     if errors:
-        raise ValueError(f"{len(errors)} split entr{'y' if len(errors) == 1 else 'ies'} rejected:\n  " + "\n  ".join(errors))
+        raise ValueError(f"the split has {len(errors)} problem{'' if len(errors) == 1 else 's'}:\n  " + "\n  ".join(errors))
     ids = [ep.episode_id for _, ep in out]
     if len(set(ids)) != len(ids):
         raise ValueError("two split entries generate the same episode (e.g. seed 1 and \"1\", or an explicit default config)")
