@@ -10,7 +10,7 @@ tick() {  # tick LABEL CMD...: run CMD in the background; every 2 s say LABEL, s
   while kill -0 $P 2>/dev/null; do
     sleep 1; N=$((N + 1))
     if [ $((N % 2)) -eq 0 ] && kill -0 $P 2>/dev/null; then
-      if [ $BIG -eq 0 ]; then say "  $L · $N s · $(( $(mb) - B )) MB so far"; else say "  $L · $N s"; fi
+      if [ $BIG -eq 0 ]; then say "  $L · $N s · $(( $(mb) - B )) MB on disk so far"; else say "  $L · $N s"; fi
     fi
   done
   trap - INT TERM

@@ -14,7 +14,7 @@ def kind(ep) -> str:
     if not ep.truth["issues"]:
         return "clean"
     x = sorted(i for i in inj if i in ("X1", "X2"))
-    return f"interacting {'+'.join(x)}" if x else "errors"
+    return f"interacting {'+'.join(x)}" if x else "other"
 
 
 def kind_counts(eps) -> str:

@@ -84,7 +84,8 @@ def working(con: Console, first: str | None = None):
             if stage != st["stage"]:
                 done_line()
                 st.update(stage=stage, t0=now, last=now, count="", frac=None, detail="")
-                con.print(f"  ... {stage}", style="dim", markup=False, soft_wrap=True)
+                first = count or (f"{int(done or 0)}/{int(total)}" if total else "")
+                con.print(f"  ... {stage}{' · ' + first if first else ''}", style="dim", markup=False, soft_wrap=True)
             st["detail"] = detail
             if total:
                 st.update(frac=min((done or 0) / total, 1.0), total=total, weighted=count,
@@ -97,7 +98,7 @@ def working(con: Console, first: str | None = None):
         def beat() -> None:  # runs even while a long step reports nothing (test collection, one slow episode)
             while not stop.wait(1.0):
                 now = time.monotonic()
-                if st["stage"] and now - st["last"] >= 5:
+                if st["stage"] and now - st["last"] >= 3:
                     st["last"] = now
                     el = now - st["t0"]
                     left = _left(st["frac"], el, st["total"], st["weighted"]) if st["frac"] is not None else ""
@@ -272,7 +273,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
                     "platform": platform.platform(), "steps": {}}
     con.print(Panel.fit(
         f"[bold]AuditGym {__version__} · jury tour[/]\n"
-        "Runs the whole verification in 1-2 minutes, then prints a pass/fail scorecard for each case criterion.\n"
+        "Runs the whole verification in about a minute (40-90 s), then prints a pass/fail scorecard for each case criterion.\n"
         "Fully offline: no network, GPU, API keys or accounts needed. Ctrl-C stops it at any time.\n"
         "4 steps: hidden-episode evaluation → paired checks → replay and leak scan → the full official check → scorecard\n"
         f"[dim]Python {platform.python_version()} · {platform.system()} {platform.machine()} · build {report['code_hash']} (the same id is in every run.json)[/]\n"
@@ -287,11 +288,8 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     # 1. closed evaluation like the organizers' ---------------------------------------------------------------------
     _step(con, "Step 1/4 · Hidden-episode evaluation", "how the organizers will test agents",
           ("Uses the episodes from your split (read from stdin). " if split is not None else
-           "20 new episodes from secret random seeds and a secret salt, never written down (5 with clean books, 5 with "
-           "errors that interact). ")
-          + "Their data is checked independently, then the case's 4 reference policies (our adapters) and our expert run on "
-            "them, each in an isolated process. Under 10 s. (The salt is a secret key mixed into every seed, so an agent cannot "
-            "rebuild the answers with the open generator.)")
+           "20 new secret episodes (5 clean, 5 with interacting errors). ")
+          + "Data checked independently, then 5 policies run in isolated processes. Under 10 s.")
     t0 = time.time()
     if split is not None and os.environ.get("AUDITGYM_SALT"):
         from .runner import salt_exposures
@@ -470,23 +468,29 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
     tb = Table(show_header=True, header_style="bold")
     tb.add_column("Criterion")
     tb.add_column("Max points", justify="right")
+    tb.add_column("Our estimate", justify="right")
     tb.add_column("Status", justify="center")
     tb.add_column("Evidence from this run")
-    status = {}
+    status, est = {}, {}
     for k, name, pts in CRITERIA:
         ok_k = status[k] = {"contract": by_c[k][0] == by_c[k][1] and not leaks and not integ and not any(term_bad.values()),
                 "data": by_c[k][0] == by_c[k][1] and data_ok_n == n_eps,
                 "reward": by_c[k][0] == by_c[k][1] and order_ok,
                 "repro": by_c[k][0] == by_c[k][1] and paired_ok and rep_ok == rep_n,
                 "eng": None}[k]
-        tb.add_row(name, str(pts), "[dim]not measured[/]" if ok_k is None else "[green]✓ PASS[/]" if ok_k else "[red]✗ FAIL[/]", evidence[k])
+        # the case's formula (section 10) applied to our own measurements; the jury computes its own from its checks
+        est[k] = None if ok_k is None else pts if ok_k else round(pts * by_c[k][0] / max(by_c[k][1], 1) * (0.9 if by_c[k][0] == by_c[k][1] else 1))
+        tb.add_row(name, str(pts), "—" if est[k] is None else str(est[k]), "[dim]not measured[/]" if ok_k is None else "[green]✓ PASS[/]" if ok_k else "[red]✗ FAIL[/]", evidence[k])
     con.print(tb)
-    con.print("Max points: the jury's weight for each criterion. PASS: every measurement for that criterion passed in this run. "
-              "Engineering and explanation is judged from the docs, so the tour does not score it.", style="dim", markup=False)
+    con.print("Max points: the jury's weight for each criterion (case section 10). Our estimate: that weight when every "
+              "measurement of the criterion passed in this run, otherwise reduced in proportion; the jury computes its own points "
+              "from its own checks. Engineering and explanation is judged from the docs, so the tour does not score it.",
+              style="dim", markup=False)
     verdict = (f"{'[bold green]✓ ALL PASSED[/]' if all_ok else '[bold red]✗ SOME CHECKS FAILED[/]'} · "
-               f"{sum(v is True for v in status.values())} of {sum(v is not None for v in status.values())} measured criteria passed · "
+               f"{sum(v is True for v in status.values())} of {sum(v is not None for v in status.values())} measured criteria passed "
+               f"({sum(v for v in est.values() if v is not None)} of {sum(p for k, _, p in CRITERIA if est[k] is not None)} points, our estimate) · "
                f"{time.time() - t_all:.0f} s · report: {_shown(outdir / 'report.md')}")
-    report.update({"ok": all_ok, "seconds": round(time.time() - t_all, 1), "evidence": evidence, "status": status})
+    report.update({"ok": all_ok, "seconds": round(time.time() - t_all, 1), "evidence": evidence, "status": status, "points_estimate": est})
     _write_report(outdir, report, rows)
 
     steps = next_steps()
@@ -531,8 +535,9 @@ def _write_report(outdir: Path, report: dict, rows: dict) -> None:
     sym = {True: "✓ PASS", False: "✗ FAIL", None: "not measured"}
     md = [f"# AuditGym {report['auditgym_version']} jury tour: {'ALL PASSED' if report['ok'] else 'SOME CHECKS FAILED'}", "",
           f"Python {report['python']} · {report['platform']} · code hash {report['code_hash']} · {report['seconds']} s", "",
-          "## Scorecard by case criterion", "", "| Criterion | Max points | Status | Evidence from this run |", "|---|---|---|---|"]
-    md += [f"| {name} | {pts} | {sym[report['status'][k]]} | {report['evidence'][k]} |" for k, name, pts in CRITERIA]
+          "## Scorecard by case criterion", "", "| Criterion | Max points | Our estimate | Status | Evidence from this run |", "|---|---|---|---|---|"]
+    md += [f"| {name} | {pts} | {'—' if report['points_estimate'][k] is None else report['points_estimate'][k]} | {sym[report['status'][k]]} | "
+           f"{report['evidence'][k]} |" for k, name, pts in CRITERIA]
     ce = report["steps"]["closed_eval"]
     md += ["", f"## Hidden-episode evaluation ({ce['episodes']} episodes, {'your split' if ce.get('source') == 'juror split' else 'new random seeds'})", "",
            "| Policy | Role | Precision | Recall | F1 | Reward | Reward, clean books | Steps | Sec/episode |", "|---|---|---|---|---|---|---|---|---|"]

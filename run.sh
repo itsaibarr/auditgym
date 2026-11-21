@@ -37,7 +37,7 @@ fi
 
 mkdir -p "$HOME_DIR/bin"
 T0=$(date +%s)
-[ -d "$SRC/.venv" ] || { say "first run: one-time setup before the tour, usually 20-60 s (up to 3 min on a slow network):"; say "  uv, a Python installer (~20 MB), and Python 3.11 (~30 MB), each only if missing; then 19 pinned packages."; say "  Ctrl-C is safe: running the same command again resumes. Later runs start in about 1 s."; }
+[ -d "$SRC/.venv" ] || { say "first run: one-time setup before the tour, usually 20-60 s (up to 3 min on a slow network):"; say "  uv, a Python installer (~20 MB), and Python 3.11 (~30 MB download), each only if missing; then 19 pinned packages."; say "  Ctrl-C is safe: running the same command again resumes. Later runs start in a few seconds."; }
 HERE=""
 if [ -f "$0" ] && [ "$(basename "$0")" = "run.sh" ]; then HERE="$(cd "$(dirname "$0")" 2>/dev/null && pwd || true)"; fi
 if [ -z "${AUDITGYM_SRC:-}" ] && [ -n "$HERE" ] && [ -f "$HERE/uv.lock" ] && [ -d "$HERE/auditgym" ]; then
@@ -75,7 +75,7 @@ if [ -z "$UV" ]; then
     aarch64-unknown-linux-musl) S=a6096da273d548cb9f277d237a01ac7344a39ef0f455c0e148e4dc9737c1596b ;;
     x86_64-unknown-linux-musl) S=6401c4665d8fa2a9893e087c91f585430738e3170f5398a1141483efb4a93310 ;;
   esac
-  say "downloading uv 0.12.17 (~20 MB) into $HOME_DIR/bin (one time) ..."
+  say "downloading uv 0.12.17 (~20 MB, usually 3-20 s) into $HOME_DIR/bin (one time) ..."
   TMP="$HOME_DIR/bin/.dl.$$"; rm -rf "$TMP"; mkdir -p "$TMP"
   fetch_to "https://github.com/astral-sh/uv/releases/download/0.12.17/uv-$T.tar.gz" "$TMP/uv.tgz" resume || true
   GOT=$( (sha256sum "$TMP/uv.tgz" 2>/dev/null || shasum -a 256 "$TMP/uv.tgz") | cut -d' ' -f1)
@@ -91,12 +91,12 @@ rc=0
 . "$SRC/bin/tick.sh"   # tick: a live line every 2 s while a quiet setup step runs
 if [ ! -d "$SRC/.venv" ]; then   # first run: quiet installs with a live line every 2 s, then one receipt line
   if ! "$UV" python find 3.11 >/dev/null 2>&1; then
-    say "downloading Python 3.11 (~30 MB, one time) ..."
-    tick "downloading Python 3.11 (usually 5-30 s)" "$UV" python install --quiet --no-bin 3.11 || { say "Python download failed: run the same command again (finished downloads are kept)"; exit 2; }
+    say "downloading Python 3.11 (~30 MB download, ~55 MB on disk; usually 5-30 s, one time) ..."
+    tick "downloading Python 3.11" "$UV" python install --quiet --no-bin 3.11 || { say "Python download failed: run the same command again (finished downloads are kept)"; exit 2; }
   fi
-  say "installing the 19 pinned packages ..."
-  tick "installing the 19 pinned packages (usually 5-20 s)" "$UV" sync --quiet --frozen --extra gym --project "$SRC" || { say "package install failed: run the same command again (finished downloads are kept)"; exit 2; }
-  say "✓ setup done in $(( $(date +%s) - T0 )) s: uv, Python 3.11 and the packages (later runs start in about 1 s)"
+  say "installing the 19 pinned packages (usually 5-20 s) ..."
+  tick "installing the packages" "$UV" sync --quiet --frozen --extra gym --project "$SRC" || { say "package install failed: run the same command again (finished downloads are kept)"; exit 2; }
+  say "✓ setup done in $(( $(date +%s) - T0 )) s: uv, Python 3.11 and the packages (later runs start in a few seconds)"
 fi
 AUDITGYM_LAUNCHER="sh '$SRC/run.sh'" AUDITGYM_SRC="$SRC" "$UV" run --quiet --frozen --extra gym --project "$SRC" auditgym "$@" || rc=$?
 if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then

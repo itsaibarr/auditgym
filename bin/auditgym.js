@@ -100,7 +100,7 @@ if (isWin) {
 
 const first = !fs.existsSync(path.join(ROOT, ".venv"));  // first run: say the plan before any download, show uv's progress
 const T0 = Date.now();
-if (first) { say("first run: one-time setup before the tour, usually 20-60 s (up to 3 min on a slow network):"); say("  uv, a Python installer (~20 MB), and Python 3.11 (~30 MB), each only if missing; then 19 pinned packages."); say("  Ctrl-C is safe: running the same command again resumes. Later runs start in about 1 s."); }
+if (first) { say("first run: one-time setup before the tour, usually 20-60 s (up to 3 min on a slow network):"); say("  uv, a Python installer (~20 MB), and Python 3.11 (~30 MB download), each only if missing; then 19 pinned packages."); say("  Ctrl-C is safe: running the same command again resumes. Later runs start in a few seconds."); }
 const runs = (u) => spawnSync(u, ["--version"], { timeout: 15000 }).status === 0;  // a cached/system uv must actually start
 let uv = process.env.AUDITGYM_UV ||
   [path.join(CACHE, "bin", "uv"), which("uv"), path.join(os.homedir(), ".local", "bin", "uv"), path.join(os.homedir(), ".cargo", "bin", "uv")].find((u) => u && exists(u) && runs(u));
@@ -110,16 +110,16 @@ const ticked = (label, cmd) => spawnSync("sh", ["-c", `say() { printf '[auditgym
   "sh", uv, path.join(ROOT, "bin", "tick.sh"), label, ...cmd], { stdio: ["ignore", 2, "inherit"] }).status;
 if (first) {  // quiet installs with a live line every 2 s, then one receipt line
   if (spawnSync(uv, ["python", "find", "3.11"], { stdio: "ignore" }).status !== 0) {
-    say("downloading Python 3.11 (~30 MB, one time) ...");
-    if (ticked("downloading Python 3.11 (usually 5-30 s)", [uv, "python", "install", "--quiet", "--no-bin", "3.11"]) !== 0) {
+    say("downloading Python 3.11 (~30 MB download, ~55 MB on disk; usually 5-30 s, one time) ...");
+    if (ticked("downloading Python 3.11", [uv, "python", "install", "--quiet", "--no-bin", "3.11"]) !== 0) {
       say("Python download failed: run the same command again (finished downloads are kept)"); process.exit(2);
     }
   }
-  say("installing the 19 pinned packages ...");
-  if (ticked("installing the 19 pinned packages (usually 5-20 s)", [uv, "sync", "--quiet", "--frozen", "--extra", "gym", "--project", ROOT]) !== 0) {
+  say("installing the 19 pinned packages (usually 5-20 s) ...");
+  if (ticked("installing the packages", [uv, "sync", "--quiet", "--frozen", "--extra", "gym", "--project", ROOT]) !== 0) {
     say("package install failed: run the same command again (finished downloads are kept)"); process.exit(2);
   }
-  say(`✓ setup done in ${Math.round((Date.now() - T0) / 1000)} s: uv, Python 3.11 and the packages (later runs start in about 1 s)`);
+  say(`✓ setup done in ${Math.round((Date.now() - T0) / 1000)} s: uv, Python 3.11 and the packages (later runs start in a few seconds)`);
 }
 const r = spawnSync(uv, ["run", "--quiet", "--frozen", "--extra", "gym", "--project", ROOT, "auditgym", ...args], {
   stdio: "inherit",

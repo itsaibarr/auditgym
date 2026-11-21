@@ -15,18 +15,19 @@ from .episode import generate, load_public, write_episode
 from .splits import ROOT, dir_episode, load_split_config, parse_seeds, split_episodes
 
 COLUMNS = [("policy", "Policy"), ("episodes", "Episodes"), ("micro_precision", "Precision"), ("micro_recall", "Recall"), ("mean_f1", "F1"),
-           ("mean_return", "Reward"), ("mean_return_experimental", "Reward, partial credit"), ("mean_steps", "Steps"),
+           ("mean_return", "Reward"), ("dirty_return", "Reward, books with errors"), ("mean_return_experimental", "Reward, partial credit"), ("mean_steps", "Steps"),
            ("clean_fp_rate", "Clean books flagged"), ("mean_wall_s", "Sec/episode"), ("failed", "Crashed/timed out")]
 LEGEND = ("Precision and recall: pooled over all findings · F1: mean per episode (an empty answer on clean books scores F1 = 1, "
           "so a policy can have F1 > 0 with precision and recall 0) · Reward: the case's terminal reward, -1 to +1, higher is "
-          "better (2·F1 - 1 minus a small cost per step) · Reward, partial credit: an extra variant reported separately, gives half credit for the right "
+          "better (2·F1 - 1 minus a small cost per step) · Reward, books with errors: the same, only on episodes that have errors (the case's reward ordering is stated there) · Reward, partial credit: an extra variant reported separately, gives half credit for the right "
           "error with a wrong amount · Clean books flagged: share of clean episodes where the policy reported any error")
 
 
-def _console():
+def _console(stderr: bool = False):
     from rich.console import Console
     import os
-    return Console(highlight=False, width=None if _tty() or os.environ.get("COLUMNS") else 160)  # piped/Docker: no 80-column squeeze
+    tty = sys.stderr.isatty() if stderr else _tty()
+    return Console(stderr=stderr, highlight=False, width=None if tty or os.environ.get("COLUMNS") else 160)  # piped/Docker: no 80-column squeeze
 
 
 def rich_table(title: str, headers: list[str], rows: list[list[str]], legend: str = "", left: int = 1) -> None:
@@ -213,7 +214,7 @@ def cmd_run(a) -> int:
     from .tour import working
     stage = (f"Running {len(specs)} {'policy' if len(specs) == 1 else 'policies'} on {len(episodes)} episodes"
              + (", each in an isolated process" if not a.no_isolate else ""))
-    with working(Console(stderr=True, highlight=False), stage) as say:  # progress on stderr: stdout stays the results
+    with working(_console(stderr=True), stage) as say:  # progress on stderr: stdout stays the results
         say(stage, "each episode: up to 60 s and 100 steps", 0, len(specs) * len(episodes))
         results = run_policies(specs, episodes, Path(a.out), mode=a.mode, args=a.policy_arg, policy_path=a.policy_path,
                                isolate=not a.no_isolate, allow_forks=a.allow_forks, meta={"sources": source, "isolate": not a.no_isolate, "allow_forks": a.allow_forks,
@@ -223,7 +224,9 @@ def cmd_run(a) -> int:
     for spec in specs:
         res = results[spec]
         failed = sum(1 for r in res if r["termination"] in ("timeout", "policy_crash"))
-        rows.append({"policy": spec, **summarize(res)["all"], "failed": failed})
+        dirty = [r["reward"] for r in res if not r["clean"]]
+        rows.append({"policy": spec, **summarize(res)["all"], "failed": failed,
+                     "dirty_return": round(sum(dirty) / len(dirty), 4) if dirty else None})
         print(f"{spec}: {len(res)} episodes -> {Path(a.out) / name(spec)}", file=sys.stderr)
         if failed:
             print(f"warning: {spec}: {failed}/{len(res)} episodes ended by crash or timeout (graded as empty answers; "
@@ -397,8 +400,8 @@ def cmd_datacheck(a) -> int:
     from rich.console import Console
     from .datacheck import kind, kind_counts, verify_episode
     from .tour import working
-    rows, bad, eps = [], 0, [ep for _, ep in _episodes(a)]
-    with working(Console(stderr=True, highlight=False)) as say:
+    rows, bad, eps = [], 0, sorted((ep for _, ep in _episodes(a)), key=lambda e: getattr(e, 'split_pos', 0))  # split order
+    with working(_console(stderr=True)) as say:
         checks = []
         for ep in eps:
             say(f"Checking the data of {len(eps)} episodes", "", len(checks), len(eps))
@@ -438,9 +441,9 @@ def cmd_paired(a) -> int:
         a.policy_path = str(ROOT / a.policy_path)
     from rich.console import Console
     from .tour import working
-    rows, bad, eps = [], 0, [ep for _, ep in _episodes(a)]
+    rows, bad, eps = [], 0, sorted((ep for _, ep in _episodes(a)), key=lambda e: getattr(e, 'split_pos', 0))  # split order
     stage = f"Grading shuffled and renamed copies of {len(eps)} episodes (oracle + {', '.join(specs)})"
-    ctx = working(Console(stderr=True, highlight=False))
+    ctx = working(_console(stderr=True))
     say = ctx.__enter__()
     say(stage, "", 0, len(eps))
     per = {sp: {"same": 0, "steps_only": 0, "changed": []} for sp in specs}
@@ -460,6 +463,7 @@ def cmd_paired(a) -> int:
         ok = o2["reward"] == 1.0  # the case's paired check: the oracle's answer under the new IDs still gets the maximum
         bad += not ok
         rows.append([str(getattr(ep, "split_pos", "")), ep.episode_id, kind(ep), str(len(mapping)), f"{o2['reward']:+.3f}",
+                     ("yes" if not changed else "NO, changed") if len(specs) == 1 else
                      f"{len(specs) - len(changed)}/{len(specs)}" + (f" (changed: {', '.join(changed)})" if changed else ""),
                      "✓ PASS" if ok else "✗ FAIL"])
         say(stage, f"now: {ep.episode_id}", k + 1, len(eps))
@@ -495,7 +499,9 @@ def cmd_init(a) -> int:
     ag = os.environ.get("AUDITGYM_LAUNCHER", "auditgym")
     print(f"wrote {dst}: a toy agent (class LookAround) that reads a few invoice pages and accuses nobody; edit reset/step.")
     print("Run it on the 10 open dev episodes (--trust-policies: it is your own code and runs with your user's rights):")
-    print(f"  {ag} run --policy my_policy:LookAround --policy-path {shlex.quote(str(d))} --split dev --out out --trust-policies")
+    print(f"  auditgym run --policy my_policy:LookAround --policy-path {shlex.quote(str(d))} --split dev --out out --trust-policies")
+    if ag != "auditgym":
+        print(f"  (auditgym = your launch command: {ag})")
     print("Expect reward +1 on clean books and -1 where errors exist, since it never reports any: about -0.6 on dev, where "
           "2 of the 10 books are clean. Our expert scores about +0.95 there; oracle +1.0.")
     return 0
@@ -593,7 +599,7 @@ def build_parser() -> argparse.ArgumentParser:
     def cmdp(name: str, h: str):
         return sub.add_parser(name, help=h, description=h[0].upper() + h[1:] + ".")
 
-    t = cmdp("tour", "start here: the whole jury check in 1-2 minutes, ending with a pass/fail scorecard for each case criterion")
+    t = cmdp("tour", "start here: the whole jury check in about a minute (40-90 s), ending with a pass/fail scorecard for each case criterion")
     t.add_argument("--out", help="report directory (default: ./auditgym-report)")
     t.add_argument("--quick", action="store_true", help="fewer fresh seeds in the test step")
     t.add_argument("--split", help="'-' = run steps 2-4 on YOUR split from stdin (AUDITGYM_SALT if set and not visible to a wrapper process such as npx/run.sh, else a random salt)")
@@ -704,7 +710,7 @@ and grades whether an agent finds them. Runs offline: no network, API keys, GPU 
 
 START HERE
   auditgym tour
-      The whole jury check in 1-2 minutes. Ends with a pass/fail scorecard for each case criterion.
+      The whole jury check in about a minute (40-90 s). Ends with a pass/fail scorecard for each case criterion.
 
 CHECK THE GRADER ON SEEDS ONLY YOU KNOW
   auditgym split > my_split.json
