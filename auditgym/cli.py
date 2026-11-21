@@ -56,10 +56,12 @@ def print_table(rows: list[dict], title: str = "", fmt: str = "auto") -> None:
     if fmt == "json":
         print(json.dumps(rows, indent=2))
         return
-    if fmt == "csv":
-        print(",".join(h for _, h in COLUMNS))
+    if fmt == "csv":  # a real CSV writer: headers such as "Reward, partial credit" contain commas
+        import csv
+        w = csv.writer(sys.stdout, lineterminator="\n")
+        w.writerow([h for _, h in COLUMNS])
         for r in rows:
-            print(",".join(str(r.get(k, "")) for k, _ in COLUMNS))
+            w.writerow(["" if r.get(k) is None else r.get(k) for k, _ in COLUMNS])
         return
     if fmt == "auto":
         rich_table(title, [h for _, h in COLUMNS], [[_fmt(r.get(k), k) for k, _ in COLUMNS] for r in rows], LEGEND)
@@ -221,11 +223,12 @@ def cmd_run(a) -> int:
     stage = (f"Running {len(specs)} {'policy' if len(specs) == 1 else 'policies'} on {len(episodes)} episode{'' if len(episodes) == 1 else 's'}"
              + (", each in an isolated process" if not a.no_isolate else ""))
     with working(_console(stderr=True)) as say:  # progress on stderr: stdout stays the results
-        say(stage, "each episode: up to 60 s and 100 steps", 0, len(specs) * len(episodes))
+        say(stage, "each episode: up to 60 s and 100 steps", 0, len(specs) * len(episodes), f"0/{len(specs) * len(episodes)} policy runs")
         results = run_policies(specs, episodes, Path(a.out), mode=a.mode, args=a.policy_arg, policy_path=a.policy_path,
                                isolate=not a.no_isolate, allow_forks=a.allow_forks, meta={"sources": source, "isolate": not a.no_isolate, "allow_forks": a.allow_forks,
                                                          "trust_policies": a.trust_policies}, dir_name=name,
-                               on_episode=lambda spec, n, tot: say(stage, f"now: {spec} (each episode: up to 60 s and 100 steps)", n, tot))
+                               on_episode=lambda spec, n, tot: say(stage, f"now: {spec} (each episode: up to 60 s and 100 steps)", n, tot,
+                                                                     f"{n}/{tot} policy runs"))
     rows, dead = [], []
     for spec in specs:
         res = results[spec]
@@ -233,10 +236,10 @@ def cmd_run(a) -> int:
         dirty = [r["reward"] for r in res if not r["clean"]]
         rows.append({"policy": spec, **summarize(res)["all"], "failed": failed, "invalid": sum(1 for r in res if not r.get("valid", True)),
                      "dirty_return": round(sum(dirty) / len(dirty), 4) if dirty else None})
-        print(f"{spec}: {len(res)} episodes -> {Path(a.out) / name(spec)}", file=sys.stderr)
+        print(f"{spec}: {_pl(len(res), 'episode')} -> {Path(a.out) / name(spec)}", file=sys.stderr)
         if failed:
             print(f"warning: {spec}: {failed}/{len(res)} episodes ended by crash or timeout (graded as empty answers; "
-                  f"see the stderr lines above)", file=sys.stderr)
+                  f"if the policy wrote to stderr, its last lines are printed above)", file=sys.stderr)
         if failed == len(res):
             dead.append(spec)
     mode = "evaluation: rewards stay hidden from the policy until the end" if a.mode == "eval" else "training: the policy sees its final reward"
@@ -514,7 +517,8 @@ def cmd_paired(a) -> int:
                 done_u[0] += 1
             r1, r2 = (x.result for x in runs)
             back = {new: old for old, new in mapping.items()}
-            same_accusations = _accusations(runs[0]) == _accusations(runs[1], back)
+            acc1, acc2 = _accusations(runs[0]), _accusations(runs[1], back)
+            same_accusations = acc1 == acc2
             per[spec]["crashed"] += any(r.get("termination") in ("timeout", "policy_crash") for r in (r1, r2))
             hit = lambda r: sorted(m["issue_id"] for m in r.get("matches", []) if m.get("result") == "TP")  # issue ids survive renaming
             if all(r1[f] == r2[f] for f in ("tp", "fp", "fn")) and hit(r1) == hit(r2) and same_accusations:
@@ -523,7 +527,13 @@ def cmd_paired(a) -> int:
                 per[spec]["steps_only"] += r1["reward"] != r2["reward"]
             else:
                 changed.append(spec)
-                per[spec]["changed"].append(f"{ep.episode_id} {r1['tp']}/{r1['fp']}/{r1['fn']} {hit(r1)} → {r2['tp']}/{r2['fp']}/{r2['fn']} {hit(r2)}")
+                moved = ""
+                if acc1 != acc2:  # name what moved, in the original's ids (the copy's mapped back)
+                    fmt = lambda a: "; ".join(f"{x[0]} {','.join(x[1])}" if len(x) > 1 else x[0] for x in a) or "nothing"
+                    moved = (f", accused {fmt(sorted(set(acc1) - set(acc2)))} on the original but "
+                             f"{fmt(sorted(set(acc2) - set(acc1)))} on the copy")
+                per[spec]["changed"].append(f"{ep.episode_id} {r1['tp']}/{r1['fp']}/{r1['fn']} {hit(r1)} → "
+                                            f"{r2['tp']}/{r2['fp']}/{r2['fn']} {hit(r2)}{moved}")
         ok = o2["reward"] == 1.0  # the case's paired check: the oracle's answer under the new IDs still gets the maximum
         bad += not ok
         rows.append([str(getattr(ep, "split_pos", "")), ep.episode_id, kind(ep), str(len(mapping)), f"{o2['reward']:+.3f}",

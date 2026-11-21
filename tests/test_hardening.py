@@ -1126,3 +1126,12 @@ def test_paired_same_answer_means_the_same_documents_accused(monkeypatch, capsys
     monkeypatch.setattr(R, "run_episode", fake)
     assert main(["paired", "--split", "dev", "--policy", "falsealarm"]) == 0
     assert "falsealarm: answer changed on 10/10 copies" in capsys.readouterr().out
+
+
+def test_csv_rows_parse_with_a_standard_reader(tmp_path, capsys):
+    """--format csv is for jury scripts: headers with commas are quoted, every row has the header's length."""
+    import csv, io
+    from auditgym.cli import main
+    assert main(["run", "--policy", "random,flag_all", "--split", "dev", "--out", str(tmp_path), "--format", "csv"]) == 0
+    rows = list(csv.reader(io.StringIO(capsys.readouterr().out)))
+    assert len(rows) == 3 and all(len(r) == len(rows[0]) for r in rows) and "Reward, partial credit" in rows[0]

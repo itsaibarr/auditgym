@@ -48,7 +48,7 @@ if [ -z "${AUDITGYM_SRC:-}" ]; then
   TGZ="$SRC.$$.tgz"; NEW="$SRC.new.$$"; rm -rf "$TGZ" "$NEW"
   case "$URL" in http*) fetch_to "$URL" "$TGZ" "" quiet || true ;; *) cp "$URL" "$TGZ" ;; esac   # 0.6 MB: no bar needed
   if [ -f "$SRC/.tarball.cksum" ] && [ "$(cksum < "$TGZ")" = "$(cat "$SRC/.tarball.cksum")" ]; then
-    rm -f "$TGZ"   # same version as last time: keep the tree and its environment (no rebuild, works offline)
+    rm -f "$TGZ"; say "✓ already up to date"   # same version as last time: keep the tree and its environment
   else
     mkdir -p "$NEW"
     if ! tar -xzf "$TGZ" --strip-components=1 -C "$NEW" 2>/dev/null; then
@@ -75,7 +75,7 @@ if [ -z "$UV" ]; then
     aarch64-unknown-linux-musl) S=a6096da273d548cb9f277d237a01ac7344a39ef0f455c0e148e4dc9737c1596b ;;
     x86_64-unknown-linux-musl) S=6401c4665d8fa2a9893e087c91f585430738e3170f5398a1141483efb4a93310 ;;
   esac
-  say "downloading uv 0.12.17 (~20 MB, usually 3-20 s) into $HOME_DIR/bin (one time) ..."
+  say "downloading uv 0.12.17 (~20 MB, usually 3-30 s) into $HOME_DIR/bin (one time) ..."
   TMP="$HOME_DIR/bin/.dl.$$"; rm -rf "$TMP"; mkdir -p "$TMP"
   fetch_to "https://github.com/astral-sh/uv/releases/download/0.12.17/uv-$T.tar.gz" "$TMP/uv.tgz" resume || true
   GOT=$( (sha256sum "$TMP/uv.tgz" 2>/dev/null || shasum -a 256 "$TMP/uv.tgz") | cut -d' ' -f1)
