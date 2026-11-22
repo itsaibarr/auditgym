@@ -212,5 +212,159 @@
    "period_cutoff": 23
   },
   "mean_new_tokens": 78.9
+ },
+ "base_c": {
+  "per_type": {
+   "duplicate_invoice": {
+    "tp": 1,
+    "fp": 9,
+    "fn": 5
+   },
+   "fx_conversion": {
+    "tp": 0,
+    "fp": 23,
+    "fn": 12
+   },
+   "payment_allocation": {
+    "tp": 0,
+    "fp": 22,
+    "fn": 6
+   },
+   "period_cutoff": {
+    "tp": 0,
+    "fp": 31,
+    "fn": 10
+   }
+  },
+  "fp_reasons": {
+   "amount": 6,
+   "insufficient_evidence": 1,
+   "no_issue": 78
+  },
+  "mean_new_tokens": 583.9
+ },
+ "c4_c": {
+  "per_type": {
+   "duplicate_invoice": {
+    "tp": 23,
+    "fp": 2,
+    "fn": 2
+   },
+   "fx_conversion": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 31
+   },
+   "payment_allocation": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 19
+   },
+   "period_cutoff": {
+    "tp": 8,
+    "fp": 13,
+    "fn": 21
+   }
+  },
+  "fp_reasons": {
+   "amount": 2,
+   "insufficient_evidence": 2,
+   "no_issue": 7,
+   "unknown_evidence_id": 4
+  },
+  "mean_new_tokens": 77.1
+ },
+ "c5_c": {
+  "per_type": {
+   "duplicate_invoice": {
+    "tp": 19,
+    "fp": 3,
+    "fn": 6
+   },
+   "fx_conversion": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 31
+   },
+   "payment_allocation": {
+    "tp": 1,
+    "fp": 21,
+    "fn": 18
+   },
+   "period_cutoff": {
+    "tp": 7,
+    "fp": 19,
+    "fn": 22
+   }
+  },
+  "fp_reasons": {
+   "amount": 2,
+   "insufficient_evidence": 1,
+   "no_issue": 36,
+   "unknown_evidence_id": 4
+  },
+  "mean_new_tokens": 114.9
+ },
+ "c5": {
+  "per_type": {
+   "duplicate_invoice": {
+    "tp": 23,
+    "fp": 2,
+    "fn": 6
+   },
+   "fx_conversion": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 27
+   },
+   "payment_allocation": {
+    "tp": 1,
+    "fp": 17,
+    "fn": 18
+   },
+   "period_cutoff": {
+    "tp": 9,
+    "fp": 21,
+    "fn": 18
+   }
+  },
+  "fp_reasons": {
+   "amount": 4,
+   "insufficient_evidence": 3,
+   "no_issue": 32,
+   "unknown_evidence_id": 1
+  },
+  "mean_new_tokens": 122.9
+ },
+ "c5_b": {
+  "per_type": {
+   "duplicate_invoice": {
+    "tp": 24,
+    "fp": 2,
+    "fn": 3
+   },
+   "fx_conversion": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 30
+   },
+   "payment_allocation": {
+    "tp": 3,
+    "fp": 19,
+    "fn": 14
+   },
+   "period_cutoff": {
+    "tp": 13,
+    "fp": 10,
+    "fn": 17
+   }
+  },
+  "fp_reasons": {
+   "amount": 3,
+   "insufficient_evidence": 2,
+   "no_issue": 25,
+   "unknown_evidence_id": 1
+  },
+  "mean_new_tokens": 118.1
  }
 }
