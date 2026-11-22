@@ -7,3 +7,4 @@ kaggle/build3/
 results/kaggle_arttts/*/adapter/*.safetensors
 results/kaggle_arttts/*/spec_*.json
 kaggle/build5/
+kaggle/build6/

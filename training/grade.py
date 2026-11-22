@@ -20,6 +20,7 @@ sys.path.insert(0, str(HERE.parent))
 
 import agpolicy as A  # noqa: E402
 from play import expert_decide, play  # noqa: E402
+from postfilter import postfilter  # noqa: E402
 
 GROUPS = {"clean": "clean", "duplicate_invoice": "single", "payment_allocation": "single", "fx_conversion": "single",
           "period_cutoff": "single", "mixed": "multi", "X1": "multi", "X2": "multi"}
@@ -47,7 +48,8 @@ def lenient(gens: dict) -> dict:
     return out
 
 
-def grade_arm(held: list[dict], gens: dict | None) -> list[dict]:
+def grade_arm(held: list[dict], gens: dict | None, filt=None) -> list[dict]:
+    """filt: config 6 post-filter (postfilter.py) applied to the parsed answer before submit; drops are recorded."""
     rows = []
     for e in held:
         g = gens.get(e["seed"]) if gens is not None else None
@@ -61,6 +63,13 @@ def grade_arm(held: list[dict], gens: dict | None) -> list[dict]:
         else:
             payload, parse_ok = A.to_submission(g["text"], e["episode_id"])
             decide, missing = (lambda o, r, p=payload: p), False
+            if filt is not None and parse_ok:
+                drops = []
+
+                def decide(o, r, p=payload, d=drops):
+                    q, why = filt(p, o, r)
+                    d.extend(why)
+                    return q
             extra = {"new_tokens": g["new_tokens"], "hit_max_new_tokens": g["hit_max_new_tokens"],
                      "n_findings": len(payload["findings"]) if parse_ok and isinstance(payload["findings"], list) else None}
         obs0, _, n_scan, res = play(e["seed"], e["config"], decide)
@@ -70,6 +79,7 @@ def grade_arm(held: list[dict], gens: dict | None) -> list[dict]:
                      "steps": res["inspection_steps"] + 1,
                      "fp_reasons": [m["reason"] for m in res["matches"] if m["result"] == "FP"],
                      "per_type": res.get("per_type", {}),
+                     **({"filter_drops": list(drops)} if filt is not None and g is not None and parse_ok else {}),
                      **extra})
     return rows
 
@@ -109,8 +119,10 @@ def paired_bootstrap(a: list[float], b: list[float]) -> dict:
 SETS = {  # held-out set -> (file, arms read from results/kaggle/<arm>/gen_*.jsonl, output suffix)
     "A": ("heldout.jsonl", ("base", "after", "after2", "c3", "c4", "c5"), ""),
     "B": ("heldout_b.jsonl", ("base_b", "c3_b", "c4_b", "c5_b"), "_b"),
-    "C": ("heldout_c.jsonl", ("base_c", "c4_c", "c5_c"), "_c"),   # round 3 confirmation set (addendum 4)
+    "C": ("heldout_c.jsonl", ("base_c", "c4_c", "c5_c", "c7_c"), "_c"),   # round 3 confirmation set (addendum 4)
+    "D": ("heldout_d.jsonl", ("base_d", "c4_d", "c5_d", "c7_d"), "_d"),   # round 4 confirmation set (addendum 5)
 }
+DERIVED = {"c6": "c4"}   # config 6 = config 4's generations + postfilter.py (no new generation)
 
 
 def main():
@@ -124,6 +136,9 @@ def main():
             arms[arm] = grade_arm(held, gens)
             if arm in ("base", "after", "after2"):
                 arms[f"explore_{arm}_lenient_explanation"] = grade_arm(held, lenient(gens))
+            for new, src in DERIVED.items():
+                if arm == src + suffix:
+                    arms[new + suffix] = grade_arm(held, gens, filt=postfilter)
     arms["ref_expert"] = grade_arm([{**e, "_ref": "expert"} for e in held], None)
     arms["ref_empty"] = grade_arm(held, None)
     metrics = {"set": which, "file": fname, "arms": {}, "by_group": {}}
@@ -132,8 +147,10 @@ def main():
         metrics["by_group"][arm] = {g: summary([r for r in rows if r["group"] == g]) for g in ("clean", "single", "multi")}
     sfx = suffix
     base = "base" + sfx
-    pairs = [(b, a) for a in arm_names if a != base for b in (base, "ref_empty")]
+    names = list(arm_names) + [n + sfx for n in DERIVED]
+    pairs = [(b, a) for a in names if a != base for b in (base, "ref_empty")]
     pairs += [("c3" + sfx, "c4" + sfx), ("c4" + sfx, "c5" + sfx)]
+    pairs += [(b + sfx, a + sfx) for a in ("c6", "c7") for b in ("c5", "c4")]
     for b_arm, a_arm in pairs:
         if b_arm not in arms or a_arm not in arms:
             continue

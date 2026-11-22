@@ -131,7 +131,11 @@ def load(path, device_map, adapter=None, trainable=False):
         m.config.use_cache = False
         m.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
         m.enable_input_require_grads()
-        m = get_peft_model(m, LoraConfig(task_type="CAUSAL_LM", bias="none", **LORA))
+        if os.environ.get("GAG_INIT_ADAPTER"):   # config 7: continue training an existing adapter (mounted read-only)
+            from peft import PeftModel
+            m = PeftModel.from_pretrained(m, os.path.dirname(find("adapter_config.json")), is_trainable=True)
+        else:
+            m = get_peft_model(m, LoraConfig(task_type="CAUSAL_LM", bias="none", **LORA))
         for p in m.parameters():
             if p.requires_grad:
                 p.data = p.data.float()   # fp32 master weights for the adapter, fp16 autocast compute
@@ -324,6 +328,10 @@ def main():
             generate_sharded(path, rows, tag, adapter=os.path.dirname(find("adapter_config.json")) if ad == "adapter" else None)
     elif MODE == "sft":
         run_train(path, sft, TRAIN_DEVICES, "main")
+        # config 7: optional generation with the adapter just trained ("trained" = /kaggle/working/adapter)
+        for item in filter(None, os.environ.get("GAG_GEN_AFTER", "").split(",")):
+            fname, tag, _ = item.split(":")
+            generate_sharded(path, [json.loads(l) for l in open(find(fname))], tag, adapter=f"{W}/adapter")
     elif MODE == "diag":
         tg = {json.loads(l)["seed"]: json.loads(l)["target"] for l in open(find("heldout_expert_targets.jsonl"))}
         rows = [{**r, "target": tg[r["seed"]], "split": "heldout"} for r in held] + \
