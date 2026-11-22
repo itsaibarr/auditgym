@@ -9,3 +9,4 @@ runs/
 *.egg-info/
 dist/
 .hypothesis/
+auditgym-report/
