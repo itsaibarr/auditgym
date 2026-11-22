@@ -1,0 +1,65 @@
+{"event": "downloaded", "s": 50, "t": 1795301837.1}
+{"event": "start", "mode": "gen", "n_held": 60, "n_sft": 640, "t": 1795301837.5}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 287.2, "peak_gb": {"0": 12.51}, "in_tokens": 5546, "done": 2, "total": 30, "t": 1795302172.1}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 287.7, "peak_gb": {"0": 12.54}, "in_tokens": 5590, "done": 2, "total": 30, "t": 1795302172.5}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 190.7, "peak_gb": {"0": 12.54}, "in_tokens": 5459, "done": 4, "total": 30, "t": 1795302363.3}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 273.3, "peak_gb": {"0": 12.51}, "in_tokens": 5247, "done": 4, "total": 30, "t": 1795302445.4}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 218.6, "peak_gb": {"0": 12.54}, "in_tokens": 5450, "done": 6, "total": 30, "t": 1795302581.9}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 261.8, "peak_gb": {"0": 12.51}, "in_tokens": 5174, "done": 6, "total": 30, "t": 1795302707.3}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 232.5, "peak_gb": {"0": 12.54}, "in_tokens": 5280, "done": 8, "total": 30, "t": 1795302814.4}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 212.3, "peak_gb": {"0": 12.51}, "in_tokens": 5146, "done": 8, "total": 30, "t": 1795302919.6}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 122.9, "peak_gb": {"0": 12.51}, "in_tokens": 5000, "done": 10, "total": 30, "t": 1795303042.5}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 272.0, "peak_gb": {"0": 12.54}, "in_tokens": 5110, "done": 10, "total": 30, "t": 1795303086.4}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 214.9, "peak_gb": {"0": 12.51}, "in_tokens": 4795, "done": 12, "total": 30, "t": 1795303257.4}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 271.6, "peak_gb": {"0": 12.54}, "in_tokens": 5028, "done": 12, "total": 30, "t": 1795303358.0}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 206.4, "peak_gb": {"0": 12.51}, "in_tokens": 4761, "done": 14, "total": 30, "t": 1795303463.8}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 130.6, "peak_gb": {"0": 12.54}, "in_tokens": 5002, "done": 14, "total": 30, "t": 1795303488.6}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 106.5, "peak_gb": {"0": 12.51}, "in_tokens": 4678, "done": 16, "total": 30, "t": 1795303570.4}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 197.3, "peak_gb": {"0": 12.54}, "in_tokens": 4871, "done": 16, "total": 30, "t": 1795303685.9}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 263.6, "peak_gb": {"0": 12.51}, "in_tokens": 4609, "done": 18, "total": 30, "t": 1795303834.0}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 161.2, "peak_gb": {"0": 12.54}, "in_tokens": 4791, "done": 18, "total": 30, "t": 1795303847.2}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 107.2, "peak_gb": {"0": 12.54}, "in_tokens": 4787, "done": 20, "total": 30, "t": 1795303954.4}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 96.7, "peak_gb": {"0": 12.54}, "in_tokens": 4523, "done": 22, "total": 30, "t": 1795304051.1}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 226.0, "peak_gb": {"0": 12.51}, "in_tokens": 4410, "done": 20, "total": 30, "t": 1795304060.1}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 144.3, "peak_gb": {"0": 12.54}, "in_tokens": 4344, "done": 24, "total": 30, "t": 1795304195.4}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 146.6, "peak_gb": {"0": 12.51}, "in_tokens": 4396, "done": 22, "total": 30, "t": 1795304206.7}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 115.4, "peak_gb": {"0": 12.54}, "in_tokens": 4321, "done": 26, "total": 30, "t": 1795304310.8}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 136.0, "peak_gb": {"0": 12.51}, "in_tokens": 4302, "done": 24, "total": 30, "t": 1795304342.8}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 158.0, "peak_gb": {"0": 12.51}, "in_tokens": 4296, "done": 26, "total": 30, "t": 1795304500.8}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 207.9, "peak_gb": {"0": 12.54}, "in_tokens": 4311, "done": 28, "total": 30, "t": 1795304518.8}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 115.0, "peak_gb": {"0": 12.51}, "in_tokens": 3930, "done": 28, "total": 30, "t": 1795304615.9}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 133.5, "peak_gb": {"0": 12.54}, "in_tokens": 4148, "done": 30, "total": 30, "t": 1795304652.3}
+{"event": "gen_batch", "tag": "base_c", "n": 2, "s": 236.9, "peak_gb": {"0": 12.51}, "in_tokens": 3715, "done": 30, "total": 30, "t": 1795304852.8}
+{"event": "gen_done", "tag": "base_c", "codes": [0, 0], "t": 1795304854.2}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 52.7, "peak_gb": {"0": 12.99}, "in_tokens": 5546, "done": 2, "total": 30, "t": 1795304931.6}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 67.2, "peak_gb": {"0": 13.02}, "in_tokens": 5590, "done": 2, "total": 30, "t": 1795304946.1}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 23.3, "peak_gb": {"0": 13.02}, "in_tokens": 5459, "done": 4, "total": 30, "t": 1795304969.4}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 74.5, "peak_gb": {"0": 12.99}, "in_tokens": 5247, "done": 4, "total": 30, "t": 1795305006.2}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 47.2, "peak_gb": {"0": 13.02}, "in_tokens": 5450, "done": 6, "total": 30, "t": 1795305016.5}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 45.3, "peak_gb": {"0": 13.02}, "in_tokens": 5280, "done": 8, "total": 30, "t": 1795305061.8}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 66.0, "peak_gb": {"0": 12.99}, "in_tokens": 5174, "done": 6, "total": 30, "t": 1795305072.2}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 45.7, "peak_gb": {"0": 13.02}, "in_tokens": 5110, "done": 10, "total": 30, "t": 1795305107.5}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 44.2, "peak_gb": {"0": 12.99}, "in_tokens": 5146, "done": 8, "total": 30, "t": 1795305116.4}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 47.2, "peak_gb": {"0": 12.99}, "in_tokens": 5000, "done": 10, "total": 30, "t": 1795305163.7}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 63.5, "peak_gb": {"0": 13.02}, "in_tokens": 5028, "done": 12, "total": 30, "t": 1795305171.1}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 22.7, "peak_gb": {"0": 13.02}, "in_tokens": 5002, "done": 14, "total": 30, "t": 1795305193.8}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 66.5, "peak_gb": {"0": 12.99}, "in_tokens": 4795, "done": 12, "total": 30, "t": 1795305230.2}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 46.8, "peak_gb": {"0": 12.99}, "in_tokens": 4761, "done": 14, "total": 30, "t": 1795305277.0}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 88.5, "peak_gb": {"0": 13.02}, "in_tokens": 4871, "done": 16, "total": 30, "t": 1795305282.3}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 68.0, "peak_gb": {"0": 12.99}, "in_tokens": 4678, "done": 16, "total": 30, "t": 1795305345.0}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 67.0, "peak_gb": {"0": 13.02}, "in_tokens": 4791, "done": 18, "total": 30, "t": 1795305349.3}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 44.3, "peak_gb": {"0": 13.02}, "in_tokens": 4787, "done": 20, "total": 30, "t": 1795305393.6}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 61.5, "peak_gb": {"0": 12.99}, "in_tokens": 4609, "done": 18, "total": 30, "t": 1795305406.5}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 20.4, "peak_gb": {"0": 13.02}, "in_tokens": 4523, "done": 22, "total": 30, "t": 1795305414.0}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 20.5, "peak_gb": {"0": 12.99}, "in_tokens": 4410, "done": 20, "total": 30, "t": 1795305427.1}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 20.6, "peak_gb": {"0": 12.99}, "in_tokens": 4396, "done": 22, "total": 30, "t": 1795305447.7}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 39.8, "peak_gb": {"0": 13.02}, "in_tokens": 4344, "done": 24, "total": 30, "t": 1795305453.8}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 40.8, "peak_gb": {"0": 13.02}, "in_tokens": 4321, "done": 26, "total": 30, "t": 1795305494.6}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 60.1, "peak_gb": {"0": 12.99}, "in_tokens": 4302, "done": 24, "total": 30, "t": 1795305507.8}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 19.3, "peak_gb": {"0": 13.02}, "in_tokens": 4311, "done": 28, "total": 30, "t": 1795305513.9}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 39.6, "peak_gb": {"0": 13.02}, "in_tokens": 4148, "done": 30, "total": 30, "t": 1795305553.5}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 61.6, "peak_gb": {"0": 12.99}, "in_tokens": 4296, "done": 26, "total": 30, "t": 1795305569.5}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 18.1, "peak_gb": {"0": 12.99}, "in_tokens": 3930, "done": 28, "total": 30, "t": 1795305587.6}
+{"event": "gen_batch", "tag": "c4_c", "n": 2, "s": 37.3, "peak_gb": {"0": 12.99}, "in_tokens": 3715, "done": 30, "total": 30, "t": 1795305624.9}
+{"event": "gen_done", "tag": "c4_c", "codes": [0, 0], "t": 1795305626.4}
+{"event": "end", "mode": "gen", "t": 1795305626.4}

@@ -69,6 +69,7 @@ def grade_arm(held: list[dict], gens: dict | None) -> list[dict]:
                      "valid": res["valid"], "parse_ok": parse_ok, "missing": missing,
                      "steps": res["inspection_steps"] + 1,
                      "fp_reasons": [m["reason"] for m in res["matches"] if m["result"] == "FP"],
+                     "per_type": res.get("per_type", {}),
                      **extra})
     return rows
 
@@ -85,7 +86,9 @@ def summary(rows: list[dict]) -> dict:
          "unparseable_rate": round(sum(not r["parse_ok"] for r in rows) / n, 4),
          "mean_steps": round(sum(r["steps"] for r in rows) / n, 2),
          "fp_reasons": dict(sorted(Counter(x for r in rows for x in r["fp_reasons"]).items())),
-         "clean_books_false_accusation_rate": round(sum(r["fp"] > 0 for r in clean) / len(clean), 4) if clean else None}
+         "clean_books_false_accusation_rate": round(sum(r["fp"] > 0 for r in clean) / len(clean), 4) if clean else None,
+         "per_type": {t: {k: sum(r.get("per_type", {}).get(t, {}).get(k, 0) for r in rows) for k in ("tp", "fp", "fn")}
+                      for t in sorted({t for r in rows for t in r.get("per_type", {})})}}
     if any("new_tokens" in r for r in rows):
         s["mean_new_tokens"] = round(sum(r.get("new_tokens", 0) for r in rows) / n, 1)
         s["hit_max_new_tokens"] = sum(bool(r.get("hit_max_new_tokens")) for r in rows)
@@ -104,8 +107,9 @@ def paired_bootstrap(a: list[float], b: list[float]) -> dict:
 
 
 SETS = {  # held-out set -> (file, arms read from results/kaggle/<arm>/gen_*.jsonl, output suffix)
-    "A": ("heldout.jsonl", ("base", "after", "after2", "c3", "c4"), ""),
-    "B": ("heldout_b.jsonl", ("base_b", "c3_b", "c4_b"), "_b"),
+    "A": ("heldout.jsonl", ("base", "after", "after2", "c3", "c4", "c5"), ""),
+    "B": ("heldout_b.jsonl", ("base_b", "c3_b", "c4_b", "c5_b"), "_b"),
+    "C": ("heldout_c.jsonl", ("base_c", "c4_c", "c5_c"), "_c"),   # round 3 confirmation set (addendum 4)
 }
 
 
@@ -126,9 +130,10 @@ def main():
     for arm, rows in arms.items():
         metrics["arms"][arm] = summary(rows)
         metrics["by_group"][arm] = {g: summary([r for r in rows if r["group"] == g]) for g in ("clean", "single", "multi")}
-    base = "base" if which == "A" else "base_b"
-    pairs = [(b, a) for a in arm_names if a not in ("base", "base_b") for b in (base, "ref_empty")]
-    pairs.append(("c3" if which == "A" else "c3_b", "c4" if which == "A" else "c4_b"))
+    sfx = suffix
+    base = "base" + sfx
+    pairs = [(b, a) for a in arm_names if a != base for b in (base, "ref_empty")]
+    pairs += [("c3" + sfx, "c4" + sfx), ("c4" + sfx, "c5" + sfx)]
     for b_arm, a_arm in pairs:
         if b_arm not in arms or a_arm not in arms:
             continue
