@@ -490,7 +490,7 @@ def run_tour(out: str | None = None, quick: bool = False, split: dict | None = N
                   f"flag_all −1 on clean books: {'yes' if flag_clean else 'no'}; {order_txt}",
         "repro": f"paired checks {len(eps) - len(bad)}/{len(eps)}; replay {rep_ok}/{rep_n}",
         "eng": "judged from the docs: versions and hashes in run.json · trajectories in closed/*/trajectories.jsonl · "
-               "failure analysis in docs/FAILURE_ANALYSIS.md · limitations in the README",
+               "failure analysis in docs/FAILURE_ANALYSIS.md · scope and roadmap in the README",
     }
     con.rule("[bold]Scorecard by case criterion[/]")
     tb = Table(show_header=True, header_style="bold")
