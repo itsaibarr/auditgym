@@ -1,8 +1,8 @@
 # AuditGym demo (VHS): the jury tour, then the case's own checking process (section 06) step by step, then your own agent.
-# Terminal part of submission/demo.mp4 (the published video adds title cards and a caption band): cd <repo> && vhs submission/demo.tape
+# Terminal recording of the jury tour (VHS): cd <repo> && vhs submission/demo.tape
 # Needs: curl, docker image auditgym:1.0.0 (docker build -t auditgym:1.0.0 .), openssl.
 # Recorded with a neutral HOME (/tmp/jury/home), warmed up off camera; a real first run adds a 20-60 s one-time setup.
-Output submission/demo.mp4
+Output submission/demo_terminal.mp4
 
 Require curl
 Require docker

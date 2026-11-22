@@ -20,7 +20,7 @@ AuditGym генерирует бухгалтерию вымышленной ко
 | Траектории с episode_id, step, action, observation, reward, terminated, truncated | [`trajectories/trajectories.jsonl`](trajectories/trajectories.jsonl), по политикам в [`trajectories/train/`](trajectories/train) |
 | Записка о дизайне | [`docs/DESIGN.md`](docs/DESIGN.md) |
 | Разбор сбоев | [`docs/FAILURE_ANALYSIS.md`](docs/FAILURE_ANALYSIS.md) |
-| Демо | [`submission/demo.mp4`](submission/demo.mp4) (то же видео лежит в папке сдачи), сценарий терминальной части [`submission/demo.tape`](submission/demo.tape) |
+| Демо | [`submission/demo.mp4`](submission/demo.mp4), 2 минуты (то же видео лежит в папке сдачи); запись тура жюри в терминале: [`submission/demo.tape`](submission/demo.tape) |
 
 ## Для жюри: одна команда
 
@@ -488,7 +488,7 @@ configs/    train.json dev.json closed_example.json      data/ 10 train + 10 dev
 tests/      контракт, данные, награда, воспроизводимость, изоляция      schema/ JSON Schema
 examples/   свои политики (Python-класс, протокол stdio)      trajectories/ траектории train
 docs/       DESIGN.md, FAILURE_ANALYSIS.md, SPEC.md, PLAN.md, COUNCIL.md      scripts/ failure_analysis.py
-submission/ demo.mp4 (демо), demo.tape (сценарий записи)
+submission/ demo.mp4 (демо), demo.tape (запись тура в терминале)
 ```
 
 Как мы проверяли среду и путь жюри, по раундам, описано в [docs/COUNCIL.md](docs/COUNCIL.md).
