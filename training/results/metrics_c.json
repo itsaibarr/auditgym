@@ -1,0 +1,725 @@
+{
+ "set": "C",
+ "file": "heldout_c.jsonl",
+ "arms": {
+  "base_c": {
+   "n": 60,
+   "mean_reward": -0.9935,
+   "mean_f1": 0.0033,
+   "micro_f1": 0.0105,
+   "tp": 1,
+   "fp": 85,
+   "fn": 103,
+   "schema_error_rate": 0.7167,
+   "unparseable_rate": 0.0667,
+   "mean_steps": 6.92,
+   "fp_reasons": {
+    "amount": 6,
+    "insufficient_evidence": 1,
+    "no_issue": 78
+   },
+   "clean_books_false_accusation_rate": 0.2143,
+   "per_type": {
+    "duplicate_invoice": {
+     "tp": 1,
+     "fp": 9,
+     "fn": 5
+    },
+    "fx_conversion": {
+     "tp": 0,
+     "fp": 23,
+     "fn": 12
+    },
+    "payment_allocation": {
+     "tp": 0,
+     "fp": 22,
+     "fn": 6
+    },
+    "period_cutoff": {
+     "tp": 0,
+     "fp": 31,
+     "fn": 10
+    }
+   },
+   "mean_new_tokens": 583.9,
+   "hit_max_new_tokens": 5,
+   "missing_generations": 0
+  },
+  "c4_c": {
+   "n": 60,
+   "mean_reward": -0.0221,
+   "mean_f1": 0.4928,
+   "micro_f1": 0.4133,
+   "tp": 31,
+   "fp": 15,
+   "fn": 73,
+   "schema_error_rate": 0.0,
+   "unparseable_rate": 0.0,
+   "mean_steps": 6.92,
+   "fp_reasons": {
+    "amount": 2,
+    "insufficient_evidence": 2,
+    "no_issue": 7,
+    "unknown_evidence_id": 4
+   },
+   "clean_books_false_accusation_rate": 0.0714,
+   "per_type": {
+    "duplicate_invoice": {
+     "tp": 23,
+     "fp": 2,
+     "fn": 2
+    },
+    "fx_conversion": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 31
+    },
+    "payment_allocation": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 19
+    },
+    "period_cutoff": {
+     "tp": 8,
+     "fp": 13,
+     "fn": 21
+    }
+   },
+   "mean_new_tokens": 77.1,
+   "hit_max_new_tokens": 0,
+   "missing_generations": 0
+  },
+  "ref_expert": {
+   "n": 60,
+   "mean_reward": 0.9882,
+   "mean_f1": 1.0,
+   "micro_f1": 1.0,
+   "tp": 104,
+   "fp": 0,
+   "fn": 0,
+   "schema_error_rate": 0.0,
+   "unparseable_rate": 0.0,
+   "mean_steps": 6.92,
+   "fp_reasons": {},
+   "clean_books_false_accusation_rate": 0.0,
+   "per_type": {
+    "duplicate_invoice": {
+     "tp": 25,
+     "fp": 0,
+     "fn": 0
+    },
+    "fx_conversion": {
+     "tp": 31,
+     "fp": 0,
+     "fn": 0
+    },
+    "payment_allocation": {
+     "tp": 19,
+     "fp": 0,
+     "fn": 0
+    },
+    "period_cutoff": {
+     "tp": 29,
+     "fp": 0,
+     "fn": 0
+    }
+   }
+  },
+  "ref_empty": {
+   "n": 60,
+   "mean_reward": -0.5361,
+   "mean_f1": 0.2333,
+   "micro_f1": 0.0,
+   "tp": 0,
+   "fp": 0,
+   "fn": 104,
+   "schema_error_rate": 0.0,
+   "unparseable_rate": 0.0,
+   "mean_steps": 6.92,
+   "fp_reasons": {},
+   "clean_books_false_accusation_rate": 0.0,
+   "per_type": {
+    "duplicate_invoice": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 25
+    },
+    "fx_conversion": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 31
+    },
+    "payment_allocation": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 19
+    },
+    "period_cutoff": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 29
+    }
+   }
+  }
+ },
+ "by_group": {
+  "base_c": {
+   "clean": {
+    "n": 12,
+    "mean_reward": -1.0,
+    "mean_f1": 0.0,
+    "micro_f1": 0.0,
+    "tp": 0,
+    "fp": 14,
+    "fn": 0,
+    "schema_error_rate": 0.75,
+    "unparseable_rate": 0.0,
+    "mean_steps": 6.92,
+    "fp_reasons": {
+     "no_issue": 14
+    },
+    "clean_books_false_accusation_rate": 0.25,
+    "per_type": {
+     "duplicate_invoice": {
+      "tp": 0,
+      "fp": 1,
+      "fn": 0
+     },
+     "fx_conversion": {
+      "tp": 0,
+      "fp": 1,
+      "fn": 0
+     },
+     "payment_allocation": {
+      "tp": 0,
+      "fp": 6,
+      "fn": 0
+     },
+     "period_cutoff": {
+      "tp": 0,
+      "fp": 6,
+      "fn": 0
+     }
+    },
+    "mean_new_tokens": 511.1,
+    "hit_max_new_tokens": 0,
+    "missing_generations": 0
+   },
+   "single": {
+    "n": 24,
+    "mean_reward": -1.0,
+    "mean_f1": 0.0,
+    "micro_f1": 0.0,
+    "tp": 0,
+    "fp": 48,
+    "fn": 33,
+    "schema_error_rate": 0.625,
+    "unparseable_rate": 0.1667,
+    "mean_steps": 6.96,
+    "fp_reasons": {
+     "amount": 4,
+     "no_issue": 44
+    },
+    "clean_books_false_accusation_rate": 0.0,
+    "per_type": {
+     "duplicate_invoice": {
+      "tp": 0,
+      "fp": 3,
+      "fn": 4
+     },
+     "fx_conversion": {
+      "tp": 0,
+      "fp": 18,
+      "fn": 4
+     },
+     "payment_allocation": {
+      "tp": 0,
+      "fp": 9,
+      "fn": 2
+     },
+     "period_cutoff": {
+      "tp": 0,
+      "fp": 18,
+      "fn": 5
+     }
+    },
+    "mean_new_tokens": 598.2,
+    "hit_max_new_tokens": 4,
+    "missing_generations": 0
+   },
+   "multi": {
+    "n": 24,
+    "mean_reward": -0.9838,
+    "mean_f1": 0.0083,
+    "micro_f1": 0.0211,
+    "tp": 1,
+    "fp": 23,
+    "fn": 70,
+    "schema_error_rate": 0.7917,
+    "unparseable_rate": 0.0,
+    "mean_steps": 6.88,
+    "fp_reasons": {
+     "amount": 2,
+     "insufficient_evidence": 1,
+     "no_issue": 20
+    },
+    "clean_books_false_accusation_rate": 0.0,
+    "per_type": {
+     "duplicate_invoice": {
+      "tp": 1,
+      "fp": 5,
+      "fn": 1
+     },
+     "fx_conversion": {
+      "tp": 0,
+      "fp": 4,
+      "fn": 8
+     },
+     "payment_allocation": {
+      "tp": 0,
+      "fp": 7,
+      "fn": 4
+     },
+     "period_cutoff": {
+      "tp": 0,
+      "fp": 7,
+      "fn": 5
+     }
+    },
+    "mean_new_tokens": 606.0,
+    "hit_max_new_tokens": 1,
+    "missing_generations": 0
+   }
+  },
+  "c4_c": {
+   "clean": {
+    "n": 12,
+    "mean_reward": 0.8225,
+    "mean_f1": 0.9167,
+    "micro_f1": 0.0,
+    "tp": 0,
+    "fp": 1,
+    "fn": 0,
+    "schema_error_rate": 0.0,
+    "unparseable_rate": 0.0,
+    "mean_steps": 6.92,
+    "fp_reasons": {
+     "no_issue": 1
+    },
+    "clean_books_false_accusation_rate": 0.0833,
+    "per_type": {
+     "period_cutoff": {
+      "tp": 0,
+      "fp": 1,
+      "fn": 0
+     }
+    },
+    "mean_new_tokens": 14.9,
+    "hit_max_new_tokens": 0,
+    "missing_generations": 0
+   },
+   "single": {
+    "n": 24,
+    "mean_reward": -0.3244,
+    "mean_f1": 0.3403,
+    "micro_f1": 0.44,
+    "tp": 11,
+    "fp": 6,
+    "fn": 22,
+    "schema_error_rate": 0.0,
+    "unparseable_rate": 0.0,
+    "mean_steps": 6.96,
+    "fp_reasons": {
+     "insufficient_evidence": 2,
+     "no_issue": 3,
+     "unknown_evidence_id": 1
+    },
+    "clean_books_false_accusation_rate": 0.0,
+    "per_type": {
+     "duplicate_invoice": {
+      "tp": 8,
+      "fp": 0,
+      "fn": 2
+     },
+     "fx_conversion": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 9
+     },
+     "payment_allocation": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 6
+     },
+     "period_cutoff": {
+      "tp": 3,
+      "fp": 6,
+      "fn": 5
+     }
+    },
+    "mean_new_tokens": 70.4,
+    "hit_max_new_tokens": 0,
+    "missing_generations": 0
+   },
+   "multi": {
+    "n": 24,
+    "mean_reward": -0.142,
+    "mean_f1": 0.4334,
+    "micro_f1": 0.404,
+    "tp": 20,
+    "fp": 8,
+    "fn": 51,
+    "schema_error_rate": 0.0,
+    "unparseable_rate": 0.0,
+    "mean_steps": 6.88,
+    "fp_reasons": {
+     "amount": 2,
+     "no_issue": 3,
+     "unknown_evidence_id": 3
+    },
+    "clean_books_false_accusation_rate": 0.0,
+    "per_type": {
+     "duplicate_invoice": {
+      "tp": 15,
+      "fp": 2,
+      "fn": 0
+     },
+     "fx_conversion": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 22
+     },
+     "payment_allocation": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 13
+     },
+     "period_cutoff": {
+      "tp": 5,
+      "fp": 6,
+      "fn": 16
+     }
+    },
+    "mean_new_tokens": 114.8,
+    "hit_max_new_tokens": 0,
+    "missing_generations": 0
+   }
+  },
+  "ref_expert": {
+   "clean": {
+    "n": 12,
+    "mean_reward": 0.9882,
+    "mean_f1": 1.0,
+    "micro_f1": null,
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "schema_error_rate": 0.0,
+    "unparseable_rate": 0.0,
+    "mean_steps": 6.92,
+    "fp_reasons": {},
+    "clean_books_false_accusation_rate": 0.0,
+    "per_type": {}
+   },
+   "single": {
+    "n": 24,
+    "mean_reward": 0.9881,
+    "mean_f1": 1.0,
+    "micro_f1": 1.0,
+    "tp": 33,
+    "fp": 0,
+    "fn": 0,
+    "schema_error_rate": 0.0,
+    "unparseable_rate": 0.0,
+    "mean_steps": 6.96,
+    "fp_reasons": {},
+    "clean_books_false_accusation_rate": 0.0,
+    "per_type": {
+     "duplicate_invoice": {
+      "tp": 10,
+      "fp": 0,
+      "fn": 0
+     },
+     "fx_conversion": {
+      "tp": 9,
+      "fp": 0,
+      "fn": 0
+     },
+     "payment_allocation": {
+      "tp": 6,
+      "fp": 0,
+      "fn": 0
+     },
+     "period_cutoff": {
+      "tp": 8,
+      "fp": 0,
+      "fn": 0
+     }
+    }
+   },
+   "multi": {
+    "n": 24,
+    "mean_reward": 0.9882,
+    "mean_f1": 1.0,
+    "micro_f1": 1.0,
+    "tp": 71,
+    "fp": 0,
+    "fn": 0,
+    "schema_error_rate": 0.0,
+    "unparseable_rate": 0.0,
+    "mean_steps": 6.88,
+    "fp_reasons": {},
+    "clean_books_false_accusation_rate": 0.0,
+    "per_type": {
+     "duplicate_invoice": {
+      "tp": 15,
+      "fp": 0,
+      "fn": 0
+     },
+     "fx_conversion": {
+      "tp": 22,
+      "fp": 0,
+      "fn": 0
+     },
+     "payment_allocation": {
+      "tp": 13,
+      "fp": 0,
+      "fn": 0
+     },
+     "period_cutoff": {
+      "tp": 21,
+      "fp": 0,
+      "fn": 0
+     }
+    }
+   }
+  },
+  "ref_empty": {
+   "clean": {
+    "n": 12,
+    "mean_reward": 0.9882,
+    "mean_f1": 1.0,
+    "micro_f1": null,
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "schema_error_rate": 0.0,
+    "unparseable_rate": 0.0,
+    "mean_steps": 6.92,
+    "fp_reasons": {},
+    "clean_books_false_accusation_rate": 0.0,
+    "per_type": {}
+   },
+   "single": {
+    "n": 24,
+    "mean_reward": -0.9172,
+    "mean_f1": 0.0417,
+    "micro_f1": 0.0,
+    "tp": 0,
+    "fp": 0,
+    "fn": 33,
+    "schema_error_rate": 0.0,
+    "unparseable_rate": 0.0,
+    "mean_steps": 6.96,
+    "fp_reasons": {},
+    "clean_books_false_accusation_rate": 0.0,
+    "per_type": {
+     "duplicate_invoice": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 10
+     },
+     "fx_conversion": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 9
+     },
+     "payment_allocation": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 6
+     },
+     "period_cutoff": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 8
+     }
+    }
+   },
+   "multi": {
+    "n": 24,
+    "mean_reward": -0.9172,
+    "mean_f1": 0.0417,
+    "micro_f1": 0.0,
+    "tp": 0,
+    "fp": 0,
+    "fn": 71,
+    "schema_error_rate": 0.0,
+    "unparseable_rate": 0.0,
+    "mean_steps": 6.88,
+    "fp_reasons": {},
+    "clean_books_false_accusation_rate": 0.0,
+    "per_type": {
+     "duplicate_invoice": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 15
+     },
+     "fx_conversion": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 22
+     },
+     "payment_allocation": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 13
+     },
+     "period_cutoff": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 21
+     }
+    }
+   }
+  }
+ },
+ "paired_c4_c_minus_base_c": {
+  "reward": {
+   "delta_mean": 0.9715,
+   "ci95": [
+    0.7604,
+    1.1804
+   ],
+   "wins": 39,
+   "ties": 21,
+   "losses": 0,
+   "n": 60,
+   "resamples": 10000,
+   "seed": 20261121
+  },
+  "f1": {
+   "delta_mean": 0.4895,
+   "ci95": [
+    0.3833,
+    0.5945
+   ],
+   "wins": 39,
+   "ties": 21,
+   "losses": 0,
+   "n": 60,
+   "resamples": 10000,
+   "seed": 20261121
+  }
+ },
+ "paired_c4_c_minus_base_c_by_group": {
+  "clean": {
+   "delta_mean": 1.8225,
+   "ci95": [
+    1.491,
+    1.9885
+   ],
+   "wins": 11,
+   "ties": 1,
+   "losses": 0,
+   "n": 12,
+   "resamples": 10000,
+   "seed": 20261121
+  },
+  "single": {
+   "delta_mean": 0.6756,
+   "ci95": [
+    0.3581,
+    1.0208
+   ],
+   "wins": 10,
+   "ties": 14,
+   "losses": 0,
+   "n": 24,
+   "resamples": 10000,
+   "seed": 20261121
+  },
+  "multi": {
+   "delta_mean": 0.8419,
+   "ci95": [
+    0.5821,
+    1.1005
+   ],
+   "wins": 18,
+   "ties": 6,
+   "losses": 0,
+   "n": 24,
+   "resamples": 10000,
+   "seed": 20261121
+  }
+ },
+ "paired_c4_c_minus_ref_empty": {
+  "reward": {
+   "delta_mean": 0.514,
+   "ci95": [
+    0.3189,
+    0.7099
+   ],
+   "wins": 26,
+   "ties": 33,
+   "losses": 1,
+   "n": 60,
+   "resamples": 10000,
+   "seed": 20261121
+  },
+  "f1": {
+   "delta_mean": 0.2595,
+   "ci95": [
+    0.1611,
+    0.3583
+   ],
+   "wins": 26,
+   "ties": 33,
+   "losses": 1,
+   "n": 60,
+   "resamples": 10000,
+   "seed": 20261121
+  }
+ },
+ "paired_c4_c_minus_ref_empty_by_group": {
+  "clean": {
+   "delta_mean": -0.1657,
+   "ci95": [
+    -0.497,
+    0.0
+   ],
+   "wins": 0,
+   "ties": 11,
+   "losses": 1,
+   "n": 12,
+   "resamples": 10000,
+   "seed": 20261121
+  },
+  "single": {
+   "delta_mean": 0.5927,
+   "ci95": [
+    0.2892,
+    0.9236
+   ],
+   "wins": 9,
+   "ties": 15,
+   "losses": 0,
+   "n": 24,
+   "resamples": 10000,
+   "seed": 20261121
+  },
+  "multi": {
+   "delta_mean": 0.7752,
+   "ci95": [
+    0.5291,
+    1.0224
+   ],
+   "wins": 17,
+   "ties": 7,
+   "losses": 0,
+   "n": 24,
+   "resamples": 10000,
+   "seed": 20261121
+  }
+ }
+}
